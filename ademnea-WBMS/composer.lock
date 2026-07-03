@@ -4,7 +4,7 @@
         "Read more about it at https://getcomposer.org/doc/01-basic-usage.md#installing-dependencies",
         "This file is @generated automatically"
     ],
-    "content-hash": "1c2c1bd7867391ffbb75c515b0c10ca7",
+    "content-hash": "36793882908b6cbdd344b5a4840231db",
     "packages": [
         {
             "name": "brick/math",
@@ -1059,16 +1059,16 @@
         },
         {
             "name": "laravel/framework",
-            "version": "v13.18.1",
+            "version": "v13.18.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/laravel/framework.git",
-                "reference": "7d66044819e269f05924793a6800022dc181d850"
+                "reference": "138e5806ed7e4e21591948b661119d3810f052cf"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/laravel/framework/zipball/7d66044819e269f05924793a6800022dc181d850",
-                "reference": "7d66044819e269f05924793a6800022dc181d850",
+                "url": "https://api.github.com/repos/laravel/framework/zipball/138e5806ed7e4e21591948b661119d3810f052cf",
+                "reference": "138e5806ed7e4e21591948b661119d3810f052cf",
                 "shasum": ""
             },
             "require": {
@@ -1279,7 +1279,7 @@
                 "issues": "https://github.com/laravel/framework/issues",
                 "source": "https://github.com/laravel/framework"
             },
-            "time": "2026-07-02T18:35:20+00:00"
+            "time": "2026-06-30T12:54:13+00:00"
         },
         {
             "name": "laravel/prompts",
@@ -1339,69 +1339,6 @@
                 "source": "https://github.com/laravel/prompts/tree/v0.3.21"
             },
             "time": "2026-06-26T00:11:25+00:00"
-        },
-        {
-            "name": "laravel/sanctum",
-            "version": "v4.3.2",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/laravel/sanctum.git",
-                "reference": "2a9bccc18e9907808e0018dd15fa643937886b1e"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/laravel/sanctum/zipball/2a9bccc18e9907808e0018dd15fa643937886b1e",
-                "reference": "2a9bccc18e9907808e0018dd15fa643937886b1e",
-                "shasum": ""
-            },
-            "require": {
-                "ext-json": "*",
-                "illuminate/console": "^11.0|^12.0|^13.0",
-                "illuminate/contracts": "^11.0|^12.0|^13.0",
-                "illuminate/database": "^11.0|^12.0|^13.0",
-                "illuminate/support": "^11.0|^12.0|^13.0",
-                "php": "^8.2",
-                "symfony/console": "^7.0|^8.0"
-            },
-            "require-dev": {
-                "mockery/mockery": "^1.6",
-                "orchestra/testbench": "^9.15|^10.8|^11.0",
-                "phpstan/phpstan": "^1.10"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Laravel\\Sanctum\\SanctumServiceProvider"
-                    ]
-                }
-            },
-            "autoload": {
-                "psr-4": {
-                    "Laravel\\Sanctum\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Taylor Otwell",
-                    "email": "taylor@laravel.com"
-                }
-            ],
-            "description": "Laravel Sanctum provides a featherweight authentication system for SPAs and simple APIs.",
-            "keywords": [
-                "auth",
-                "laravel",
-                "sanctum"
-            ],
-            "support": {
-                "issues": "https://github.com/laravel/sanctum/issues",
-                "source": "https://github.com/laravel/sanctum"
-            },
-            "time": "2026-04-30T11:46:25+00:00"
         },
         {
             "name": "laravel/serializable-closure",
@@ -2460,19 +2397,20 @@
         },
         {
             "name": "nikic/php-parser",
-            "version": "v5.8.0",
+            "version": "v5.7.0",
             "source": {
                 "type": "git",
                 "url": "https://github.com/nikic/PHP-Parser.git",
-                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f"
+                "reference": "dca41cd15c2ac9d055ad70dbfd011130757d1f82"
             },
             "dist": {
                 "type": "zip",
-                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
-                "reference": "044a6a392ff8ad0d61f14370a5fbbd0a0107152f",
+                "url": "https://api.github.com/repos/nikic/PHP-Parser/zipball/dca41cd15c2ac9d055ad70dbfd011130757d1f82",
+                "reference": "dca41cd15c2ac9d055ad70dbfd011130757d1f82",
                 "shasum": ""
             },
             "require": {
+                "ext-ctype": "*",
                 "ext-json": "*",
                 "ext-tokenizer": "*",
                 "php": ">=7.4"
@@ -2511,9 +2449,9 @@
             ],
             "support": {
                 "issues": "https://github.com/nikic/PHP-Parser/issues",
-                "source": "https://github.com/nikic/PHP-Parser/tree/v5.8.0"
+                "source": "https://github.com/nikic/PHP-Parser/tree/v5.7.0"
             },
-            "time": "2026-07-04T14:30:18+00:00"
+            "time": "2025-12-06T11:56:16+00:00"
         },
         {
             "name": "nunomaduro/termwind",
@@ -3365,155 +3303,6 @@
                 "source": "https://github.com/ramsey/uuid/tree/4.9.3"
             },
             "time": "2026-06-18T03:57:49+00:00"
-        },
-        {
-            "name": "spatie/laravel-package-tools",
-            "version": "1.93.1",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/spatie/laravel-package-tools.git",
-                "reference": "d5552849801f2642aea710557463234b59ef65eb"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-package-tools/zipball/d5552849801f2642aea710557463234b59ef65eb",
-                "reference": "d5552849801f2642aea710557463234b59ef65eb",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/contracts": "^10.0|^11.0|^12.0|^13.0",
-                "php": "^8.1"
-            },
-            "require-dev": {
-                "mockery/mockery": "^1.5",
-                "orchestra/testbench": "^8.0|^9.2|^10.0|^11.0",
-                "pestphp/pest": "^2.1|^3.1|^4.0",
-                "phpunit/php-code-coverage": "^10.0|^11.0|^12.0",
-                "phpunit/phpunit": "^10.5|^11.5|^12.5",
-                "spatie/pest-plugin-test-time": "^2.2|^3.0"
-            },
-            "type": "library",
-            "autoload": {
-                "psr-4": {
-                    "Spatie\\LaravelPackageTools\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Freek Van der Herten",
-                    "email": "freek@spatie.be",
-                    "role": "Developer"
-                }
-            ],
-            "description": "Tools for creating Laravel packages",
-            "homepage": "https://github.com/spatie/laravel-package-tools",
-            "keywords": [
-                "laravel-package-tools",
-                "spatie"
-            ],
-            "support": {
-                "issues": "https://github.com/spatie/laravel-package-tools/issues",
-                "source": "https://github.com/spatie/laravel-package-tools/tree/1.93.1"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/spatie",
-                    "type": "github"
-                }
-            ],
-            "time": "2026-05-19T14:06:37+00:00"
-        },
-        {
-            "name": "spatie/laravel-permission",
-            "version": "8.3.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/spatie/laravel-permission.git",
-                "reference": "60e8ed5b2fbf043c2264433fc2680c76b8b66aa6"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/spatie/laravel-permission/zipball/60e8ed5b2fbf043c2264433fc2680c76b8b66aa6",
-                "reference": "60e8ed5b2fbf043c2264433fc2680c76b8b66aa6",
-                "shasum": ""
-            },
-            "require": {
-                "illuminate/auth": "^12.0|^13.0",
-                "illuminate/container": "^12.0|^13.0",
-                "illuminate/contracts": "^12.0|^13.0",
-                "illuminate/database": "^12.0|^13.0",
-                "php": "^8.3",
-                "spatie/laravel-package-tools": "^1.0"
-            },
-            "require-dev": {
-                "larastan/larastan": "^3.9",
-                "laravel/octane": "^2.0",
-                "laravel/passport": "^13.0",
-                "laravel/pint": "^1.0",
-                "orchestra/testbench": "^10.0|^11.0",
-                "pestphp/pest": "^3.0|^4.0",
-                "pestphp/pest-plugin-laravel": "^3.0|^4.1",
-                "phpstan/phpstan": "^2.1"
-            },
-            "type": "library",
-            "extra": {
-                "laravel": {
-                    "providers": [
-                        "Spatie\\Permission\\PermissionServiceProvider"
-                    ]
-                },
-                "branch-alias": {
-                    "dev-main": "8.x-dev",
-                    "dev-master": "8.x-dev"
-                }
-            },
-            "autoload": {
-                "files": [
-                    "src/helpers.php"
-                ],
-                "psr-4": {
-                    "Spatie\\Permission\\": "src"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Freek Van der Herten",
-                    "email": "freek@spatie.be",
-                    "homepage": "https://spatie.be",
-                    "role": "Developer"
-                }
-            ],
-            "description": "Permission handling for Laravel 12 and up",
-            "homepage": "https://github.com/spatie/laravel-permission",
-            "keywords": [
-                "acl",
-                "laravel",
-                "permission",
-                "permissions",
-                "rbac",
-                "roles",
-                "security",
-                "spatie"
-            ],
-            "support": {
-                "issues": "https://github.com/spatie/laravel-permission/issues",
-                "source": "https://github.com/spatie/laravel-permission/tree/8.3.0"
-            },
-            "funding": [
-                {
-                    "url": "https://github.com/spatie",
-                    "type": "github"
-                }
-            ],
-            "time": "2026-07-03T15:36:01+00:00"
         },
         {
             "name": "symfony/clock",
@@ -6454,70 +6243,6 @@
             "time": "2025-08-08T12:00:00+00:00"
         },
         {
-            "name": "giorgiosironi/eris",
-            "version": "1.1.0",
-            "source": {
-                "type": "git",
-                "url": "https://github.com/giorgiosironi/eris.git",
-                "reference": "be4969c653431ba8de75bff16efcb825742c7177"
-            },
-            "dist": {
-                "type": "zip",
-                "url": "https://api.github.com/repos/giorgiosironi/eris/zipball/be4969c653431ba8de75bff16efcb825742c7177",
-                "reference": "be4969c653431ba8de75bff16efcb825742c7177",
-                "shasum": ""
-            },
-            "require": {
-                "php": "^8.1"
-            },
-            "require-dev": {
-                "friendsofphp/php-cs-fixer": "^3.0",
-                "ilario-pierbattista/reverse-regex": "0.5.0",
-                "phpstan/phpstan": "^2.0",
-                "phpunit/phpunit": "^10.0.4 || ^11.0 || ^12.0 || ^13.0",
-                "psalm/phar": "^5.4",
-                "rector/rector": "^2.0",
-                "sebastian/comparator": ">=2.1.3"
-            },
-            "suggest": {
-                "ilario-pierbattista/reverse-regex": "0.5.0 for the regex() Generator",
-                "phpunit/phpunit": "Standard way to run generated test cases"
-            },
-            "type": "library",
-            "autoload": {
-                "files": [
-                    "src/Generator/functions.php"
-                ],
-                "psr-4": {
-                    "Eris\\": "src/"
-                }
-            },
-            "notification-url": "https://packagist.org/downloads/",
-            "license": [
-                "MIT"
-            ],
-            "authors": [
-                {
-                    "name": "Giorgio Sironi",
-                    "email": "info@giorgiosironi.com"
-                },
-                {
-                    "name": "Mirko Bonadei",
-                    "email": "mirko.bonadei@gmail.com"
-                },
-                {
-                    "name": "Gabriele Lana",
-                    "email": "gabriele.lana@gmail.com"
-                }
-            ],
-            "description": "PHP library for property-based testing. Integrates with PHPUnit.",
-            "support": {
-                "issues": "https://github.com/giorgiosironi/eris/issues",
-                "source": "https://github.com/giorgiosironi/eris/tree/1.1.0"
-            },
-            "time": "2026-03-31T04:14:43+00:00"
-        },
-        {
             "name": "hamcrest/hamcrest-php",
             "version": "v2.1.1",
             "source": {
@@ -8669,12 +8394,12 @@
     ],
     "aliases": [],
     "minimum-stability": "stable",
-    "stability-flags": [],
+    "stability-flags": {},
     "prefer-stable": true,
     "prefer-lowest": false,
     "platform": {
-        "php": "^8.2"
+        "php": "^8.3"
     },
-    "platform-dev": [],
-    "plugin-api-version": "2.6.0"
+    "platform-dev": {},
+    "plugin-api-version": "2.9.0"
 }
