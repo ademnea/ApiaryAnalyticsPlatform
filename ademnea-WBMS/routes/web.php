@@ -1,21 +1,17 @@
 <?php
 
 use Illuminate\Support\Facades\Route;
-use Illuminate\Http\Request;
-
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
-
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\GalleryController as AdminGalleryController;
 use App\Http\Controllers\Admin\ScholarshipController as AdminScholarshipController;
 use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
-
 use App\Http\Controllers\Public\GalleryController as PublicGalleryController;
 use App\Http\Controllers\Public\ScholarshipController as PublicScholarshipController;
 use App\Http\Controllers\Public\FeedbackController as PublicFeedbackController;
-
+use Illuminate\Http\Request;
 
 // ============================================================
 // PUBLIC ROUTES
@@ -25,6 +21,10 @@ Route::get('/', function () {
     return redirect()->route('admin.login');
 });
 
+Route::get('/gallery', [PublicGalleryController::class, 'index'])->name('public.gallery.index');
+Route::get('/gallery/{gallery:slug}', [PublicGalleryController::class, 'show'])->name('public.gallery.show');
+Route::get('/scholarships', [PublicScholarshipController::class, 'index'])->name('public.scholarships.index');
+Route::get('/scholarships/{scholarship}', [PublicScholarshipController::class, 'show'])->name('public.scholarships.show');
 
 Route::get('/gallery', [PublicGalleryController::class, 'index'])
     ->name('public.gallery.index');
@@ -253,6 +253,17 @@ Route::middleware(['auth','ensure.not.farmer'])->group(function () {
     // PLACEHOLDER ROUTES
     // ========================================================
 
+    Route::prefix('/admin/scholarships')->name('admin.scholarship.')->group(function () {
+        Route::get('/', [AdminScholarshipController::class, 'index'])->name('index');
+        Route::get('/create', [AdminScholarshipController::class, 'create'])->name('create');
+        Route::post('/', [AdminScholarshipController::class, 'store'])->name('store');
+        Route::get('/{scholarship}', [AdminScholarshipController::class, 'show'])->name('show');
+        Route::get('/{scholarship}/edit', [AdminScholarshipController::class, 'edit'])->name('edit');
+        Route::put('/{scholarship}', [AdminScholarshipController::class, 'update'])->name('update');
+        Route::delete('/{scholarship}', [AdminScholarshipController::class, 'destroy'])->name('destroy');
+    });
+    
+    // ---- Placeholder routes for sidebar and dashboard links ----
     $placeholders = [
 
         'apiaries.index',
@@ -281,6 +292,11 @@ Route::middleware(['auth','ensure.not.farmer'])->group(function () {
 
         'newsletter.index',
         'newsletter.create',
+        // Website content
+        'newsletter.index','newsletter.create',
+        'publications.index','publications.create',
+        'events.index','events.create',
+        'team.index','team.create',
 
         'publications.index',
         'publications.create',
