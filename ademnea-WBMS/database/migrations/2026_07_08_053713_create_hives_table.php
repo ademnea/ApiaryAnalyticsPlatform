@@ -26,7 +26,7 @@ return new class extends Migration
             
             // Current state
             $table->string('queen_status', 20)->nullable(); // present, absent, queenless, unknown
-            $table->string('status', 30)->default('active')->index(); // active, inactive, under_inspection, queenless, absconded, decommissioned
+            $table->string('status', 30)->default('active'); // active, inactive, under_inspection, queenless, absconded, decommissioned
             
             // GPS coordinates (required for field navigation and mapping)
             $table->decimal('gps_latitude', 10, 7)->nullable();
