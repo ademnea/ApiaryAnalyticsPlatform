@@ -2,60 +2,86 @@
 
 namespace App\Models;
 
-use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Farmer extends Model
 {
-    use HasFactory;
+    use SoftDeletes;
 
     protected $fillable = [
-        'user_id',
-        'telephone',
-        'address',
-        'gender',
-        'fcm_token',
+        'first_name',
+        'last_name',
+        'phone_number',
+        'email',
+        'country',
+        'region',
+        'village',
+        'national_id',
+        'profile_status',
+        'is_active',
     ];
 
     protected $casts = [
-        'user_id' => 'integer',
+        'is_active' => 'boolean',
     ];
 
+    /**
+     * Relationship: A farmer optionally has a linked user account.
+     * Nullable because farmer registration can happen before user account creation.
+     */
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
     }
 
-    public function farms(): HasMany
+    /**
+     * Relationship: A farmer has many inspection records.
+     */
+    public function inspections(): HasMany
     {
-        return $this->hasMany(Farm::class);
+        return $this->hasMany(Inspection::class, 'inspector_id');
     }
 
-    public function hives(): HasManyThrough
+    /**
+     * Relationship: A farmer has many harvest records.
+     */
+    public function harvestRecords(): HasMany
     {
-        return $this->hasManyThrough(Hive::class, Farm::class);
+        return $this->hasMany(HarvestRecord::class);
     }
 
-    public function alerts(): HasMany
+    /**
+     * Scope: Get only active farmers.
+     */
+    public function scopeActive($query)
     {
-        return $this->hasMany(Alert::class);
+        return $query->where('is_active', true);
     }
 
-    public function messages(): HasMany
+    /**
+     * Scope: Filter by country.
+     */
+    public function scopeByCountry($query, string $country)
     {
-        return $this->hasMany(FarmerMessage::class);
+        return $query->where('country', $country);
     }
 
-    public function notificationLogs(): HasMany
+    /**
+     * Scope: Filter by profile status.
+     */
+    public function scopeByStatus($query, string $status)
     {
-        return $this->hasMany(NotificationLog::class);
+        return $query->where('profile_status', $status);
     }
 
-    public function auditLogs(): HasMany
+    /**
+     * Get farmer's full name.
+     */
+    public function getFullNameAttribute(): string
     {
-        return $this->hasMany(FarmerAuditLog::class);
+        return "{$this->first_name} {$this->last_name}";
     }
 }
