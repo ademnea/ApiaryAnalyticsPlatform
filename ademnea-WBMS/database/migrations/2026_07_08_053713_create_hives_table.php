@@ -51,7 +51,6 @@ return new class extends Migration
             // Indexes
             $table->index('apiary_id');
             $table->index('status'); // Fast filtering for active vs. offline hives
-            $table->index(['gps_latitude', 'gps_longitude']); // Spatial queries for mapping
             $table->index('last_inspection_date'); // "Hives needing inspection" queries
         });
     }

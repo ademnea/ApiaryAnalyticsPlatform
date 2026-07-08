@@ -17,7 +17,7 @@ return new class extends Migration
             // Personal information
             $table->string('first_name', 100);
             $table->string('last_name', 100);
-            $table->string('phone_number', 30); // Primary contact for SMS alerts
+            $table->string('phone_number', 30)->nullable();
             $table->string('email', 255)->nullable();
             
             // Location
@@ -45,10 +45,8 @@ return new class extends Migration
                 ->on('users')
                 ->onDelete('set null'); // Farmer record survives even if user account is deleted
             
-            // Indexes
+            // Indexes 
             $table->index('user_id');
-            $table->index('phone_number'); // For SMS dispatch and farmer search
-            $table->index('country'); // For country-level farmer filtering
         });
     }
 

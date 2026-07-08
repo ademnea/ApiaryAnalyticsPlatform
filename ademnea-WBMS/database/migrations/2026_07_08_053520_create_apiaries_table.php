@@ -12,6 +12,8 @@ return new class extends Migration
             $table->id();
             
             // Core fields
+            // FK to farmer (added per corrected order)
+            $table->unsignedBigInteger('farmer_id')->nullable();
             $table->string('name', 150);
             $table->string('country', 100);
             $table->string('region', 100)->nullable();
@@ -35,9 +37,15 @@ return new class extends Migration
             
             // Unique constraint: no duplicate apiaries under same managing entity + country
             $table->unique(['name', 'country', 'managing_entity']);
-            
-            // Index for country-level filtering
-            $table->index('country');
+
+            // Indexes
+            // Foreign key to farmers table (NEW)
+            $table->foreign('farmer_id')
+                ->references('id')
+                ->on('farmers')
+                ->onDelete('set null');
+
+            $table->index('farmer_id'); // critical: query farmer's apiaries
         });
     }
 
