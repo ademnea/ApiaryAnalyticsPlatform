@@ -3,11 +3,16 @@
 use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\IotDeviceRegistryController;
+use App\Http\Controllers\Admin\IotHardwareTeamRegistryController;
 use Illuminate\Http\Request;
 
 // Route::get('/', function () {
 //     return view('welcome');
 // });
+
+
+
 
 // ------ Admin auth + dashboard routes
 Route::get('/admin/login', [LoginController::class, 'showLoginForm'])->name('admin.login');
@@ -25,7 +30,8 @@ Route::post('/admin/password/email', function (Request $request) {
     return back()->with('status', 'If an account with that email exists, a password reset link has been sent.');
 })->name('admin.password.email');
 
-Route::middleware(['web','auth'])->group(function () {
+Route::prefix('admin')
+    ->name('admin.')->middleware(['web','auth'])->group(function () {
     // Logout (admin and generic alias)
     Route::post('/admin/logout', [LoginController::class, 'logout'])->name('admin.logout');
     Route::post('/logout', [LoginController::class, 'logout'])->name('logout');
@@ -89,4 +95,19 @@ Route::middleware(['web','auth'])->group(function () {
             return view('admin.placeholder', ['title' => $title, 'subtitle' => 'Placeholder for ' . $title]);
         })->name($routeName);
     }
+
+    Route::resource('hardware-teams', IotHardwareTeamRegistryController::class)
+        ->except(['destroy']); // hardware teams are never hard/soft deleted — deactivate only
+    Route::patch('hardware-teams/{hardwareTeam}/deactivate', [IotHardwareTeamRegistryController::class, 'deactivate'])
+        ->name('hardware-teams.deactivate');
+    Route::patch('hardware-teams/{hardwareTeam}/reactivate', [IotHardwareTeamRegistryController::class, 'reactivate'])
+        ->name('hardware-teams.reactivate');
+
+    Route::resource('iot-devices', IotDeviceRegistryController::class);
+    Route::patch('iot-devices/{iotDevice}/revoke', [IotDeviceRegistryController::class, 'revoke'])
+        ->name('iot-devices.revoke');
+    Route::patch('iot-devices/{iotDevice}/reactivate', [IotDeviceRegistryController::class, 'reactivate'])
+        ->name('iot-devices.reactivate');
+
+
 });
