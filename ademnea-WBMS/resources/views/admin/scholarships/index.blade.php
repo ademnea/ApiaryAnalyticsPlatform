@@ -15,25 +15,45 @@
     <div class="row g-3 mb-4">
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm rounded-4 border-0 p-3">
-                <div class="text-muted mb-2">Total Scholarships</div>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-4" style="width:48px;height:48px;background:#E8F5E9;color:#2E7D32;">
+                        <i class="bi bi-mortarboard-fill" style="font-size:24px;"></i>
+                    </span>
+                    <span class="text-muted">Total Scholarships</span>
+                </div>
                 <h3 class="mb-0">{{ $stats['totalScholarships'] }}</h3>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm rounded-4 border-0 p-3">
-                <div class="text-muted mb-2">Active</div>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-4" style="width:48px;height:48px;background:#E8F5E9;color:#2E7D32;">
+                        <i class="bi bi-people-fill" style="font-size:24px;"></i>
+                    </span>
+                    <span class="text-muted">Active</span>
+                </div>
                 <h3 class="mb-0">{{ $stats['activeScholarships'] }}</h3>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm rounded-4 border-0 p-3">
-                <div class="text-muted mb-2">Expiring Soon</div>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-4" style="width:48px;height:48px;background:#FFF4E5;color:#F9A825;">
+                        <i class="bi bi-clock-fill" style="font-size:24px;"></i>
+                    </span>
+                    <span class="text-muted">Expiring Soon</span>
+                </div>
                 <h3 class="mb-0">{{ $stats['expiringSoon'] }}</h3>
             </div>
         </div>
         <div class="col-sm-6 col-xl-3">
             <div class="card shadow-sm rounded-4 border-0 p-3">
-                <div class="text-muted mb-2">Expired</div>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <span class="d-inline-flex align-items-center justify-content-center rounded-4" style="width:48px;height:48px;background:#FDECEA;color:#E53935;">
+                        <i class="bi bi-calendar-x-fill" style="font-size:24px;"></i>
+                    </span>
+                    <span class="text-muted">Expired</span>
+                </div>
                 <h3 class="mb-0">{{ $stats['expiredScholarships'] }}</h3>
             </div>
         </div>
