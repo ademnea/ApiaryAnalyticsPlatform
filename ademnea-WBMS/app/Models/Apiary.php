@@ -5,20 +5,17 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Apiary extends Model
 {
-    protected $fillable = [
-        'name',
-        'country',
-        'region',
-        'managing_entity',
-        'hive_capacity',
-        'contact_name',
-        'contact_phone',
-        'contact_email',
-        'status',
+    // SECURITY: Use $guarded instead of $fillable
+    protected $guarded = [
+        'id',
         'is_active',
+        'created_at',
+        'updated_at',
+        'deleted_at',
     ];
 
     protected $casts = [
@@ -32,6 +29,14 @@ class Apiary extends Model
     public function hives(): HasMany
     {
         return $this->hasMany(Hive::class);
+    }
+
+    /**
+     * Relationship: An apiary belongs to a farmer.
+     */
+    public function farmer(): BelongsTo
+    {
+        return $this->belongsTo(Farmer::class, 'farmer_id');
     }
 
     /**
