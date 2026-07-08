@@ -5,9 +5,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Admin\DashboardController;
 use Illuminate\Http\Request;
 
-// Route::get('/', function () {
-//     return view('welcome');
-// });
+Route::get('/', function () {
+    return redirect()->route('admin.login');
+});
 
 // ------ Admin auth + dashboard routes
 Route::get('/admin/login', [LoginController::class, 'showLoginForm'])->name('admin.login');
