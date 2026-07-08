@@ -25,6 +25,10 @@ Route::get('/gallery', [PublicGalleryController::class, 'index'])->name('public.
 Route::get('/gallery/{gallery:slug}', [PublicGalleryController::class, 'show'])->name('public.gallery.show');
 Route::get('/scholarships', [PublicScholarshipController::class, 'index'])->name('public.scholarships.index');
 Route::get('/scholarships/{scholarship}', [PublicScholarshipController::class, 'show'])->name('public.scholarships.show');
+// Public feedback form
+Route::get('/feedback', [\App\Http\Controllers\Public\FeedbackController::class, 'create'])->name('public.feedback.create');
+Route::post('/feedback', [\App\Http\Controllers\Public\FeedbackController::class, 'store'])->name('public.feedback.store');
+Route::get('/feedback/success', [\App\Http\Controllers\Public\FeedbackController::class, 'success'])->name('public.feedback.success');
 
 Route::get('/gallery', [PublicGalleryController::class, 'index'])
     ->name('public.gallery.index');
@@ -286,6 +290,8 @@ Route::middleware(['auth','ensure.not.farmer'])->group(function () {
 
         'users.index',
         'users.create',
+        // Farmers
+        'farmers.index','farmers.create','farmers.pending','farmers.messages',
 
         'roles.index',
         'roles.create',
@@ -345,3 +351,11 @@ Route::middleware(['auth','ensure.not.farmer'])->group(function () {
 
 
 });
+    // Admin Feedback routes
+    Route::prefix('/admin/feedback')->name('admin.feedback.')->group(function () {
+        Route::get('/', [\App\Http\Controllers\Admin\FeedbackController::class, 'index'])->name('index');
+        Route::get('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'show'])->name('show');
+        Route::put('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'update'])->name('update');
+        Route::delete('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'destroy'])->name('destroy');
+    });
+

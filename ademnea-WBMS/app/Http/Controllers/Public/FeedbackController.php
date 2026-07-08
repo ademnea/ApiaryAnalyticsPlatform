@@ -34,9 +34,11 @@ class FeedbackController extends Controller
             'submitted_at' => $data['submitted_at'],
         ]);
 
+        $disk = env('FEEDBACK_FILES_DISK', config('filesystems.default'));
+
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {
-                $path = $file->store('feedback/attachments', 'public');
+                $path = Storage::disk($disk)->putFile('feedback/attachments', $file);
                 $feedback->attachments()->create([
                     'file_name' => $file->getClientOriginalName(),
                     'file_path' => $path,

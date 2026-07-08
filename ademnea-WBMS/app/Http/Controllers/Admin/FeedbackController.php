@@ -46,7 +46,8 @@ class FeedbackController extends Controller
     public function show(Feedback $feedback): View
     {
         $feedback->load('attachments','category');
-        return view('admin.feedback.show', compact('feedback'));
+        $disk = env('FEEDBACK_FILES_DISK', config('filesystems.default'));
+        return view('admin.feedback.show', compact('feedback','disk'));
     }
 
     public function update(UpdateFeedbackStatusRequest $request, Feedback $feedback)

@@ -14,13 +14,14 @@ class StoreFeedbackRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'feedback_category_id' => ['nullable','exists:feedback_categories,id'],
+            'feedback_category_id' => ['required','exists:feedback_categories,id'],
             'full_name' => ['required','string','max:255'],
             'email' => ['required','email','max:255'],
             'phone' => ['nullable','string','max:50'],
             'organization' => ['nullable','string','max:255'],
             'subject' => ['required','string','max:255'],
             'message' => ['required','string'],
+            'attachments' => ['nullable','array'],
             'attachments.*' => ['nullable','file','mimes:pdf,doc,docx,png,jpg,jpeg,webp','max:10240'],
         ];
     }
