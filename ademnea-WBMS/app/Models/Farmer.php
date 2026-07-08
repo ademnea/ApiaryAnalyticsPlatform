@@ -11,17 +11,16 @@ class Farmer extends Model
 {
     use SoftDeletes;
 
-    protected $fillable = [
-        'first_name',
-        'last_name',
-        'phone_number',
-        'email',
-        'country',
-        'region',
-        'village',
-        'national_id',
-        'profile_status',
-        'is_active',
+    // SECURITY: Use $guarded instead of $fillable
+    protected $guarded = [
+        'id',
+        'farmer_code',      // Never mass-assign code
+        'user_id',          // Never mass-assign user link
+        'is_active',        // Never mass-assign state
+        'profile_status',   // Never mass-assign status
+        'created_at',
+        'updated_at',
+        'deleted_at',
     ];
 
     protected $casts = [
@@ -35,6 +34,14 @@ class Farmer extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    /**
+     * Relationship: A farmer has many apiaries (NEW).
+     */
+    public function apiaries(): HasMany
+    {
+        return $this->hasMany(Apiary::class, 'farmer_id');
     }
 
     /**
