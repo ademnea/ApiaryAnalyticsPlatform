@@ -76,6 +76,10 @@ class UserController extends Controller
 
         $plainPassword = $validated['password'];
 
+        // Permanently remove any soft-deleted record with this email so the
+        // DB unique constraint doesn't fire (SQLite doesn't support partial indexes).
+        User::withTrashed()->where('email', $validated['email'])->whereNotNull('deleted_at')->forceDelete();
+
         $user = User::create([
             'name'      => $validated['name'],
             'email'     => $validated['email'],
