@@ -63,13 +63,6 @@
                             @endforeach
                         </select>
                     </div>
-                    <div class="col-md-4">
-                        <label class="form-label">Status</label>
-                        <select name="is_published" class="form-select">
-                            <option value="1" {{ old('is_published', $gallery->is_published ? '1' : '0') == '1' ? 'selected' : '' }}>Published</option>
-                            <option value="0" {{ old('is_published', $gallery->is_published ? '1' : '0') == '0' ? 'selected' : '' }}>Draft</option>
-                        </select>
-                    </div>
                     <div class="col-md-6">
                         <label class="form-label">Cover image</label>
                         <input type="file" name="cover_image" class="form-control" accept="image/jpeg,image/png,image/webp">

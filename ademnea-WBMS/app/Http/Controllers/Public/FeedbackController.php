@@ -47,11 +47,15 @@ class FeedbackController extends Controller
             }
         }
 
-        return redirect()->route('public.feedback.success')->with('success', 'Thanks for your feedback.');
+        return redirect()->route('public.feedback.success')
+            ->with('success', 'Thanks for your feedback.')
+            ->with('feedback', $feedback);
     }
 
     public function success(): View
     {
-        return view('public.feedback.success');
+        return view('public.feedback.success', [
+            'feedback' => session('feedback'),
+        ]);
     }
 }

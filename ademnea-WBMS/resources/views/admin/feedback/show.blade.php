@@ -79,6 +79,34 @@
                 @endif
             </div>
 
+            <div class="mb-3">
+                <strong>Administrator Response</strong>
+                @if($feedback->admin_response)
+                    <div class="border p-3 mt-2 rounded bg-light">
+                        {{ $feedback->admin_response }}
+                    </div>
+                    <div class="text-muted small mt-2">
+                        Responded by {{ optional($feedback->responder)->name ?? 'Administrator' }}
+                        @if($feedback->responded_at)
+                            on {{ $feedback->responded_at->toDayDateTimeString() }}
+                        @endif
+                    </div>
+                @else
+                    <div class="text-muted mt-2">No response yet.</div>
+                @endif
+
+                <form method="POST" action="{{ route('admin.feedback.update', $feedback) }}" class="mt-3">
+                    @csrf
+                    @method('PUT')
+                    <input type="hidden" name="status" value="{{ $feedback->status }}">
+                    <div class="mb-2">
+                        <label class="form-label" for="admin_response">Reply to submitter</label>
+                        <textarea id="admin_response" name="admin_response" class="form-control" rows="4" placeholder="Write a response to the submitter...">{{ old('admin_response', $feedback->admin_response) }}</textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Send Response</button>
+                </form>
+            </div>
+
         </div>
     </div>
 </div>

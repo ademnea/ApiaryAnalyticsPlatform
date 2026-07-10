@@ -24,15 +24,24 @@ class Feedback extends Model
         'message',
         'status',
         'submitted_at',
+        'admin_response',
+        'responded_at',
+        'responded_by',
     ];
 
     protected $casts = [
         'submitted_at' => 'datetime',
+        'responded_at' => 'datetime',
     ];
 
     public function category(): BelongsTo
     {
         return $this->belongsTo(FeedbackCategory::class, 'feedback_category_id');
+    }
+
+    public function responder(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'responded_by');
     }
 
     public function attachments(): HasMany

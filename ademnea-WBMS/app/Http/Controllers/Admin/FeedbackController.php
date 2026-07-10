@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateFeedbackStatusRequest;
+use App\Mail\FeedbackResponseMail;
 use App\Models\Feedback;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class FeedbackController extends Controller
@@ -52,8 +54,41 @@ class FeedbackController extends Controller
 
     public function update(UpdateFeedbackStatusRequest $request, Feedback $feedback)
     {
-        $feedback->update(['status' => $request->status]);
-        return back()->with('success', 'Status updated.');
+        $feedback->update([
+            'status' => $request->input('status'),
+        ]);
+
+        if ($request->filled('admin_response')) {
+            $feedback->update([
+                'admin_response' => $request->input('admin_response'),
+                'responded_at' => now(),
+                'responded_by' => auth()->id(),
+            ]);
+
+            $this->notifySubmitter($feedback);
+        }
+
+        return back()->with('success', 'Feedback updated.');
+    }
+
+    protected function notifySubmitter(Feedback $feedback): void
+    {
+        if (! $this->mailerConfigured()) {
+            return;
+        }
+
+        try {
+            Mail::to($feedback->email)->send(new FeedbackResponseMail($feedback));
+        } catch (\Throwable $e) {
+            report($e);
+        }
+    }
+
+    protected function mailerConfigured(): bool
+    {
+        $default = config('mail.default');
+
+        return filled($default) && $default !== 'array';
     }
 
     public function destroy(Feedback $feedback)

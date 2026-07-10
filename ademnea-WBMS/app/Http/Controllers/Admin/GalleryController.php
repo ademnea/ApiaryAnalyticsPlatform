@@ -6,13 +6,18 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\GalleryAlbumRequest;
 use App\Models\GalleryAlbum;
 use App\Models\GalleryImage;
+use App\Services\GalleryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Storage;
 use Illuminate\View\View;
 
 class GalleryController extends Controller
 {
+    public function __construct(
+        private readonly GalleryService $galleryService
+    ) {
+    }
+
     public function index(Request $request): View
     {
         $query = GalleryAlbum::query()->withCount('images')->latest();
@@ -63,22 +68,7 @@ class GalleryController extends Controller
 
     public function store(GalleryAlbumRequest $request): RedirectResponse
     {
-        $data = $request->validated();
-        $data['user_id'] = auth()->id();
-        $data['is_published'] = $request->boolean('is_published');
-        $data['visibility'] = $request->input('visibility', 'public');
-        $data['category'] = $request->input('category');
-
-        $album = GalleryAlbum::create($data);
-
-        if ($request->hasFile('cover_image')) {
-            $album->cover_image = $request->file('cover_image')->store('gallery/covers', 'public');
-            $album->save();
-        }
-
-        if ($request->hasFile('images')) {
-            $this->storeImages($album, $request->file('images'));
-        }
+        $this->galleryService->createAlbum($request);
 
         return redirect()->route('admin.gallery.index')->with('success', 'Gallery album created successfully.');
     }
@@ -94,39 +84,14 @@ class GalleryController extends Controller
 
     public function update(GalleryAlbumRequest $request, GalleryAlbum $gallery): RedirectResponse
     {
-        $data = $request->validated();
-        $data['is_published'] = $request->boolean('is_published');
-        $data['visibility'] = $request->input('visibility', 'public');
-        $data['category'] = $request->input('category');
-
-        if ($request->hasFile('cover_image')) {
-            if ($gallery->cover_image) {
-                Storage::disk('public')->delete($gallery->cover_image);
-            }
-
-            $data['cover_image'] = $request->file('cover_image')->store('gallery/covers', 'public');
-        }
-
-        $gallery->update($data);
-
-        if ($request->hasFile('images')) {
-            $this->storeImages($gallery, $request->file('images'));
-        }
+        $this->galleryService->updateAlbum($request, $gallery);
 
         return redirect()->route('admin.gallery.edit', $gallery)->with('success', 'Gallery album updated successfully.');
     }
 
     public function destroy(GalleryAlbum $gallery): RedirectResponse
     {
-        foreach ($gallery->images as $image) {
-            Storage::disk('public')->delete($image->path);
-        }
-
-        if ($gallery->cover_image) {
-            Storage::disk('public')->delete($gallery->cover_image);
-        }
-
-        $gallery->delete();
+        $this->galleryService->deleteAlbum($gallery);
 
         return redirect()->route('admin.gallery.index')->with('success', 'Gallery album deleted successfully.');
     }
@@ -137,42 +102,15 @@ class GalleryController extends Controller
             'image' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
         ]);
 
-        if ($image->path) {
-            Storage::disk('public')->delete($image->path);
-        }
-
-        $image->path = $request->file('image')->store('gallery/images', 'public');
-        $image->file_name = $request->file('image')->getClientOriginalName();
-        $image->mime_type = $request->file('image')->getClientMimeType();
-        $image->save();
+        $this->galleryService->replaceImage($image, $request->file('image'));
 
         return back()->with('success', 'Image replaced successfully.');
     }
 
     public function deleteImage(GalleryImage $image): RedirectResponse
     {
-        Storage::disk('public')->delete($image->path);
-        $image->delete();
+        $this->galleryService->deleteImage($image);
 
         return back()->with('success', 'Image deleted successfully.');
-    }
-
-    protected function storeImages(GalleryAlbum $album, array $files): void
-    {
-        $files = array_filter(is_array($files) ? $files : [$files]);
-        $order = $album->images()->count();
-
-        foreach ($files as $file) {
-            $path = $file->store('gallery/images', 'public');
-
-            $album->images()->create([
-                'file_name' => $file->getClientOriginalName(),
-                'path' => $path,
-                'mime_type' => $file->getClientMimeType(),
-                'order' => $order,
-            ]);
-
-            $order++;
-        }
     }
 }

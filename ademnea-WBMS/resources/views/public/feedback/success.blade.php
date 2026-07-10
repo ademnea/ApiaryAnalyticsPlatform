@@ -14,6 +14,15 @@
                     <a href="{{ route('public.feedback.create') }}" class="btn btn-primary">Submit another message</a>
                 </div>
             </div>
+
+            @if($feedback && $feedback->admin_response)
+                <div class="card shadow-sm border-info mt-3">
+                    <div class="card-body text-start">
+                        <h5 class="card-title">Administrator Response</h5>
+                        <p class="mb-0">{{ $feedback->admin_response }}</p>
+                    </div>
+                </div>
+            @endif
         </div>
     </div>
 </div>
