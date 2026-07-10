@@ -42,9 +42,9 @@ class IotHardwareTeamRegistryController extends Controller
 
     public function show(IotHardwareTeam $hardwareTeam): View
     {
-        $hardwareTeam->load('devices');
+    $hardwareTeam->load(['devices', 'members' => fn ($q) => $q->orderBy('name')]);
 
-        return view('admin.hardware-teams.show', compact('hardwareTeam'));
+    return view('admin.hardware-teams.show', compact('hardwareTeam'));
     }
 
     public function edit(IotHardwareTeam $hardwareTeam): View

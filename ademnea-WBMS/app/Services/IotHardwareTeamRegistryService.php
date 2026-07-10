@@ -44,7 +44,9 @@ class IotHardwareTeamRegistryService
     }
 
     public function list(): Collection
-    {
-        return IotHardwareTeam::orderBy('name')->get();
-    }
+   {
+    return IotHardwareTeam::withCount(['devices', 'members'])
+        ->orderBy('name')
+        ->get();
+   }
 }

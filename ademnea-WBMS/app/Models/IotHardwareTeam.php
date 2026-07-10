@@ -17,7 +17,7 @@ class IotHardwareTeam extends Model
         'country',
         'contact_email',
         'contact_phone',
-        'is_active',
+        
     ];
 
     protected $casts = [
@@ -28,4 +28,10 @@ class IotHardwareTeam extends Model
     {
         return $this->hasMany(IotDevice::class, 'hardware_team_id');
     }
+    
+    public function members(): HasMany
+    {
+        return $this->hasMany(IotHardwareTeamMember::class, 'hardware_team_id');
+    }
+
 }

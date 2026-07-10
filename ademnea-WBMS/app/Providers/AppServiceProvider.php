@@ -11,7 +11,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-        //
+    $this->app->bind(
+    \App\Contracts\ApiaryDirectoryServiceContract::class,
+    \App\Services\External\ApiaryDirectoryServiceMock::class
+);
     }
 
     /**
