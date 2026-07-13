@@ -25,8 +25,6 @@ class Apiary extends Model
 
     protected $casts = [
         'hive_capacity' => 'integer',
-        'latitude'       => 'decimal:8',
-        'longitude'      => 'decimal:8',
     ];
 
     public function farmer(): BelongsTo
