@@ -3,8 +3,11 @@
 namespace App\Http\Controllers\Admin\ApiaryManagement;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Admin\FarmerRequest;
+use App\Http\Requests\ApiaryManagement\FarmerStoreRequest;
+use App\Http\Requests\ApiaryManagement\FarmerUpdateRequest;
+use App\Models\Farmer;
 use App\Services\ApiaryManagement\FarmerRegistrationService;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 

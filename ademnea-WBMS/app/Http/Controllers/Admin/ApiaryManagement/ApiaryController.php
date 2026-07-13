@@ -31,7 +31,7 @@ class ApiaryController extends Controller
 
         return view('admin.apiary-management.apiaries.index', [
             'apiaries'  => $apiaries,
-            'countries' => ['Uganda', 'South Sudan', 'Tanzania'],
+            'countries' => ['UG' => 'Uganda', 'SS' => 'South Sudan', 'TZ' => 'Tanzania'],
             'statuses'  => ['active', 'inactive', 'decommissioned'],
         ]);
     }
@@ -42,7 +42,7 @@ class ApiaryController extends Controller
     public function create()
     {
         return view('admin.apiary-management.apiaries.create', [
-            'countries' => ['Uganda', 'South Sudan', 'Tanzania'],
+            'countries' => ['UG' => 'Uganda', 'SS' => 'South Sudan', 'TZ' => 'Tanzania'],
             'farmers'   => $this->service->assignableFarmers(),
         ]);
     }
@@ -79,7 +79,7 @@ class ApiaryController extends Controller
     {
         return view('admin.apiary-management.apiaries.edit', [
             'apiary'    => $apiary,
-            'countries' => ['Uganda', 'South Sudan', 'Tanzania'],
+            'countries' => ['UG' => 'Uganda', 'SS' => 'South Sudan', 'TZ' => 'Tanzania'],
             'farmers'   => $this->service->assignableFarmers(),
         ]);
     }

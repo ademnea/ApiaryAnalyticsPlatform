@@ -27,6 +27,7 @@ class HiveRegistrationService
         $hive = new Hive($data);
         $hive->apiary_id = $apiary->id;
         $hive->current_status = 'Active';
+        $hive->hybrid_identifier = $this->generateHybridIdentifier($apiary);
         $hive->save();
 
         event(new HiveRegistered($hive));
@@ -44,15 +45,41 @@ class HiveRegistrationService
         return $this->generateHybridIdentifier($apiary);
     }
 
+    private function generateApiaryCode(string $name, string $country): string
+    {
+        $words = preg_split('/\s+/', trim($name)) ?: [];
+        $words = array_filter($words, fn ($w) => $w !== '');
+
+        if (count($words) >= 2) {
+            $initials = collect($words)
+                ->map(fn ($w) => strtoupper(Str::substr($w, 0, 1)))
+                ->implode('');
+            $base = Str::substr($initials, 0, 4);
+        } else {
+            $base = strtoupper(Str::substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 4));
+        }
+
+        $base = $base !== '' ? $base : strtoupper(Str::substr($country, 0, 2)).'X';
+
+        $candidate = $base;
+        $suffix = 1;
+
+        while (Apiary::where('apiary_code', $candidate)->exists()) {
+            $candidate = $base.$suffix;
+            $suffix++;
+        }
+
+        return $candidate;
+    }
+
     public function generateHybridIdentifier(Apiary $apiary): string
     {
         return DB::transaction(function () use ($apiary) {
             $lockedApiary = Apiary::where('id', $apiary->id)->lockForUpdate()->first();
 
             if (! $lockedApiary || ! $lockedApiary->apiary_code) {
-                throw new RuntimeException(
-                    "Apiary #{$apiary->id} has no apiary_code — cannot generate a hive identifier."
-                );
+                $lockedApiary->apiary_code = $this->generateApiaryCode($lockedApiary->name, $lockedApiary->country);
+                $lockedApiary->save();
             }
 
             $prefix = "HIVE-{$lockedApiary->country}-{$lockedApiary->apiary_code}-";
@@ -125,10 +152,9 @@ class HiveRegistrationService
         return Hive::with([
             'apiary',
             'statusHistory',
-            'deviceAssignments',
-            'inspections',
-            'harvestRecords',
-            'alertThresholds',
+            // 'inspections',       // TODO: Uncomment when Inspection model is implemented
+            // 'harvestRecords',    // TODO: Uncomment when HarvestRecord model is implemented
+            // 'alertThresholds',   // TODO: Uncomment when AlertThreshold model is implemented
         ])->findOrFail($hiveId);
     }
 

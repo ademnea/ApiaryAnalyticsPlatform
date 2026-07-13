@@ -23,15 +23,10 @@ class StoreApiaryRequest extends FormRequest
                         ->where('farmer_id', $this->input('farmer_id'));
                 }),
             ],
-            'country' => ['nullable', 'string', 'size:2'],
+            'country' => ['required', 'string', 'size:2'],
             'region' => ['nullable', 'string', 'max:100'],
             'district' => ['nullable', 'string', 'max:100'],
             'farmer_id' => ['nullable', 'integer', 'exists:farmers,id'],
-            'contact_person_name' => ['nullable', 'string', 'max:150'],
-            'contact_person_phone' => ['nullable', 'string', 'max:20'],
-            'contact_person_email' => ['nullable', 'email', 'max:100'],
-            'latitude' => ['nullable', 'numeric', 'between:-90,90'],
-            'longitude' => ['nullable', 'numeric', 'between:-180,180'],
             'hive_capacity' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', 'in:Active,Inactive,Under Maintenance'],
@@ -45,8 +40,6 @@ class StoreApiaryRequest extends FormRequest
             'name' => 'apiary name',
             'country' => 'country of deployment',
             'hive_capacity' => 'hive capacity',
-            'contact_person_phone' => 'contact phone number',
-            'contact_person_email' => 'contact email address',
         ];
     }
 
