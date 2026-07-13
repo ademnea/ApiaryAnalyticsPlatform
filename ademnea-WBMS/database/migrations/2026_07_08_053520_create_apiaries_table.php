@@ -6,46 +6,55 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Table: apiaries
+     * Purpose: Master registry of physical beekeeping sites.
+     * Soft delete: Yes (Rule 5).
+     *
+     * DEVIATION FROM ORIGINAL SRS (flagged for team sign-off, per SDD
+     * redesign notes): direct farmer_id FK added at the apiary level.
+     *
+     * DEVIATION FROM SDD §4.2.2: apiary_code column added to source the
+     * [APIARY_CODE] segment of the hive hybrid identifier
+     * (HIVE-[COUNTRY]-[APIARY_CODE]-[SEQ], SDD §4.2.9 Decision 2).
+     * Generated once at apiary-creation time to keep identifiers permanent.
+     */
     public function up(): void
     {
         Schema::create('apiaries', function (Blueprint $table) {
             $table->id();
-            
-            // Core fields
-            // FK to farmer (added per corrected order)
-            $table->unsignedBigInteger('farmer_id')->nullable();
-            $table->string('name', 150);
-            $table->string('country', 100);
-            $table->string('region', 100)->nullable();
-            $table->string('managing_entity', 150)->nullable();
-            
-            // Capacity and contact
-            $table->integer('hive_capacity')->default(0);
-            $table->string('contact_name', 100)->nullable();
-            $table->string('contact_phone', 30)->nullable();
-            $table->string('contact_email', 255)->nullable();
-            
-            // Status fields
-            $table->string('status', 20)->default('active')->index(); // active, inactive, decommissioned
-            $table->boolean('is_active')->default(true);
-            
-            // Soft delete (available but not typically used)
-            $table->softDeletes();
-            
-            // Timestamps
-            $table->timestamps();
-            
-            // Unique constraint: no duplicate apiaries under same managing entity + country
-            $table->unique(['name', 'country', 'managing_entity']);
 
-            // Indexes
-            // Foreign key to farmers table (NEW)
+            $table->string('name', 150);
+            $table->string('apiary_code', 10)->nullable()->unique()->after('name');
+            $table->string('country', 2)->default('UG');
+            $table->string('region', 100)->nullable();
+            $table->string('district', 100)->nullable();
+
+            $table->unsignedBigInteger('farmer_id')->nullable();
             $table->foreign('farmer_id')
-                ->references('id')
-                ->on('farmers')
+                ->references('id')->on('farmers')
                 ->onDelete('set null');
 
-            $table->index('farmer_id'); // critical: query farmer's apiaries
+            $table->string('contact_person_name', 150)->nullable();
+            $table->string('contact_person_phone', 20)->nullable();
+            $table->string('contact_person_email', 100)->nullable();
+
+            $table->decimal('latitude', 10, 8)->nullable();
+            $table->decimal('longitude', 11, 8)->nullable();
+
+            $table->integer('hive_capacity')->default(0);
+            $table->text('description')->nullable();
+
+            $table->enum('status', ['Active', 'Inactive', 'Under Maintenance'])->default('Active');
+
+            $table->timestamps();
+            $table->softDeletes();
+
+            $table->index('farmer_id', 'idx_apiaries_farmer_id');
+            $table->index('country', 'idx_apiaries_country');
+            $table->index('status', 'idx_apiaries_status');
+
+            $table->unique(['name', 'country', 'farmer_id'], 'uniq_apiaries_name_country_farmer');
         });
     }
 

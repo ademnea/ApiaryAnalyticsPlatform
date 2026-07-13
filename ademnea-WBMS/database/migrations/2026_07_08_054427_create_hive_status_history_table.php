@@ -6,42 +6,41 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Table: hive_status_history
+     * Purpose: Append-only audit trail of all hive status transitions.
+     * Soft delete: No — this is a permanent audit record.
+     *
+     * NOTE: changed_by_user_id references users.id, owned by Developer A
+     * (User Management module). This migration must run after Developer
+     * A's users table migration. Confirm ordering in the shared SDD /
+     * migration ownership table (Section 4.2) before merging.
+     */
     public function up(): void
     {
         Schema::create('hive_status_history', function (Blueprint $table) {
             $table->id();
-            
-            // FK to hive
+
             $table->unsignedBigInteger('hive_id');
-            
-            // Status transition details
-            $table->string('previous_status', 30); // Former status value
-            $table->string('new_status', 30); // New status value
-            
-            // Who made the change
-            $table->unsignedBigInteger('changed_by_user_id')->nullable(); // FK to users; nullable for system-initiated changes
-            
-            // Why the change happened
-            $table->text('change_notes')->nullable();
-            $table->string('reason_code', 50)->nullable(); // Structured code: inspection_finding, beekeeper_report, system_alert
-            
-            // Timestamp (only column that matters for this audit log)
-            $table->timestamp('created_at')->useCurrent();
-            
-            // Foreign keys
             $table->foreign('hive_id')
-                ->references('id')
-                ->on('hives')
-                ->onDelete('cascade'); // Status history is a direct child of hive; delete when hive is deleted
-            
+                ->references('id')->on('hives')
+                ->onDelete('cascade');
+
+            $table->string('previous_status', 50)->nullable();
+            $table->string('new_status', 50);
+            $table->text('reason_note')->nullable();
+
+            $table->unsignedBigInteger('changed_by_user_id')->nullable();
             $table->foreign('changed_by_user_id')
-                ->references('id')
-                ->on('users')
-                ->onDelete('set null'); // User deletion doesn't erase the audit trail
-            
-            // Indexes
-            $table->index(['hive_id', 'created_at']); // Query: "give me status history for hive X in order"
-            $table->index('changed_by_user_id'); // Query: "what changes did user X make"
+                ->references('id')->on('users')
+                ->onDelete('set null');
+
+            $table->timestamp('transitioned_at')->useCurrent();
+
+            $table->timestamp('created_at')->useCurrent();
+
+            $table->index('hive_id', 'idx_hive_status_history_hive_id');
+            $table->index('transitioned_at', 'idx_hive_status_history_transitioned_at');
         });
     }
 
