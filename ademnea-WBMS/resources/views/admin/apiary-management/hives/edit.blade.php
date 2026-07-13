@@ -1,4 +1,4 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('content')
 <h1 class="h4 mb-3">Edit Hive: {{ $hive->display_name }} <small class="text-muted">({{ $hive->hybrid_identifier }})</small></h1>

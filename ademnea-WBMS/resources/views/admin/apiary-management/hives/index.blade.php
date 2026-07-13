@@ -1,9 +1,11 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">Hives</h1>
-    <a href="{{ route('admin.hives.create', ['apiary_id' => request('apiary_id')]) }}" class="btn btn-primary">Register Hive</a>
+    @if(request('apiary_id'))
+        <a href="{{ route('admin.hives.create', ['apiary' => request('apiary_id')]) }}" class="btn btn-primary">Register Hive</a>
+    @endif
 </div>
 
 @if (session('success'))
