@@ -28,6 +28,18 @@ class User extends Authenticatable
             'email_verified_at' => 'datetime',
             'password'          => 'hashed',
             'is_active'         => 'boolean',
+            'deleted_at'        => 'datetime',
         ];
+    }
+
+    /**
+     * Send the password reset notification via a custom mailable.
+     *
+     * @todo ResetPasswordMail created in Task 7
+     */
+    public function sendPasswordResetNotification($token): void
+    {
+        \Illuminate\Support\Facades\Mail::to($this->email)
+            ->send(new \App\Mail\ResetPasswordMail($token, $this->email));
     }
 }
