@@ -1,4 +1,4 @@
-@extends('admin.layout')
+@extends('layouts.app')
 
 @section('content')
 <h1 class="h4 mb-3">Register Hive — {{ $apiary->name }}</h1>
