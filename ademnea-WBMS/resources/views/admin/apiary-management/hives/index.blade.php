@@ -3,9 +3,7 @@
 @section('content')
 <div class="d-flex justify-content-between align-items-center mb-3">
     <h1 class="h4 mb-0">Hives</h1>
-    @if(request('apiary_id'))
-        <a href="{{ route('admin.hives.create', ['apiary' => request('apiary_id')]) }}" class="btn btn-primary">Register Hive</a>
-    @endif
+    <a href="{{ route('admin.hives.create') }}" class="btn btn-primary">Register Hive</a>
 </div>
 
 @if (session('success'))

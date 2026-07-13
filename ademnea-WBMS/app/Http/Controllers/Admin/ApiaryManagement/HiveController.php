@@ -41,19 +41,17 @@ class HiveController extends Controller
         return view('admin.apiary-management.hives.index', compact('hives', 'apiaries', 'statuses'));
     }
 
-    public function create(?Apiary $apiary = null): View
+    public function create(Request $request): View
     {
-        if ($apiary === null) {
-            $apiaries = Apiary::where('status', 'Active')->get();
+        $apiaries = Apiary::where('status', 'Active')->get();
 
-            return view('admin.apiary-management.hives.select-apiary', compact('apiaries'));
-        }
-
-        return view('admin.apiary-management.hives.create', compact('apiary'));
+        return view('admin.apiary-management.hives.create', compact('apiaries'));
     }
 
-    public function store(StoreHiveRequest $request, Apiary $apiary): RedirectResponse
+    public function store(StoreHiveRequest $request): RedirectResponse
     {
+        $apiary = Apiary::findOrFail($request->validated('apiary_id'));
+
         $hive = $this->registrationService->register($apiary, $request->validated());
 
         return redirect()
