@@ -3,19 +3,39 @@
 namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
+use App\Services\DashboardService;
 use Illuminate\Http\Request;
-use App\Models\User;
 
+/**
+ * DashboardController
+ *
+ * Thin controller — delegates all data aggregation to DashboardService.
+ * Responsibility: receive the request, call the service, return the view.
+ */
 class DashboardController extends Controller
 {
-    /** Show simple dashboard overview. */
-    public function index(Request $request)
-    {
-        // Basic stats for initial skeleton
-        $stats = [
-            'users' => User::count(),
-        ];
+    public function __construct(
+        private readonly DashboardService $dashboard
+    ) {}
 
-        return view('admin.dashboard', compact('stats'));
+    /**
+     * Render the admin dashboard.
+     *
+     * Passes five named view variables so partials stay decoupled:
+     *   $summary    – overview stat counts
+     *   $monitoring – hive/sensor aggregate summary
+     *   $chartData  – Chart.js-ready arrays (labels + series)
+     *   $alerts     – alert collections by category
+     *   $activity   – recent records across modules
+     */
+    public function index(Request $request): \Illuminate\View\View
+    {
+        return view('admin.dashboard', [
+            'summary'    => $this->dashboard->getSummaryCounts(),
+            'monitoring' => $this->dashboard->getHiveMonitoringSummary(),
+            'chartData'  => $this->dashboard->getChartData(days: 7),
+            'alerts'     => $this->dashboard->getAlerts(),
+            'activity'   => $this->dashboard->getRecentActivity(),
+        ]);
     }
 }

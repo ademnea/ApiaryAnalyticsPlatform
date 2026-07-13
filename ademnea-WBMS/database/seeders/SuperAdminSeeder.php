@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 
 /**
  * SuperAdminSeeder
@@ -66,14 +67,24 @@ class SuperAdminSeeder extends Seeder
 
     public function run(): void
     {
+        // Clear Spatie permission cache to prevent stale cache issues on re-runs
+        app()[\Spatie\Permission\PermissionRegistrar::class]->forgetCachedPermissions();
+
         // ----------------------------------------------------------------
         // 1. Seed permissions (idempotent — skip existing)
         // ----------------------------------------------------------------
         if (class_exists(\Spatie\Permission\Models\Permission::class)) {
             foreach ($this->permissions as $permission) {
-                \Spatie\Permission\Models\Permission::firstOrCreate(
-                    ['name' => $permission, 'guard_name' => 'web']
-                );
+                try {
+                    \Spatie\Permission\Models\Permission::firstOrCreate(
+                        ['name' => $permission, 'guard_name' => 'web']
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning(
+                        "SuperAdminSeeder: failed to create permission [{$permission}]: " . $e->getMessage()
+                    );
+                    $this->command->warn("  ⚠ Could not seed permission [{$permission}]: " . $e->getMessage());
+                }
             }
 
             // ----------------------------------------------------------------
