@@ -21,7 +21,7 @@
             @forelse($apiaries as $apiary)
                 <tr>
                     <td>{{ $apiary->name }}</td>
-                    <td>{{ $apiary->country }}</td>
+                    <td>{{ $apiary->country_name }}</td>
                     <td>
                         @if($apiary->farmer)
                             {{ $apiary->farmer->full_name }}

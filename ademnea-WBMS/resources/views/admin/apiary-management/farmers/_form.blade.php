@@ -48,8 +48,8 @@
     <div class="col-md-4">
         <label for="country" class="form-label">Country *</label>
         <select name="country" id="country" class="form-select @error('country') is-invalid @enderror">
-            @foreach($countries as $country)
-                <option value="{{ $country }}" @selected(old('country', $farmer?->country) === $country)>{{ $country }}</option>
+            @foreach($countries as $code => $name)
+                <option value="{{ $code }}" @selected(old('country', $farmer?->country) === $code)>{{ $name }}</option>
             @endforeach
         </select>
         @error('country') <div class="invalid-feedback">{{ $message }}</div> @enderror

@@ -38,6 +38,11 @@ class Farmer extends Model
         return $this->hasMany(Apiary::class, 'farmer_id');
     }
 
+    public function getCountryNameAttribute(): string
+    {
+        return config("countries.{$this->country}", $this->country);
+    }
+
     // TODO: Uncomment when Inspection model is implemented
     // public function inspections(): HasMany
     // {

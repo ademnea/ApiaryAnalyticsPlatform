@@ -14,7 +14,7 @@
     @endif
 
     <dl class="row">
-        <dt class="col-sm-3">Country</dt><dd class="col-sm-9">{{ $apiary->country }}</dd>
+        <dt class="col-sm-3">Country</dt>        <dd class="col-sm-9">{{ $apiary->country_name }}</dd>
         <dt class="col-sm-3">Region</dt><dd class="col-sm-9">{{ $apiary->region ?? '—' }}</dd>
         <dt class="col-sm-3">District</dt><dd class="col-sm-9">{{ $apiary->district ?? '—' }}</dd>
         <dt class="col-sm-3">Managing Farmer</dt>
@@ -25,10 +25,6 @@
                 Organization-managed
             @endif
         </dd>
-        <dt class="col-sm-3">Contact Person</dt>
-        <dd class="col-sm-9">{{ $apiary->contact_person_name ?? '—' }} ({{ $apiary->contact_person_phone ?? '—' }})</dd>
-        <dt class="col-sm-3">Coordinates</dt>
-        <dd class="col-sm-9">{{ $apiary->latitude ?? '—' }}, {{ $apiary->longitude ?? '—' }}</dd>
         <dt class="col-sm-3">Hive Capacity</dt><dd class="col-sm-9">{{ $apiary->hives_count ?? $apiary->hives->count() }} / {{ $apiary->hive_capacity }}</dd>
         <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ ucfirst($apiary->status) }}</dd>
         <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ $apiary->description ?? '—' }}</dd>

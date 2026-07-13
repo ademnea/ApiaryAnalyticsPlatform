@@ -35,13 +35,6 @@ return new class extends Migration
                 ->references('id')->on('farmers')
                 ->onDelete('set null');
 
-            $table->string('contact_person_name', 150)->nullable();
-            $table->string('contact_person_phone', 20)->nullable();
-            $table->string('contact_person_email', 100)->nullable();
-
-            $table->decimal('latitude', 10, 8)->nullable();
-            $table->decimal('longitude', 11, 8)->nullable();
-
             $table->integer('hive_capacity')->default(0);
             $table->text('description')->nullable();
 

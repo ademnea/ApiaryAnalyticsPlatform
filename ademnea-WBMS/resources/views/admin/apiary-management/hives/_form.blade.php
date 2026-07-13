@@ -75,7 +75,7 @@
         <label for="latitude" class="form-label">Latitude *</label>
         <input type="number" step="0.0000001" name="latitude" id="latitude"
                class="form-control @error('latitude') is-invalid @enderror"
-               value="{{ old('latitude', $hive?->latitude ?? $apiary->latitude ?? '') }}" required>
+               value="{{ old('latitude', $hive?->latitude ?? '') }}" required>
         @error('latitude') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
 
@@ -83,7 +83,7 @@
         <label for="longitude" class="form-label">Longitude *</label>
         <input type="number" step="0.0000001" name="longitude" id="longitude"
                class="form-control @error('longitude') is-invalid @enderror"
-               value="{{ old('longitude', $hive?->longitude ?? $apiary->longitude ?? '') }}" required>
+               value="{{ old('longitude', $hive?->longitude ?? '') }}" required>
         @error('longitude') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>
 

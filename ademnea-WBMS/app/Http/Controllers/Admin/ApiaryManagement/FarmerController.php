@@ -24,7 +24,7 @@ class FarmerController extends Controller
             'country', 'status', 'search',
         ]));
 
-        $countries = ['UG', 'SS', 'TZ'];
+        $countries = config('countries');
         $statuses = ['Active', 'Inactive', 'Suspended'];
 
         return view('admin.apiary-management.farmers.index', compact('farmers', 'countries', 'statuses'));
@@ -32,7 +32,7 @@ class FarmerController extends Controller
 
     public function create(): View
     {
-        $countries = ['UG', 'SS', 'TZ'];
+        $countries = config('countries');
 
         return view('admin.apiary-management.farmers.create', compact('countries'));
     }
@@ -55,7 +55,7 @@ class FarmerController extends Controller
 
     public function edit(Farmer $farmer): View
     {
-        $countries = ['UG', 'SS', 'TZ'];
+        $countries = config('countries');
 
         return view('admin.apiary-management.farmers.edit', compact('farmer', 'countries'));
     }
