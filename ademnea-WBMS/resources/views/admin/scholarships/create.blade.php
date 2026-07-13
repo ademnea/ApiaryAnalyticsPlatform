@@ -38,11 +38,21 @@
                     </div>
                     <div class="col-lg-4">
                         <label class="form-label">Country</label>
-                        <input type="text" name="country" class="form-control" value="{{ old('country') }}" required>
+                        <select name="country" class="form-select" required>
+                            <option value="" disabled selected>Select Country</option>
+                            @foreach(config('scholarship_options.countries') as $country)
+                                <option value="{{ $country }}" {{ old('country') === $country ? 'selected' : '' }}>{{ $country }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-lg-4">
                         <label class="form-label">Category</label>
-                        <input type="text" name="category" class="form-control" value="{{ old('category') }}" required>
+                        <select name="category" class="form-select" required>
+                            <option value="" disabled selected>Select Category</option>
+                            @foreach(config('scholarship_options.categories') as $category)
+                                <option value="{{ $category }}" {{ old('category') === $category ? 'selected' : '' }}>{{ $category }}</option>
+                            @endforeach
+                        </select>
                     </div>
                     <div class="col-lg-4">
                         <label class="form-label">Funding Type</label>

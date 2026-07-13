@@ -115,8 +115,8 @@ Route::middleware(['auth','ensure.not.farmer'])->group(function () {
 
     Route::get('/admin/dashboard',
         [DashboardController::class,'index']
-    )->name('admin.dashboard');
-
+    )->name('admin.dashboard'); 
+});
 
 
     // ========================================================
@@ -265,6 +265,30 @@ Route::middleware(['auth','ensure.not.farmer'])->group(function () {
         Route::get('/{scholarship}/edit', [AdminScholarshipController::class, 'edit'])->name('edit');
         Route::put('/{scholarship}', [AdminScholarshipController::class, 'update'])->name('update');
         Route::delete('/{scholarship}', [AdminScholarshipController::class, 'destroy'])->name('destroy');
+    
+    Route::middleware(['permission:manage-gallery'])->group(function () {
+        Route::prefix('/admin/gallery')->name('admin.gallery.')->group(function () {
+            Route::get('/', [AdminGalleryController::class, 'index'])->name('index');
+            Route::get('/create', [AdminGalleryController::class, 'create'])->name('create');
+            Route::post('/', [AdminGalleryController::class, 'store'])->name('store');
+            Route::get('/{gallery}/edit', [AdminGalleryController::class, 'edit'])->name('edit');
+            Route::put('/{gallery}', [AdminGalleryController::class, 'update'])->name('update');
+            Route::delete('/{gallery}', [AdminGalleryController::class, 'destroy'])->name('destroy');
+            Route::post('/images/{image}/replace', [AdminGalleryController::class, 'replaceImage'])->name('images.replace');
+            Route::delete('/images/{image}', [AdminGalleryController::class, 'deleteImage'])->name('images.delete');
+        });
+    });
+
+    Route::middleware(['permission:manage-scholarship'])->group(function () {
+        Route::prefix('/admin/scholarships')->name('admin.scholarship.')->group(function () {
+            Route::get('/', [AdminScholarshipController::class, 'index'])->name('index');
+            Route::get('/create', [AdminScholarshipController::class, 'create'])->name('create');
+            Route::post('/', [AdminScholarshipController::class, 'store'])->name('store');
+            Route::get('/{scholarship}', [AdminScholarshipController::class, 'show'])->name('show');
+            Route::get('/{scholarship}/edit', [AdminScholarshipController::class, 'edit'])->name('edit');
+            Route::put('/{scholarship}', [AdminScholarshipController::class, 'update'])->name('update');
+            Route::delete('/{scholarship}', [AdminScholarshipController::class, 'destroy'])->name('destroy');
+        });
     });
     
     // ---- Placeholder routes for sidebar and dashboard links ----
@@ -352,10 +376,11 @@ Route::middleware(['auth','ensure.not.farmer'])->group(function () {
 
 });
     // Admin Feedback routes
-    Route::prefix('/admin/feedback')->name('admin.feedback.')->group(function () {
-        Route::get('/', [\App\Http\Controllers\Admin\FeedbackController::class, 'index'])->name('index');
-        Route::get('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'show'])->name('show');
-        Route::put('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'update'])->name('update');
-        Route::delete('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'destroy'])->name('destroy');
+    Route::middleware(['permission:manage-feedback'])->group(function () {
+        Route::prefix('/admin/feedback')->name('admin.feedback.')->group(function () {
+            Route::get('/', [\App\Http\Controllers\Admin\FeedbackController::class, 'index'])->name('index');
+            Route::get('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'show'])->name('show');
+            Route::put('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'update'])->name('update');
+            Route::delete('/{feedback}', [\App\Http\Controllers\Admin\FeedbackController::class, 'destroy'])->name('destroy');
+        });
     });
-

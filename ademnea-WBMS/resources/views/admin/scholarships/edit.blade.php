@@ -43,11 +43,33 @@
                     </div>
                     <div class="col-lg-4">
                         <label class="form-label">Country</label>
-                        <input type="text" name="country" class="form-control" value="{{ old('country', $scholarship->country) }}" required>
+                        <select name="country" class="form-select" required>
+                            @php
+                                $selectedCountry = old('country', $scholarship->country);
+                            @endphp
+                            <option value="" {{ $selectedCountry ? '' : 'selected' }} disabled>Select Country</option>
+                            @foreach(config('scholarship_options.countries') as $country)
+                                <option value="{{ $country }}" {{ $selectedCountry === $country ? 'selected' : '' }}>{{ $country }}</option>
+                            @endforeach
+                            @if($selectedCountry && !in_array($selectedCountry, config('scholarship_options.countries'), true))
+                                <option value="{{ $selectedCountry }}" selected>{{ $selectedCountry }}</option>
+                            @endif
+                        </select>
                     </div>
                     <div class="col-lg-4">
                         <label class="form-label">Category</label>
-                        <input type="text" name="category" class="form-control" value="{{ old('category', $scholarship->category) }}" required>
+                        <select name="category" class="form-select" required>
+                            @php
+                                $selectedCategory = old('category', $scholarship->category);
+                            @endphp
+                            <option value="" {{ $selectedCategory ? '' : 'selected' }} disabled>Select Category</option>
+                            @foreach(config('scholarship_options.categories') as $category)
+                                <option value="{{ $category }}" {{ $selectedCategory === $category ? 'selected' : '' }}>{{ $category }}</option>
+                            @endforeach
+                            @if($selectedCategory && !in_array($selectedCategory, config('scholarship_options.categories'), true))
+                                <option value="{{ $selectedCategory }}" selected>{{ $selectedCategory }}</option>
+                            @endif
+                        </select>
                     </div>
                     <div class="col-lg-4">
                         <label class="form-label">Funding Type</label>
