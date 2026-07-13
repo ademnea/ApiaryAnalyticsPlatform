@@ -71,26 +71,29 @@ class Hive extends Model
     //     return $this->hasMany(IotDevice::class);
     // }
 
-=======
+
     public function inspections(): HasMany
     {
         return $this->hasMany(Inspection::class);
     }
 
-    public function harvestRecords(): HasMany
-    {
-        return $this->hasMany(HarvestRecord::class);
-    }
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function harvestRecords(): HasMany
+    // {
+    //     return $this->hasMany(HarvestRecord::class);
+    // }
 
-    public function alertThresholds(): HasMany
-    {
-        return $this->hasMany(AlertThreshold::class);
-    }
+    // TODO: Uncomment when AlertThreshold model is implemented
+    // public function alertThresholds(): HasMany
+    // {
+    //     return $this->hasMany(AlertThreshold::class);
+    // }
 
-    public function iotDevices(): HasMany
-    {
-        return $this->hasMany(IotDevice::class);
-    }
+    // TODO: Uncomment when IotDevice model is implemented
+    // public function iotDevices(): HasMany
+    // {
+    //     return $this->hasMany(IotDevice::class);
+    // }
 
 >>>>>>> 4a09e20 (APM: redesign core domain models and schema)
     public function scopeActive($query)
