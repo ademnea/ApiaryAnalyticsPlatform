@@ -29,7 +29,7 @@
             "Database\\Seeders\\": "database/seeders/"
         },
         "classmap": [
-            "app/Models/Hive_Status_History.php"
+            "app/Models/HiveStatusHistory.php"
         ]
     },
     "autoload-dev": {

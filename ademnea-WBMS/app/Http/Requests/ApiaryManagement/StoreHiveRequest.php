@@ -14,6 +14,7 @@ class StoreHiveRequest extends FormRequest
     public function rules(): array
     {
         return [
+            'apiary_id' => ['required', 'integer', 'exists:apiaries,id'],
             'display_name' => ['required', 'string', 'max:150'],
             'hive_type' => ['required', 'in:TopBar,Langstroth,Warre,Kenya,Other'],
             'construction_material' => ['nullable', 'string', 'max:100'],
