@@ -14,8 +14,8 @@ use App\Http\Controllers\Admin\RoleController;
 // ============================================================
 
 Route::get('/', function () {
-    return redirect()->route('admin.login');
-});
+    return view('welcome');
+})->name('home');
 
 // --- Auth: Login ---
 Route::get('/admin/login',  [LoginController::class, 'showLoginForm'])->name('admin.login');
