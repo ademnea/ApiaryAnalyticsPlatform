@@ -2,7 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Farmer;
+use App\Models\Hive;
 use App\Services\DashboardService;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -22,6 +25,23 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        //
+        // Share $unreadAlerts with every view that uses the admin layout.
+        // This drives the topbar bell badge without requiring each controller
+        // to pass the count individually.
+        View::composer('layouts.app', function ($view) {
+            if (auth()->check()) {
+                $count = 0;
+
+                // Hives in critical status
+                $count += Hive::whereIn('status', ['queenless', 'absconded', 'under_inspection'])->count();
+
+                // Farmers awaiting approval
+                $count += Farmer::where('profile_status', 'pending')->count();
+
+                // TODO: add IotDevice offline count once model exists
+
+                $view->with('unreadAlerts', $count);
+            }
+        });
     }
 }

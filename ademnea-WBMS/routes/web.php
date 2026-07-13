@@ -12,10 +12,16 @@ use App\Http\Controllers\Admin\RoleController;
 // ============================================================
 // PUBLIC ROUTES (no auth middleware)
 // ============================================================
-
+// Route::get('/', function () {
+//     return view('welcome');
+// });
 Route::get('/', function () {
     return view('welcome');
-})->name('home');
+});
+
+Route::get('/', function () {
+    return redirect()->route('admin.login');
+});
 
 // --- Auth: Login ---
 Route::get('/admin/login',  [LoginController::class, 'showLoginForm'])->name('admin.login');
@@ -43,19 +49,19 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
 
     // --- Profile ---
-    Route::get('/admin/profile',                [ProfileController::class, 'show'])->name('admin.profile');
-    Route::post('/admin/profile/update',        [ProfileController::class, 'update'])->name('admin.profile.update');
+    Route::get('/admin/profile',                  [ProfileController::class, 'show'])->name('admin.profile');
+    Route::post('/admin/profile/update',          [ProfileController::class, 'update'])->name('admin.profile.update');
     Route::post('/admin/profile/change-password', [ProfileController::class, 'changePassword'])->name('admin.profile.change-password');
 
     // ============================================================
     // USER MANAGEMENT — additional middleware: permission:manage-users
     // ============================================================
     Route::middleware(['permission:manage-users'])->group(function () {
-        Route::get('/admin/users',              [UserController::class, 'index'])->name('admin.users.index');
-        Route::get('/admin/users/create',       [UserController::class, 'create'])->name('admin.users.create');
-        Route::post('/admin/users',             [UserController::class, 'store'])->name('admin.users.store');
-        Route::get('/admin/users/{id}/edit',    [UserController::class, 'edit'])->name('admin.users.edit');
-        Route::post('/admin/users/{id}/update', [UserController::class, 'update'])->name('admin.users.update');
+        Route::get('/admin/users',                [UserController::class, 'index'])->name('admin.users.index');
+        Route::get('/admin/users/create',         [UserController::class, 'create'])->name('admin.users.create');
+        Route::post('/admin/users',               [UserController::class, 'store'])->name('admin.users.store');
+        Route::get('/admin/users/{id}/edit',      [UserController::class, 'edit'])->name('admin.users.edit');
+        Route::post('/admin/users/{id}/update',   [UserController::class, 'update'])->name('admin.users.update');
         Route::post('/admin/users/{id}/activate', [UserController::class, 'activate'])->name('admin.users.activate');
         Route::post('/admin/users/{id}/suspend',  [UserController::class, 'suspend'])->name('admin.users.suspend');
         Route::post('/admin/users/{id}/delete',   [UserController::class, 'destroy'])->name('admin.users.delete');
@@ -65,24 +71,24 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // ROLE MANAGEMENT — additional middleware: permission:manage-roles
     // ============================================================
     Route::middleware(['permission:manage-roles'])->group(function () {
-        Route::get('/admin/roles',                         [RoleController::class, 'index'])->name('admin.roles.index');
-        Route::get('/admin/roles/create',                  [RoleController::class, 'create'])->name('admin.roles.create');
-        Route::post('/admin/roles',                        [RoleController::class, 'store'])->name('admin.roles.store');
-        Route::get('/admin/roles/{id}/edit',               [RoleController::class, 'edit'])->name('admin.roles.edit');
-        Route::post('/admin/roles/{id}/rename',            [RoleController::class, 'rename'])->name('admin.roles.rename');
-        Route::post('/admin/roles/{id}/delete',            [RoleController::class, 'destroy'])->name('admin.roles.delete');
-        Route::get('/admin/roles/{id}/permissions',        [RoleController::class, 'showPermissions'])->name('admin.roles.permissions');
-        Route::post('/admin/roles/{id}/permissions',       [RoleController::class, 'syncPermissions'])->name('admin.roles.permissions.sync');
+        Route::get('/admin/roles',                   [RoleController::class, 'index'])->name('admin.roles.index');
+        Route::get('/admin/roles/create',            [RoleController::class, 'create'])->name('admin.roles.create');
+        Route::post('/admin/roles',                  [RoleController::class, 'store'])->name('admin.roles.store');
+        Route::get('/admin/roles/{id}/edit',         [RoleController::class, 'edit'])->name('admin.roles.edit');
+        Route::post('/admin/roles/{id}/rename',      [RoleController::class, 'rename'])->name('admin.roles.rename');
+        Route::post('/admin/roles/{id}/delete',      [RoleController::class, 'destroy'])->name('admin.roles.delete');
+        Route::get('/admin/roles/{id}/permissions',  [RoleController::class, 'showPermissions'])->name('admin.roles.permissions');
+        Route::post('/admin/roles/{id}/permissions', [RoleController::class, 'syncPermissions'])->name('admin.roles.permissions.sync');
     });
 
     // ============================================================
-    // PLACEHOLDER ROUTES — sidebar links (not yet implemented)
-    // Each group is protected by the correct permission so that
-    // when other developers replace these with real controllers
-    // the RBAC is already in place and matching the SRS.
+    // PLACEHOLDER ROUTES — sidebar links not yet implemented.
+    // Each group carries the correct Spatie permission so that
+    // when other developers replace placeholders with real
+    // controllers the RBAC is already wired up.
     // ============================================================
 
-    // Apiaries & Hives — manage-apiaries / manage-hives
+    // Apiaries & Hives
     Route::middleware(['permission:manage-apiaries'])->group(function () {
         foreach (['apiaries.index', 'apiaries.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -99,7 +105,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // IoT Devices — manage-iot-devices
+    // IoT Devices
     Route::middleware(['permission:manage-iot-devices'])->group(function () {
         foreach (['devices.index', 'devices.create', 'devices.fleet'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -108,7 +114,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Sensor Monitoring — view-monitoring-dashboard
+    // Sensor Monitoring
     Route::middleware(['permission:view-monitoring-dashboard'])->group(function () {
         foreach (['monitoring.temperature', 'monitoring.humidity', 'monitoring.weight', 'monitoring.co2', 'monitoring.audio', 'monitoring.video', 'monitoring.photos', 'alerts.index'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -117,7 +123,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Anomaly Detection — view-anomaly-analytics
+    // Anomaly Detection
     Route::middleware(['permission:view-anomaly-analytics'])->group(function () {
         foreach (['anomaly.dashboard', 'anomaly.analytics', 'anomaly.models'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -126,7 +132,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Reports — generate-reports
+    // Reports
     Route::middleware(['permission:generate-reports'])->group(function () {
         foreach (['reports.health', 'reports.production', 'reports.sensor-trends'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -135,7 +141,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Farmer Management — manage-farmers
+    // Farmer Management
     Route::middleware(['permission:manage-farmers'])->group(function () {
         foreach (['farmers.index', 'farmers.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -156,7 +162,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         })->name('admin.farmers.messages');
     });
 
-    // Newsletter — manage-newsletter
+    // Newsletter
     Route::middleware(['permission:manage-newsletter'])->group(function () {
         foreach (['newsletter.index', 'newsletter.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -165,7 +171,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Publications — manage-publications
+    // Publications
     Route::middleware(['permission:manage-publications'])->group(function () {
         foreach (['publications.index', 'publications.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -174,7 +180,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Events — manage-events
+    // Events
     Route::middleware(['permission:manage-events'])->group(function () {
         foreach (['events.index', 'events.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -183,7 +189,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Gallery — manage-gallery
+    // Gallery
     Route::middleware(['permission:manage-gallery'])->group(function () {
         foreach (['gallery.index', 'gallery.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -192,7 +198,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Scholarship — manage-scholarship
+    // Scholarships
     Route::middleware(['permission:manage-scholarship'])->group(function () {
         foreach (['scholarship.index', 'scholarship.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -201,7 +207,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Team Profiles — manage-team-profiles
+    // Team Profiles
     Route::middleware(['permission:manage-team-profiles'])->group(function () {
         foreach (['team.index', 'team.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -210,7 +216,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Work Packages — manage-work-packages
+    // Work Packages
     Route::middleware(['permission:manage-work-packages'])->group(function () {
         foreach (['workpackages.index', 'workpackages.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -219,14 +225,14 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Feedback — manage-feedback
+    // Feedback
     Route::middleware(['permission:manage-feedback'])->group(function () {
         Route::get('/admin/feedback/index', function () {
             return view('admin.placeholder', ['title' => 'Feedback', 'subtitle' => 'Placeholder for feedback.index']);
         })->name('admin.feedback.index');
     });
 
-    // Search — available to any authenticated non-farmer user
+    // Search — any authenticated non-farmer user
     Route::get('/admin/search', function () {
         return view('admin.placeholder', ['title' => 'Search', 'subtitle' => 'Placeholder for search']);
     })->name('admin.search');
