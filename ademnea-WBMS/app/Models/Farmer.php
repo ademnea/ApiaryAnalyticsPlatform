@@ -38,15 +38,17 @@ class Farmer extends Model
         return $this->hasMany(Apiary::class, 'farmer_id');
     }
 
-    public function inspections(): HasMany
-    {
-        return $this->hasMany(Inspection::class);
-    }
+    // TODO: Uncomment when Inspection model is implemented
+    // public function inspections(): HasMany
+    // {
+    //     return $this->hasMany(Inspection::class);
+    // }
 
-    public function harvestRecords(): HasMany
-    {
-        return $this->hasMany(HarvestRecord::class);
-    }
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function harvestRecords(): HasMany
+    // {
+    //     return $this->hasMany(HarvestRecord::class);
+    // }
 
     public function getFullNameAttribute(): string
     {

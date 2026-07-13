@@ -44,15 +44,29 @@ class Apiary extends Model
         return $this->hasMany(Hive::class);
     }
 
-    public function harvestRecords(): HasMany
-    {
-        return $this->hasMany(HarvestRecord::class);
-    }
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function harvestRecords(): HasMany
+    // {
+    //     return $this->hasMany(HarvestRecord::class);
+    // }
 
-    public function inspections(): HasManyThrough
-    {
-        return $this->hasManyThrough(Inspection::class, Hive::class);
-    }
+    // TODO: Uncomment when Inspection model is implemented
+    // public function inspections(): HasManyThrough
+    // {
+    //     return $this->hasManyThrough(Inspection::class, Hive::class);
+    // }
+
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function getTotalSeasonalYield(?int $year = null): float
+    // {
+    //     $query = $this->harvestRecords();
+    //
+    //     if ($year) {
+    //         $query->whereYear('harvest_date', $year);
+    //     }
+    //
+    //     return (float) $query->sum('honey_yield_kg');
+    // }
 
     public function scopeActive($query)
     {
@@ -87,16 +101,5 @@ class Apiary extends Model
     public function activeHiveCount(): int
     {
         return $this->hives()->where('current_status', 'Active')->count();
-    }
-
-    public function getTotalSeasonalYield(?int $year = null): float
-    {
-        $query = $this->harvestRecords();
-
-        if ($year) {
-            $query->whereYear('harvest_date', $year);
-        }
-
-        return (float) $query->sum('honey_yield_kg');
     }
 }

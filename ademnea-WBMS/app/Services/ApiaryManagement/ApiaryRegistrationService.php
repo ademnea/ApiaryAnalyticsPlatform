@@ -18,11 +18,19 @@ class ApiaryRegistrationService
             $this->assertFarmerIsAssignable($data['farmer_id']);
         }
 
-        $apiary = new Apiary($data);
-        $apiary->status = 'Active';
-        $apiary->save();
+        $data['country'] = $data['country'] ?? 'UG';
+        $data['status'] = $data['status'] ?? 'Active';
 
-        return $apiary;
+        return DB::transaction(function () use ($data) {
+            if (empty($data['apiary_code'])) {
+                $data['apiary_code'] = $this->generateApiaryCode($data['name'], $data['country']);
+            }
+
+            $apiary = new Apiary($data);
+            $apiary->save();
+
+            return $apiary;
+        });
     }
 
     public function createApiary(array $data): Apiary
@@ -85,7 +93,8 @@ class ApiaryRegistrationService
             if (! empty($filters['status'])) {
                 $query->where('current_status', $filters['status']);
             }
-            $query->withCount('deviceAssignments');
+            // TODO: Uncomment when DeviceAssignment model is implemented
+            // $query->withCount('deviceAssignments');
         }, 'farmer'])->findOrFail($apiaryId);
     }
 
@@ -94,15 +103,15 @@ class ApiaryRegistrationService
         return [
             'hive_count' => $apiary->hives()->count(),
             'active_hive_count' => $apiary->hives()->where('current_status', 'Active')->count(),
-            'device_count' => $apiary->hives()
-                ->withCount('deviceAssignments')
-                ->get()
-                ->sum('device_assignments_count'),
-            'seasonal_yield_kg' => $apiary->getTotalSeasonalYield($year),
-            'inspection_count' => $apiary->hives()
-                ->withCount('inspections')
-                ->get()
-                ->sum('inspections_count'),
+            // 'device_count' => $apiary->hives()
+            //     ->withCount('deviceAssignments')
+            //     ->get()
+            //     ->sum('device_assignments_count'),
+            // 'seasonal_yield_kg' => $apiary->getTotalSeasonalYield($year),
+            // 'inspection_count' => $apiary->hives()
+            //     ->withCount('inspections')
+            //     ->get()
+            //     ->sum('inspections_count'),
         ];
     }
 
