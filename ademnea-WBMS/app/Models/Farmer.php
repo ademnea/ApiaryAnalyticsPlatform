@@ -28,6 +28,12 @@ class Farmer extends Model
     ];
 
     /**
+     * Append computed attributes to model serialisation.
+     * full_name is used in dashboard views and API responses.
+     */
+    protected $appends = ['full_name'];
+
+    /**
      * Relationship: A farmer optionally has a linked user account.
      * Nullable because farmer registration can happen before user account creation.
      */

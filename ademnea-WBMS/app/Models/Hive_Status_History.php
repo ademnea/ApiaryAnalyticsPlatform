@@ -7,6 +7,10 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class HiveStatusHistory extends Model
 {
+    // Explicit table name — overrides Laravel's default pluralization
+    // (would guess "hive_status_histories"; actual table is "hive_status_history")
+    protected $table = 'hive_status_history';
+
     // Disable automatic update of updated_at since this is an audit log
     public $timestamps = false;
 
