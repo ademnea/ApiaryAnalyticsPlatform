@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
-use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Hive extends Model
 {
@@ -14,123 +13,74 @@ class Hive extends Model
 
     protected $fillable = [
         'apiary_id',
+        'hybrid_identifier',
         'display_name',
         'hive_type',
         'construction_material',
         'installation_date',
         'colony_origin',
         'queen_status',
-        'status',
-        'gps_latitude',
-        'gps_longitude',
-        'gps_accuracy_meters',
+        'latitude',
+        'longitude',
+        'current_status',
         'last_inspection_date',
+        'notes',
     ];
 
     protected $casts = [
-        'installation_date' => 'date',
-        'last_inspection_date' => 'date',
-        'gps_latitude' => 'float',
-        'gps_longitude' => 'float',
-        'gps_accuracy_meters' => 'integer',
+        'installation_date'     => 'date',
+        'last_inspection_date'  => 'date',
+        'latitude'              => 'decimal:8',
+        'longitude'             => 'decimal:8',
+        'deleted_at'            => 'datetime',
     ];
 
-    /**
-     * Relationship: A hive belongs to an apiary.
-     */
     public function apiary(): BelongsTo
     {
         return $this->belongsTo(Apiary::class);
     }
 
-    /**
-     * Relationship: A hive has many status history records.
-     */
     public function statusHistory(): HasMany
     {
-        return $this->hasMany(HiveStatusHistory::class);
+        return $this->hasMany(HiveStatusHistory::class)
+            ->orderBy('transitioned_at', 'desc');
     }
 
-    /**
-     * Relationship: A hive has many inspection records.
-     */
     public function inspections(): HasMany
     {
         return $this->hasMany(Inspection::class);
     }
 
-    /**
-     * Relationship: A hive has many harvest records.
-     */
     public function harvestRecords(): HasMany
     {
         return $this->hasMany(HarvestRecord::class);
     }
 
-    /**
-     * Relationship: A hive has many IoT devices assigned to it.
-     * Note: This assumes hive_device_assignments table with direct FK.
-     * If using a pivot table, this would be a belongsToMany.
-     */
+    public function alertThresholds(): HasMany
+    {
+        return $this->hasMany(AlertThreshold::class);
+    }
+
     public function iotDevices(): HasMany
     {
         return $this->hasMany(IotDevice::class);
     }
 
-    /**
-     * Convenience relationship: All temperature readings from devices on this hive.
-     */
-    public function temperatureReadings(): HasManyThrough
-    {
-        return $this->hasManyThrough(
-            HiveTemperature::class,
-            IotDevice::class,
-            'hive_id', // FK on iot_devices
-            'device_id' // FK on hive_temperatures
-        );
-    }
-
-    /**
-     * Convenience relationship: All humidity readings.
-     */
-    public function humidityReadings(): HasManyThrough
-    {
-        return $this->hasManyThrough(
-            HiveHumidity::class,
-            IotDevice::class,
-            'hive_id',
-            'device_id'
-        );
-    }
-
-    /**
-     * Scope: Get only active hives.
-     */
     public function scopeActive($query)
     {
-        return $query->where('status', 'active');
+        return $query->where('current_status', 'Active');
     }
 
-    /**
-     * Scope: Filter by apiary.
-     */
     public function scopeByApiary($query, int $apiaryId)
     {
         return $query->where('apiary_id', $apiaryId);
     }
 
-    /**
-     * Scope: Filter by status.
-     */
     public function scopeByStatus($query, string $status)
     {
-        return $query->where('status', $status);
+        return $query->where('current_status', $status);
     }
 
-    /**
-     * Scope: Hives that need inspection (last inspection was X days ago).
-     * Example: days ago since last inspection.
-     */
     public function scopeNeedingInspection($query, int $daysSinceLastInspection = 30)
     {
         return $query->where(function ($q) use ($daysSinceLastInspection) {
@@ -139,11 +89,31 @@ class Hive extends Model
         });
     }
 
-    /**
-     * Get the most recent status from history.
-     */
     public function getLatestStatusHistory()
     {
-        return $this->statusHistory()->latest('created_at')->first();
+        return $this->statusHistory()->latest('transitioned_at')->first();
+    }
+
+    public function getDaysSinceLastInspection(): ?int
+    {
+        $latest = $this->getLatestStatusHistory();
+
+        return $latest ? $latest->transitioned_at->diffInDays(now()) : null;
+    }
+
+    public function getSeasonalHarvestTotal(?int $year = null): float
+    {
+        $query = $this->harvestRecords();
+
+        if ($year) {
+            $query->whereYear('harvest_date', $year);
+        }
+
+        return (float) $query->sum('honey_yield_kg');
+    }
+
+    public function isActive(): bool
+    {
+        return $this->current_status === 'Active';
     }
 }

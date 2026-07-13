@@ -3,64 +3,100 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Apiary extends Model
 {
-    // SECURITY: Use $guarded instead of $fillable
-    protected $guarded = [
-        'id',
-        'is_active',
-        'created_at',
-        'updated_at',
-        'deleted_at',
+    use SoftDeletes;
+
+    protected $fillable = [
+        'name',
+        'country',
+        'region',
+        'district',
+        'farmer_id',
+        'contact_person_name',
+        'contact_person_phone',
+        'contact_person_email',
+        'latitude',
+        'longitude',
+        'hive_capacity',
+        'description',
+        'status',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'hive_capacity' => 'integer',
+        'latitude'       => 'decimal:8',
+        'longitude'      => 'decimal:8',
     ];
 
-    /**
-     * Relationship: An apiary has many hives.
-     */
+    public function farmer(): BelongsTo
+    {
+        return $this->belongsTo(Farmer::class);
+    }
+
     public function hives(): HasMany
     {
         return $this->hasMany(Hive::class);
     }
 
-    /**
-     * Relationship: An apiary belongs to a farmer.
-     */
-    public function farmer(): BelongsTo
+    public function harvestRecords(): HasMany
     {
-        return $this->belongsTo(Farmer::class, 'farmer_id');
+        return $this->hasMany(HarvestRecord::class);
     }
 
-    /**
-     * Convenience relationship: All IoT devices assigned to hives in this apiary.
-     * This is a hasManyThrough relationship that chains through hives.
-     */
-    public function iotDevices(): HasManyThrough
+    public function inspections(): HasManyThrough
     {
-        return $this->hasManyThrough(IotDevice::class, Hive::class);
+        return $this->hasManyThrough(Inspection::class, Hive::class);
     }
 
-    /**
-     * Scope: Get only active apiaries.
-     */
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'Active');
     }
 
-    /**
-     * Scope: Filter by country.
-     */
     public function scopeByCountry($query, string $country)
     {
         return $query->where('country', $country);
+    }
+
+    public function scopeByFarmer($query, int $farmerId)
+    {
+        return $query->where('farmer_id', $farmerId);
+    }
+
+    public function scopeForFarmer($query, Farmer $farmer)
+    {
+        return $query->where('farmer_id', $farmer->id);
+    }
+
+    public function scopeUnassigned($query)
+    {
+        return $query->whereNull('farmer_id');
+    }
+
+    public function hiveCount(): int
+    {
+        return $this->hives()->count();
+    }
+
+    public function activeHiveCount(): int
+    {
+        return $this->hives()->where('current_status', 'Active')->count();
+    }
+
+    public function getTotalSeasonalYield(?int $year = null): float
+    {
+        $query = $this->harvestRecords();
+
+        if ($year) {
+            $query->whereYear('harvest_date', $year);
+        }
+
+        return (float) $query->sum('honey_yield_kg');
     }
 }
