@@ -18,11 +18,6 @@ class Apiary extends Model
         'region',
         'district',
         'farmer_id',
-        'contact_person_name',
-        'contact_person_phone',
-        'contact_person_email',
-        'latitude',
-        'longitude',
         'hive_capacity',
         'description',
         'status',
@@ -30,13 +25,16 @@ class Apiary extends Model
 
     protected $casts = [
         'hive_capacity' => 'integer',
-        'latitude'       => 'decimal:8',
-        'longitude'      => 'decimal:8',
     ];
 
     public function farmer(): BelongsTo
     {
         return $this->belongsTo(Farmer::class);
+    }
+
+    public function getCountryNameAttribute(): string
+    {
+        return config("countries.{$this->country}", $this->country);
     }
 
     public function hives(): HasMany

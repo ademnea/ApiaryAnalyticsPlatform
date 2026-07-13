@@ -33,7 +33,7 @@
         <dt class="col-sm-3">Secondary Phone</dt>
         <dd class="col-sm-9">{{ $farmer->phone_secondary ?? '—' }}</dd>
         <dt class="col-sm-3">Country / Region</dt>
-        <dd class="col-sm-9">{{ $farmer->country }} / {{ $farmer->region ?? '—' }}</dd>
+        <dd class="col-sm-9">{{ $farmer->country_name }} / {{ $farmer->region ?? '—' }}</dd>
         <dt class="col-sm-3">Village</dt>
         <dd class="col-sm-9">{{ $farmer->village ?? '—' }}</dd>
         <dt class="col-sm-3">National ID</dt>
@@ -49,7 +49,7 @@
             @forelse ($farmer->apiaries as $apiary)
                 <tr>
                     <td><a href="{{ route('admin.apiaries.show', $apiary) }}">{{ $apiary->name }}</a></td>
-                    <td>{{ $apiary->country }}</td>
+                    <td>{{ $apiary->country_name }}</td>
                     <td>{{ $apiary->hives_count ?? $apiary->hives->count() }}</td>
                     <td>{{ ucfirst($apiary->status) }}</td>
                 </tr>

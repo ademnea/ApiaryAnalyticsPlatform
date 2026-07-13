@@ -14,7 +14,7 @@
                 <tr>
                     <td><a href="{{ route('admin.farmers.show', $farmer) }}">{{ $farmer->full_name }}</a></td>
                     <td>{{ $farmer->phone }}</td>
-                    <td>{{ $farmer->country }}</td>
+                    <td>{{ $farmer->country_name }}</td>
                     <td><span class="badge bg-{{ $farmer->status === 'Active' ? 'success' : 'secondary' }}">{{ ucfirst($farmer->status) }}</span></td>
                     <td>{{ $farmer->apiaries->count() }}</td>
                 </tr>
