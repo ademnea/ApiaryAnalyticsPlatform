@@ -13,20 +13,15 @@ use App\Services\ApiaryManagement\HiveRegistrationService;
 use App\Services\ApiaryManagement\HiveStatusChangeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\View\View;
 
-class HiveController extends Controller implements HasMiddleware
+class HiveController extends Controller
 {
     public function __construct(
         private readonly HiveRegistrationService $registrationService,
         private readonly HiveStatusChangeService $statusService
     ) {
-    }
-
-    public static function middleware(): array
-    {
-        return ['auth'];
+        $this->middleware('auth');
     }
 
     public function index(Request $request): View
@@ -46,8 +41,14 @@ class HiveController extends Controller implements HasMiddleware
         return view('admin.apiary-management.hives.index', compact('hives', 'apiaries', 'statuses'));
     }
 
-    public function create(Apiary $apiary): View
+    public function create(?Apiary $apiary = null): View
     {
+        if ($apiary === null) {
+            $apiaries = Apiary::where('status', 'Active')->get();
+
+            return view('admin.apiary-management.hives.select-apiary', compact('apiaries'));
+        }
+
         return view('admin.apiary-management.hives.create', compact('apiary'));
     }
 

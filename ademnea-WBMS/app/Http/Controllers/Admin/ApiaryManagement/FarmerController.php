@@ -3,24 +3,16 @@
 namespace App\Http\Controllers\Admin\ApiaryManagement;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\ApiaryManagement\FarmerStoreRequest;
-use App\Http\Requests\ApiaryManagement\FarmerUpdateRequest;
-use App\Models\Farmer;
+use App\Http\Requests\Admin\FarmerRequest;
 use App\Services\ApiaryManagement\FarmerRegistrationService;
-use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
-use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\View\View;
 
-class FarmerController extends Controller implements HasMiddleware
+class FarmerController extends Controller
 {
     public function __construct(private readonly FarmerRegistrationService $farmerService)
     {
-    }
-
-    public static function middleware(): array
-    {
-        return ['auth'];
+        $this->middleware('auth');
     }
 
     public function index(Request $request): View

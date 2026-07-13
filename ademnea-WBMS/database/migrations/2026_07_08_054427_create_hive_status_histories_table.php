@@ -18,7 +18,7 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('hive_status_history', function (Blueprint $table) {
+        Schema::create('hive_status_histories', function (Blueprint $table) {
             $table->id();
 
             $table->unsignedBigInteger('hive_id');
@@ -46,6 +46,6 @@ return new class extends Migration
 
     public function down(): void
     {
-        Schema::dropIfExists('hive_status_history');
+        Schema::dropIfExists('hive_status_histories');
     }
 };
