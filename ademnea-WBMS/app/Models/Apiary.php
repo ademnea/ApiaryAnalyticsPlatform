@@ -37,6 +37,28 @@ class Apiary extends Model
         return config("countries.{$this->country}", $this->country);
     }
 
+    /**
+     * Disambiguating label for <select> dropdowns.
+     *
+     * Apiary names are not unique across farmers, so we append the owner and
+     * location. Selection still happens by the primary key.
+     */
+    public function getSelectLabelAttribute(): string
+    {
+        $label = "{$this->name} ({$this->country})";
+
+        $owner = $this->farmer?->full_name;
+        $location = implode(', ', array_filter([$this->region, $this->district]));
+
+        $suffix = implode(' · ', array_filter([$owner, $location]));
+
+        if ($suffix !== '') {
+            $label .= " — {$suffix}";
+        }
+
+        return $label;
+    }
+
     public function hives(): HasMany
     {
         return $this->hasMany(Hive::class);

@@ -60,6 +60,35 @@ class Farmer extends Model
         return trim("{$this->first_name} {$this->last_name}");
     }
 
+    /**
+     * Human-readable, disambiguating label for <select> dropdowns.
+     *
+     * Multiple farmers can share a name, so we append the unique national ID
+     * (or phone fallback) plus location. Selection still happens by the
+     * primary key; this only prevents a human from picking the wrong row.
+     */
+    public function getSelectLabelAttribute(): string
+    {
+        $label = $this->full_name;
+
+        $parts = array_filter([
+            $this->village,
+            $this->region,
+        ]);
+
+        if ($this->national_id) {
+            $parts[] = "Nat.ID {$this->national_id}";
+        } elseif ($this->phone) {
+            $parts[] = $this->phone;
+        }
+
+        if (! empty($parts)) {
+            $label .= ' — ' . implode(', ', $parts);
+        }
+
+        return $label;
+    }
+
     public function scopeByCountry($query, string $country)
     {
         return $query->where('country', $country);
