@@ -15,6 +15,15 @@ class FarmerMessage extends Model
         'subject',
         'message',
         'hive_id',
+use Illuminate\Database\Eloquent\Model;
+
+class FarmerMessage extends Model
+{
+    protected $fillable = [
+        'farmer_id',
+        'hive_id',
+        'subject',
+        'message',
         'status',
     ];
 
@@ -24,11 +33,21 @@ class FarmerMessage extends Model
     ];
 
     public function farmer(): BelongsTo
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
+    ];
+
+    public function farmer()
     {
         return $this->belongsTo(Farmer::class);
     }
 
     public function hive(): BelongsTo
+    {
+        return $this->belongsTo(Hive::class);
+    }
+}
+    public function hive()
     {
         return $this->belongsTo(Hive::class);
     }

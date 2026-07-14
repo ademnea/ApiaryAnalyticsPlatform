@@ -61,3 +61,5 @@ Route::prefix('v1/farmer')->group(function () {
         Route::post('/messages', [MessageController::class, 'store']);
     });
 });
+// Farmer Mobile API (Section 4.8) — Developer D's module
+require __DIR__.'/farmer_api.php';
