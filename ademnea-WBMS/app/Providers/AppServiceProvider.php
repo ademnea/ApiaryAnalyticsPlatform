@@ -33,7 +33,7 @@ class AppServiceProvider extends ServiceProvider
                 $count = 0;
 
                 // Hives in critical status
-                $count += Hive::whereIn('status', ['queenless', 'absconded', 'under_inspection'])->count();
+                $count += Hive::whereIn('current_status', ['Queenless', 'Absconded', 'Under Inspection'])->count();
 
                 // Farmers awaiting approval
                 $count += Farmer::where('profile_status', 'pending')->count();

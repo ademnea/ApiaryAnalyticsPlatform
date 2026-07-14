@@ -3,59 +3,101 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasManyThrough;
 
 class Apiary extends Model
 {
+    use SoftDeletes;
+
     protected $fillable = [
         'name',
         'country',
         'region',
-        'managing_entity',
+        'district',
+        'farmer_id',
         'hive_capacity',
-        'contact_name',
-        'contact_phone',
-        'contact_email',
+        'description',
         'status',
-        'is_active',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
         'hive_capacity' => 'integer',
     ];
 
-    /**
-     * Relationship: An apiary has many hives.
-     */
+    public function farmer(): BelongsTo
+    {
+        return $this->belongsTo(Farmer::class);
+    }
+
+    public function getCountryNameAttribute(): string
+    {
+        return config("countries.{$this->country}", $this->country);
+    }
+
     public function hives(): HasMany
     {
         return $this->hasMany(Hive::class);
     }
 
-    /**
-     * Convenience relationship: All IoT devices assigned to hives in this apiary.
-     * This is a hasManyThrough relationship that chains through hives.
-     */
-    public function iotDevices(): HasManyThrough
-    {
-        return $this->hasManyThrough(IotDevice::class, Hive::class);
-    }
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function harvestRecords(): HasMany
+    // {
+    //     return $this->hasMany(HarvestRecord::class);
+    // }
 
-    /**
-     * Scope: Get only active apiaries.
-     */
+    // TODO: Uncomment when Inspection model is implemented
+    // public function inspections(): HasManyThrough
+    // {
+    //     return $this->hasManyThrough(Inspection::class, Hive::class);
+    // }
+
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function getTotalSeasonalYield(?int $year = null): float
+    // {
+    //     $query = $this->harvestRecords();
+    //
+    //     if ($year) {
+    //         $query->whereYear('harvest_date', $year);
+    //     }
+    //
+    //     return (float) $query->sum('honey_yield_kg');
+    // }
+
     public function scopeActive($query)
     {
-        return $query->where('is_active', true);
+        return $query->where('status', 'Active');
     }
 
-    /**
-     * Scope: Filter by country.
-     */
     public function scopeByCountry($query, string $country)
     {
         return $query->where('country', $country);
+    }
+
+    public function scopeByFarmer($query, int $farmerId)
+    {
+        return $query->where('farmer_id', $farmerId);
+    }
+
+    public function scopeForFarmer($query, Farmer $farmer)
+    {
+        return $query->where('farmer_id', $farmer->id);
+    }
+
+    public function scopeUnassigned($query)
+    {
+        return $query->whereNull('farmer_id');
+    }
+
+    public function hiveCount(): int
+    {
+        return $this->hives()->count();
+    }
+
+    public function activeHiveCount(): int
+    {
+        return $this->hives()->where('current_status', 'Active')->count();
     }
 }

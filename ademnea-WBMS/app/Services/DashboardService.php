@@ -38,15 +38,15 @@ class DashboardService
     {
         return [
             'total_farmers'      => Farmer::count(),
-            'active_farmers'     => Farmer::where('is_active', true)->count(),
+            'active_farmers'     => Farmer::where('status', 'Active')->count(),
             'pending_farmers'    => Farmer::where('profile_status', 'pending')->count(),
 
             'total_apiaries'     => Apiary::count(),
-            'active_apiaries'    => Apiary::where('is_active', true)->count(),
+            'active_apiaries'    => Apiary::where('status', 'Active')->count(),
 
             'total_hives'        => Hive::count(),
-            'active_hives'       => Hive::where('status', 'active')->count(),
-            'inactive_hives'     => Hive::whereNotIn('status', ['active'])->count(),
+            'active_hives'       => Hive::where('current_status', 'Active')->count(),
+            'inactive_hives'     => Hive::whereNotIn('current_status', ['Active'])->count(),
 
             // Team members: admin / field_officer / researcher roles (not farmers)
             'total_team_members' => User::whereIn('role', ['admin', 'field_officer', 'researcher'])
@@ -108,8 +108,8 @@ class DashboardService
      */
     private function getHiveStatusBreakdown(): \Illuminate\Support\Collection
     {
-        return Hive::select('status', DB::raw('count(*) as total'))
-                   ->groupBy('status')
+        return Hive::select('current_status', DB::raw('count(*) as total'))
+                   ->groupBy('current_status')
                    ->orderByDesc('total')
                    ->get();
     }
@@ -197,14 +197,14 @@ class DashboardService
                     $q->whereNull('last_inspection_date')
                       ->orWhere('last_inspection_date', '<', Carbon::today()->subDays(30));
                 })
-                ->where('status', 'active')
+                ->where('current_status', 'Active')
                 ->orderBy('last_inspection_date')
                 ->limit(5)
                 ->get(),
 
             // Hives in a non-healthy status
             'critical_hives' => Hive::with('apiary')
-                ->whereIn('status', ['queenless', 'absconded', 'under_inspection'])
+                ->whereIn('current_status', ['Queenless', 'Absconded', 'Under Inspection'])
                 ->orderByDesc('updated_at')
                 ->limit(5)
                 ->get(),
