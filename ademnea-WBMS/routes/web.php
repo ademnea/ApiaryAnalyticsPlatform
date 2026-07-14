@@ -23,8 +23,8 @@ use App\Http\Controllers\Public\FeedbackController as PublicFeedbackController;
 // ============================================================
 
 Route::get('/', function () {
-    return redirect()->route('admin.login');
-});
+    return view('welcome');
+})->name('home');
 
 // --- Public Gallery Routes ---
 Route::get('/gallery', [PublicGalleryController::class, 'index'])->name('public.gallery.index');
