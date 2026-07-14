@@ -642,8 +642,8 @@
                class="{{ request()->routeIs('admin.hives.index') ? 'active' : '' }}">
                 <i class="bi bi-list-ul"></i> All Hives
             </a>
-            <a href="{{ route('admin.hives.create') }}"
-               class="{{ request()->routeIs('admin.hives.create') ? 'active' : '' }}">
+             <a href="{{ route('admin.hives.create') }}"
+                class="{{ request()->routeIs('admin.hives.create*') ? 'active' : '' }}">
                 <i class="bi bi-plus-circle"></i> Register Hive
             </a>
             <a href="{{ route('admin.hives.map') }}"

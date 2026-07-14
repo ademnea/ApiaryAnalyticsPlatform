@@ -6,53 +6,55 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Table: hives
+     * Purpose: Individual hive registry linked to apiaries; central
+     * reference for all hive-related data (inspections, harvests,
+     * device assignments, alert thresholds).
+     * Soft delete: Yes (Rule 5) — see Decision 4: hive records are soft
+     * deleted to preserve linked historical data, but sensor data
+     * (owned by Developer C) is append-only and never deleted.
+     */
     public function up(): void
     {
         Schema::create('hives', function (Blueprint $table) {
             $table->id();
-            
-            // FK to parent apiary
+
             $table->unsignedBigInteger('apiary_id');
-            
-            // Hive identification
-            $table->string('hive_code', 50)->unique(); // HIVE-UG-MUK-001 format, system-generated
-            $table->string('display_name', 150); // Human-readable name: "Queen Colony A"
-            
-            // Hive details
-            $table->string('hive_type', 50); // Langstroth, Top-Bar, Warre, Skep, etc.
+            $table->foreign('apiary_id')
+                ->references('id')->on('apiaries')
+                ->onDelete('cascade');
+
+            $table->string('hybrid_identifier', 50)->unique();
+            $table->string('display_name', 150);
+
+            $table->enum('hive_type', ['TopBar', 'Langstroth', 'Warre', 'Kenya', 'Other'])
+                ->default('Langstroth');
             $table->string('construction_material', 100)->nullable();
             $table->date('installation_date')->nullable();
-            $table->string('colony_origin', 100)->nullable(); // Wild capture, purchased package, split, etc.
-            
-            // Current state
-            $table->string('queen_status', 20)->nullable(); // present, absent, queenless, unknown
-            $table->string('status', 30)->default('active'); // active, inactive, under_inspection, queenless, absconded, decommissioned
-            
-            // GPS coordinates (required for field navigation and mapping)
-            $table->decimal('gps_latitude', 10, 7)->nullable();
-            $table->decimal('gps_longitude', 10, 7)->nullable();
-            $table->integer('gps_accuracy_meters')->nullable(); // Optional accuracy radius
-            
-            // Denormalized field for dashboard queries
-            $table->date('last_inspection_date')->nullable(); // Updated by InspectionService after each inspection
-            
-            // Soft delete
-            $table->softDeletes();
-            
-            // Timestamps
+
+            $table->enum('colony_origin', ['Wild Capture', 'Split', 'Package', 'NUC', 'Unknown'])
+                ->nullable();
+            $table->enum('queen_status', ['Present', 'Absent', 'New', 'Old', 'Superseded', 'Unknown'])
+                ->default('Unknown');
+
+            $table->decimal('latitude', 10, 8);
+            $table->decimal('longitude', 11, 8);
+
+            $table->enum('current_status', [
+                'Active', 'Inactive', 'Under Inspection', 'Queenless', 'Absconded', 'Decommissioned',
+            ])->default('Active');
+
+            $table->date('last_inspection_date')->nullable();
+            $table->text('notes')->nullable();
+
             $table->timestamps();
-            
-            // Foreign key to apiaries
-            $table->foreign('apiary_id')
-                ->references('id')
-                ->on('apiaries')
-                ->onDelete('restrict'); // Prevent deletion of apiary while hives exist
-            
-            // Indexes
-            $table->index('apiary_id');
-            $table->index('status'); // Fast filtering for active vs. offline hives
-            $table->index(['gps_latitude', 'gps_longitude']); // Spatial queries for mapping
-            $table->index('last_inspection_date'); // "Hives needing inspection" queries
+            $table->softDeletes();
+
+            $table->index('apiary_id', 'idx_hives_apiary_id');
+            $table->index('current_status', 'idx_hives_current_status');
+
+            $table->index(['latitude', 'longitude'], 'idx_hives_coords');
         });
     }
 

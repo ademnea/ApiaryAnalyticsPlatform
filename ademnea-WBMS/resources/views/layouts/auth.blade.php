@@ -6,14 +6,13 @@
     <meta name="csrf-token" content="{{ csrf_token() }}" />
     <title>@yield('title', 'AdEMNEA – Login')</title>
 
-    {{-- Bootstrap 5 --}}
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css"
-          integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH"
-          crossorigin="anonymous" />
-    {{-- Bootstrap Icons --}}
-    <link rel="stylesheet"
-          href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.13.1/font/bootstrap-icons.min.css" />
+    {{-- Bootstrap 5 (local) --}}
+    <link rel="stylesheet" href="{{ asset('bootstrap.min.css') }}" />
+    {{-- Bootstrap Icons (local) --}}
+    <link rel="stylesheet" href="{{ asset('bootstrap-icons.min.css') }}" />
+    {{-- Google Fonts --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
     <style>
         /* ============================================================
@@ -193,9 +192,7 @@
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"
-            integrity="sha384-YvpcrYf0tY3lHB60NNkmXc4s9bIOgUxi8T/jzmB5VbGkADeiGBNQYZLMt7Ui4KQ"
-            crossorigin="anonymous"></script>
+    <script src="{{ asset('bootstrap.bundle.min.js') }}"></script>
     @stack('scripts')
 </body>
 </html>
