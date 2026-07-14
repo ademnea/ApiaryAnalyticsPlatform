@@ -28,6 +28,10 @@
             "Database\\Factories\\": "database/factories/",
             "Database\\Seeders\\": "database/seeders/"
         }
+        },
+        "classmap": [
+            "app/Models/HiveStatusHistory.php"
+        ]
     },
     "autoload-dev": {
         "psr-4": {

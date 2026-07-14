@@ -14,6 +14,10 @@ class HiveStatusHistory extends Model
     // Disable automatic update of updated_at since this is an audit log
     public $timestamps = false;
 
+use Illuminate\Database\Eloquent\Relations\HasMany;
+
+class HiveStatusHistory extends Model
+{
     protected $fillable = [
         'hive_id',
         'previous_status',
@@ -31,6 +35,18 @@ class HiveStatusHistory extends Model
      * Relationship: Status history belongs to a hive.
      */
     public function hive(): BelongsTo
+        'reason_note',
+        'changed_by_user_id',
+        'transitioned_at',
+        'created_at',
+    ];
+
+    protected $casts = [
+        'transitioned_at' => 'datetime',
+        'created_at'      => 'datetime',
+    ];
+
+    public function hive()
     {
         return $this->belongsTo(Hive::class);
     }
@@ -39,6 +55,7 @@ class HiveStatusHistory extends Model
      * Relationship: Status history is linked to the user who made the change.
      */
     public function changedBy(): BelongsTo
+    public function changedBy()
     {
         return $this->belongsTo(User::class, 'changed_by_user_id');
     }
@@ -65,5 +82,13 @@ class HiveStatusHistory extends Model
     public function scopeTransitionTo($query, string $newStatus)
     {
         return $query->where('new_status', $newStatus);
+    public function scopeForHive($query, int $hiveId)
+    {
+        return $query->where('hive_id', $hiveId)->latest('transitioned_at');
+    }
+
+    public function scopeByUser($query, int $userId)
+    {
+        return $query->where('changed_by_user_id', $userId)->latest('transitioned_at');
     }
 }

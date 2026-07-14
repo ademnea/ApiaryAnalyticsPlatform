@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 class Farmer extends Model
@@ -14,80 +13,60 @@ class Farmer extends Model
     protected $fillable = [
         'first_name',
         'last_name',
-        'phone_number',
         'email',
+        'phone',
+        'phone_secondary',
         'country',
         'region',
         'village',
         'national_id',
-        'profile_status',
-        'is_active',
+        'id_document_path',
+        'photo_path',
+        'status',
+        'registration_date',
+        'last_login_at',
     ];
 
     protected $casts = [
-        'is_active' => 'boolean',
+        'registration_date' => 'datetime',
+        'last_login_at'     => 'datetime',
+        'deleted_at'        => 'datetime',
     ];
 
-    /**
-     * Append computed attributes to model serialisation.
-     * full_name is used in dashboard views and API responses.
-     */
-    protected $appends = ['full_name'];
-
-    /**
-     * Relationship: A farmer optionally has a linked user account.
-     * Nullable because farmer registration can happen before user account creation.
-     */
-    public function user(): BelongsTo
+    public function apiaries(): HasMany
     {
-        return $this->belongsTo(User::class);
+        return $this->hasMany(Apiary::class, 'farmer_id');
     }
 
-    /**
-     * Relationship: A farmer has many inspection records.
-     */
-    public function inspections(): HasMany
+    public function getCountryNameAttribute(): string
     {
-        return $this->hasMany(Inspection::class, 'inspector_id');
+        return config("countries.{$this->country}", $this->country);
     }
 
-    /**
-     * Relationship: A farmer has many harvest records.
-     */
-    public function harvestRecords(): HasMany
+    // TODO: Uncomment when Inspection model is implemented
+    // public function inspections(): HasMany
+    // {
+    //     return $this->hasMany(Inspection::class);
+    // }
+
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function harvestRecords(): HasMany
+    // {
+    //     return $this->hasMany(HarvestRecord::class);
+    // }
+
+    public function getFullNameAttribute(): string
     {
-        return $this->hasMany(HarvestRecord::class);
+        return trim("{$this->first_name} {$this->last_name}");
     }
 
-    /**
-     * Scope: Get only active farmers.
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
-     * Scope: Filter by country.
-     */
     public function scopeByCountry($query, string $country)
     {
         return $query->where('country', $country);
     }
 
-    /**
-     * Scope: Filter by profile status.
-     */
-    public function scopeByStatus($query, string $status)
+    public function scopeActive($query)
     {
-        return $query->where('profile_status', $status);
-    }
-
-    /**
-     * Get farmer's full name.
-     */
-    public function getFullNameAttribute(): string
-    {
-        return "{$this->first_name} {$this->last_name}";
+        return $query->where('status', 'Active');
     }
 }
