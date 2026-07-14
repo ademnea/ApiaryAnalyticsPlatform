@@ -19,6 +19,7 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AlertThresholdSeeder::class,
             SuperAdminSeeder::class,
+            FeedbackCategorySeeder::class,
         ]);
     }
 }
