@@ -2,6 +2,13 @@
 
 namespace App\Models;
 
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+
+class Alert extends Model
+{
+    use HasFactory;
 use Illuminate\Database\Eloquent\Model;
 
 class Alert extends Model
@@ -14,6 +21,15 @@ class Alert extends Model
         'type',
         'message',
         'is_read',
+    ];
+
+    protected $casts = [
+        'farmer_id' => 'integer',
+        'hive_id' => 'integer',
+        'is_read' => 'boolean',
+    ];
+
+    public function farmer(): BelongsTo
         'read_at',
     ];
 
@@ -28,6 +44,11 @@ class Alert extends Model
         return $this->belongsTo(Farmer::class);
     }
 
+    public function hive(): BelongsTo
+    {
+        return $this->belongsTo(Hive::class);
+    }
+}
     public function hive()
     {
         // Hive model is owned by Developer B (Apiary Management).
