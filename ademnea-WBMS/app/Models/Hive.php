@@ -46,7 +46,6 @@ class Hive extends Model
             ->orderBy('transitioned_at', 'desc');
     }
 
-<<<<<<< HEAD
     // TODO: Uncomment when Inspection model is implemented
     // public function inspections(): HasMany
     // {
@@ -95,7 +94,6 @@ class Hive extends Model
     //     return $this->hasMany(IotDevice::class);
     // }
 
->>>>>>> 4a09e20 (APM: redesign core domain models and schema)
     public function scopeActive($query)
     {
         return $query->where('current_status', 'Active');
