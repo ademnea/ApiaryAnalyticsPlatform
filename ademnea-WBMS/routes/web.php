@@ -5,6 +5,9 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\ApiaryManagement\HiveController;
+use App\Http\Controllers\Admin\ApiaryManagement\ApiaryController;
+use App\Http\Controllers\Admin\ApiaryManagement\FarmerController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
@@ -146,24 +149,72 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // Each group carries the correct Spatie permission so that
     // when other developers replace placeholders with real
     // controllers the RBAC is already wired up.
+    // APIARY MANAGEMENT MODULE (SDD §4.2.4)
     // ============================================================
 
-    // Apiaries & Hives
+    // Farmers
+    Route::middleware(['permission:manage-farmers'])->group(function () {
+        Route::get('/admin/farmers', [FarmerController::class, 'index'])->name('admin.farmers.index');
+        Route::get('/admin/farmers/create', [FarmerController::class, 'create'])->name('admin.farmers.create');
+        Route::post('/admin/farmers', [FarmerController::class, 'store'])->name('admin.farmers.store');
+        Route::get('/admin/farmers/pending', function () {
+            return view('admin.placeholder', ['title' => 'Pending Farmers', 'subtitle' => 'Placeholder for farmers.pending']);
+        })->name('admin.farmers.pending');
+        Route::get('/admin/farmers/messages', function () {
+            return view('admin.placeholder', ['title' => 'Farmer Messages', 'subtitle' => 'Placeholder for farmers.messages']);
+        })->name('admin.farmers.messages');
+        Route::get('/admin/farmers/{farmer}', [FarmerController::class, 'show'])->name('admin.farmers.show');
+        Route::get('/admin/farmers/{farmer}/edit', [FarmerController::class, 'edit'])->name('admin.farmers.edit');
+        Route::put('/admin/farmers/{farmer}', [FarmerController::class, 'update'])->name('admin.farmers.update');
+        Route::delete('/admin/farmers/{farmer}', [FarmerController::class, 'destroy'])->name('admin.farmers.destroy');
+        Route::patch('/admin/farmers/{farmer}/restore', [FarmerController::class, 'restore'])
+            ->name('admin.farmers.restore')
+            ->withTrashed();
+    });
+
+    // Apiaries
     Route::middleware(['permission:manage-apiaries'])->group(function () {
-        foreach (['apiaries.index', 'apiaries.create'] as $name) {
+        Route::get('/admin/apiaries', [ApiaryController::class, 'index'])->name('admin.apiaries.index');
+        Route::get('/admin/apiaries/create', [ApiaryController::class, 'create'])->name('admin.apiaries.create');
+        Route::post('/admin/apiaries', [ApiaryController::class, 'store'])->name('admin.apiaries.store');
+        Route::get('/admin/apiaries/{apiary}', [ApiaryController::class, 'show'])->name('admin.apiaries.show');
+        Route::get('/admin/apiaries/{apiary}/edit', [ApiaryController::class, 'edit'])->name('admin.apiaries.edit');
+        Route::put('/admin/apiaries/{apiary}', [ApiaryController::class, 'update'])->name('admin.apiaries.update');
+        Route::delete('/admin/apiaries/{apiary}', [ApiaryController::class, 'destroy'])->name('admin.apiaries.destroy');
+        Route::patch('/admin/apiaries/{apiary}/restore', [ApiaryController::class, 'restore'])
+            ->name('admin.apiaries.restore')
+            ->withTrashed();
+        Route::patch('/admin/apiaries/{apiary}/deactivate', [ApiaryController::class, 'deactivate'])
+            ->name('admin.apiaries.deactivate');
+    });
+
+    // Hives
+    Route::middleware(['permission:manage-hives'])->group(function () {
+        Route::get('/admin/hives', [HiveController::class, 'index'])->name('admin.hives.index');
+        Route::get('/admin/hives/create', [HiveController::class, 'create'])
+            ->name('admin.hives.create');
+        Route::post('/admin/hives', [HiveController::class, 'store'])
+            ->name('admin.hives.store');
+        Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
+        Route::get('/admin/hives/{hive}/edit', [HiveController::class, 'edit'])->name('admin.hives.edit');
+        Route::put('/admin/hives/{hive}', [HiveController::class, 'update'])->name('admin.hives.update');
+        Route::patch('/admin/hives/{hive}/status', [HiveController::class, 'updateStatus'])
+            ->name('admin.hives.updateStatus');
+        Route::delete('/admin/hives/{hive}', [HiveController::class, 'destroy'])->name('admin.hives.destroy');
+
+        foreach (['hives.map', 'inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
             })->name('admin.' . $name);
         }
     });
 
-    Route::middleware(['permission:manage-hives'])->group(function () {
-        foreach (['hives.index', 'hives.create', 'hives.map', 'inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
-    });
+    // ============================================================
+    // PLACEHOLDER ROUTES — sidebar links not yet implemented.
+    // Each group carries the correct Spatie permission so that
+    // when other developers replace placeholders with real
+    // controllers the RBAC is already wired up.
+    // ============================================================
 
     // IoT Devices
     Route::middleware(['permission:manage-iot-devices'])->group(function () {
@@ -201,15 +252,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         }
     });
 
-    // Farmer Management
-    Route::middleware(['permission:manage-farmers'])->group(function () {
-        foreach (['farmers.index', 'farmers.create'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
-    });
-
+    // Farmer Management (non-CRUD placeholders)
     Route::middleware(['permission:approve-farmer-registrations'])->group(function () {
         Route::get('/admin/farmers/pending', function () {
             return view('admin.placeholder', ['title' => 'Pending Farmers', 'subtitle' => 'Placeholder for farmers.pending']);
