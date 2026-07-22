@@ -7,8 +7,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class HiveStatusHistory extends Model
 {
-    // Explicit table name — overrides Laravel's default pluralization
-    protected $table = 'hive_status_history';
+    protected $table = 'hive_status_histories';
 
     public $timestamps = false;
 
@@ -16,12 +15,8 @@ class HiveStatusHistory extends Model
         'hive_id',
         'previous_status',
         'new_status',
-        'changed_by_user_id',
-        'change_notes',
-        'reason_code',
         'reason_note',
-        'transitioned_at',
-        'created_at',
+        'changed_by_user_id',
     ];
 
     protected $casts = [

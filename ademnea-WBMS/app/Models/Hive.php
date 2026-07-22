@@ -70,6 +70,30 @@ class Hive extends Model
     //     return $this->hasMany(IotDevice::class);
     // }
 
+
+    public function inspections(): HasMany
+    {
+        return $this->hasMany(Inspection::class);
+    }
+
+    // TODO: Uncomment when HarvestRecord model is implemented
+    // public function harvestRecords(): HasMany
+    // {
+    //     return $this->hasMany(HarvestRecord::class);
+    // }
+
+    // TODO: Uncomment when AlertThreshold model is implemented
+    // public function alertThresholds(): HasMany
+    // {
+    //     return $this->hasMany(AlertThreshold::class);
+    // }
+
+    // TODO: Uncomment when IotDevice model is implemented
+    // public function iotDevices(): HasMany
+    // {
+    //     return $this->hasMany(IotDevice::class);
+    // }
+
     public function scopeActive($query)
     {
         return $query->where('current_status', 'Active');
