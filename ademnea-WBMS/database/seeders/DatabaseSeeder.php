@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
             AlertThresholdSeeder::class,
             SuperAdminSeeder::class,
             FeedbackCategorySeeder::class,
+            UserSeeder::class,
         ]);
     }
 }

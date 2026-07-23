@@ -109,11 +109,14 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             Route::get('/', [AdminGalleryController::class, 'index'])->name('index');
             Route::get('/create', [AdminGalleryController::class, 'create'])->name('create');
             Route::post('/', [AdminGalleryController::class, 'store'])->name('store');
+            Route::get('/{gallery}', [AdminGalleryController::class, 'show'])
+                ->name('show');
             Route::get('/{gallery}/edit', [AdminGalleryController::class, 'edit'])->name('edit');
             Route::put('/{gallery}', [AdminGalleryController::class, 'update'])->name('update');
             Route::delete('/{gallery}', [AdminGalleryController::class, 'destroy'])->name('destroy');
             Route::post('/images/{image}/replace', [AdminGalleryController::class, 'replaceImage'])->name('images.replace');
             Route::delete('/images/{image}', [AdminGalleryController::class, 'deleteImage'])->name('images.delete');
+            Route::post('/{gallery}/reorder', [AdminGalleryController::class, 'reorder'])->name('reorder');
         });
     });
 

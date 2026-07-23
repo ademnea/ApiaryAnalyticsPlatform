@@ -10,6 +10,7 @@ use App\Services\GalleryService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
+use Illuminate\Http\JsonResponse;
 
 class GalleryController extends Controller
 {
@@ -96,13 +97,17 @@ class GalleryController extends Controller
         return redirect()->route('admin.gallery.index')->with('success', 'Gallery album deleted successfully.');
     }
 
-    public function replaceImage(Request $request, GalleryImage $image): RedirectResponse
+    public function replaceImage(Request $request, GalleryImage $image): \Illuminate\Http\JsonResponse|\Illuminate\Http\RedirectResponse
     {
         $request->validate([
-            'image' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'image' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:30720'],
         ]);
 
         $this->galleryService->replaceImage($image, $request->file('image'));
+
+        if ($request->expectsJson()) {
+            return response()->json(['message' => 'Image replaced successfully.']);
+        }
 
         return back()->with('success', 'Image replaced successfully.');
     }
@@ -112,5 +117,17 @@ class GalleryController extends Controller
         $this->galleryService->deleteImage($image);
 
         return back()->with('success', 'Image deleted successfully.');
+    }
+
+    public function reorder(Request $request, GalleryAlbum $gallery): JsonResponse
+    {
+        $request->validate([
+            'ordered_ids' => ['required', 'array'],
+            'ordered_ids.*' => ['integer', 'exists:gallery_images,id'],
+        ]);
+
+        $this->galleryService->reorderImages($gallery, $request->input('ordered_ids', []));
+
+        return response()->json(['message' => 'Images reordered successfully.']);
     }
 }
