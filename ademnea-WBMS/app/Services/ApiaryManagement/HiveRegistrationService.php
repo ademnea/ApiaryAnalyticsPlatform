@@ -9,7 +9,6 @@ use App\Models\HiveStatusHistory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Str;
 use RuntimeException;
 
 class HiveRegistrationService
@@ -47,29 +46,7 @@ class HiveRegistrationService
 
     private function generateApiaryCode(string $name, string $country): string
     {
-        $words = preg_split('/\s+/', trim($name)) ?: [];
-        $words = array_filter($words, fn ($w) => $w !== '');
-
-        if (count($words) >= 2) {
-            $initials = collect($words)
-                ->map(fn ($w) => strtoupper(Str::substr($w, 0, 1)))
-                ->implode('');
-            $base = Str::substr($initials, 0, 4);
-        } else {
-            $base = strtoupper(Str::substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 4));
-        }
-
-        $base = $base !== '' ? $base : strtoupper(Str::substr($country, 0, 2)).'X';
-
-        $candidate = $base;
-        $suffix = 1;
-
-        while (Apiary::where('apiary_code', $candidate)->exists()) {
-            $candidate = $base.$suffix;
-            $suffix++;
-        }
-
-        return $candidate;
+        return ApiaryCodeGenerator::generate($name, $country);
     }
 
     public function generateHybridIdentifier(Apiary $apiary): string
