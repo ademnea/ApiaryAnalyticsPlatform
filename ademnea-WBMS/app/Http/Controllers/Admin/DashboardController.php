@@ -30,12 +30,16 @@ class DashboardController extends Controller
      */
     public function index(Request $request): \Illuminate\View\View
     {
+        $user    = auth()->user();
+        $isAdmin = $user->hasRole('super-admin') || $user->hasRole('admin');
+
         return view('admin.dashboard', [
             'summary'    => $this->dashboard->getSummaryCounts(),
             'monitoring' => $this->dashboard->getHiveMonitoringSummary(),
             'chartData'  => $this->dashboard->getChartData(days: 7),
             'alerts'     => $this->dashboard->getAlerts(),
             'activity'   => $this->dashboard->getRecentActivity(),
+            'isAdmin'    => $isAdmin,
         ]);
     }
 }

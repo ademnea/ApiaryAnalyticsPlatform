@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasColumn('feedback', 'admin_response')) {
+            return; // Already added by an earlier migration on this DB.
+        }
+
         Schema::table('feedback', function (Blueprint $table) {
             $table->text('admin_response')->nullable()->after('message');
             $table->timestamp('responded_at')->nullable()->after('admin_response');

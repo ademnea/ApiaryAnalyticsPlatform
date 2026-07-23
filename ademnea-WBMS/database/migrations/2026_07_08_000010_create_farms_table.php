@@ -8,6 +8,10 @@ return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('farms')) {
+            return;
+        }
+
         Schema::create('farms', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('farmer_id');
@@ -21,8 +25,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->foreign('farmer_id')
-                ->references('id')
-                ->on('farmers')
+                ->references('id')->on('farmers')
                 ->onDelete('cascade');
             $table->index('farmer_id');
         });

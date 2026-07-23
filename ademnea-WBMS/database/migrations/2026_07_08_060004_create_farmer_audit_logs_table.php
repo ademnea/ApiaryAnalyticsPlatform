@@ -4,10 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateFarmerAuditLogsTable extends Migration
+return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('farmer_audit_logs')) {
+            return; // Already created by an earlier migration on this DB.
+        }
+
         Schema::create('farmer_audit_logs', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('farmer_id');
@@ -18,8 +22,7 @@ class CreateFarmerAuditLogsTable extends Migration
             $table->timestamps();
 
             $table->foreign('farmer_id')
-                ->references('id')
-                ->on('farmers')
+                ->references('id')->on('farmers')
                 ->onDelete('cascade');
             $table->index(['farmer_id', 'action_type']);
             $table->index('created_at');
@@ -30,4 +33,4 @@ class CreateFarmerAuditLogsTable extends Migration
     {
         Schema::dropIfExists('farmer_audit_logs');
     }
-}
+};

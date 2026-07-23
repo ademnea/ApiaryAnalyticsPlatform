@@ -1069,6 +1069,26 @@
     });
 </script>
 
+{{-- Persist sidebar scroll position across full-page navigations --}}
+<script>
+    (function () {
+        var KEY = 'sidebarScrollTop';
+        var sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        // Restore immediately so there's no visible jump.
+        var saved = sessionStorage.getItem(KEY);
+        if (saved !== null) {
+            sidebar.scrollTop = parseInt(saved, 10);
+        }
+
+        // Save whenever the user scrolls the sidebar.
+        sidebar.addEventListener('scroll', function () {
+            sessionStorage.setItem(KEY, sidebar.scrollTop);
+        }, { passive: true });
+    })();
+</script>
+
 @stack('scripts')
 </body>
 </html>

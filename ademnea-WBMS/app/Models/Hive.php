@@ -13,16 +13,33 @@ class Hive extends Model
 
     protected $fillable = [
         'apiary_id',
+
+        // Identifier columns – hybrid_identifier is the model-preferred name;
+        // hive_code is the original DB column (kept for backward compat).
         'hybrid_identifier',
+        'hive_code',
+
         'display_name',
+        'name',         // Farmer-API column — kept in sync with display_name via booted()
         'hive_type',
         'construction_material',
         'installation_date',
         'colony_origin',
         'queen_status',
+
+        // Status – current_status is model-preferred (added by migration);
+        // status is the original DB column (kept for backward compat).
+        'current_status',
+        'status',
+
+        // GPS – latitude/longitude are model-preferred aliases (added by migration);
+        // gps_latitude/gps_longitude are the original DB columns.
         'latitude',
         'longitude',
-        'current_status',
+        'gps_latitude',
+        'gps_longitude',
+        'gps_accuracy_meters',
+
         'last_inspection_date',
         'notes',
     ];
@@ -32,8 +49,45 @@ class Hive extends Model
         'last_inspection_date'  => 'date',
         'latitude'              => 'decimal:8',
         'longitude'             => 'decimal:8',
+        'gps_latitude'          => 'decimal:8',
+        'gps_longitude'         => 'decimal:8',
         'deleted_at'            => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Hive $hive): void {
+            // hive_code is the original NOT NULL DB column.
+            // hybrid_identifier is the model-preferred name set by the service.
+            // Keep them in sync so neither violates its constraint.
+            if (!empty($hive->hybrid_identifier) && empty($hive->hive_code)) {
+                $hive->hive_code = $hive->hybrid_identifier;
+            } elseif (!empty($hive->hive_code) && empty($hive->hybrid_identifier)) {
+                $hive->hybrid_identifier = $hive->hive_code;
+            }
+
+            // name (Farmer-API column) ↔ display_name (admin module column) sync.
+            if (!empty($hive->display_name) && empty($hive->name)) {
+                $hive->name = $hive->display_name;
+            } elseif (!empty($hive->name) && empty($hive->display_name)) {
+                $hive->display_name = $hive->name;
+            }
+        });
+
+        static::updating(function (Hive $hive): void {
+            if (!empty($hive->hybrid_identifier) && empty($hive->hive_code)) {
+                $hive->hive_code = $hive->hybrid_identifier;
+            } elseif (!empty($hive->hive_code) && empty($hive->hybrid_identifier)) {
+                $hive->hybrid_identifier = $hive->hive_code;
+            }
+
+            if (!empty($hive->display_name) && empty($hive->name)) {
+                $hive->name = $hive->display_name;
+            } elseif (!empty($hive->name) && empty($hive->display_name)) {
+                $hive->display_name = $hive->name;
+            }
+        });
+    }
 
     public function apiary(): BelongsTo
     {
@@ -42,7 +96,7 @@ class Hive extends Model
 
     public function statusHistory(): HasMany
     {
-        return $this->hasMany(HiveStatusHistory::class)
+        return $this->hasMany(HiveStatusHistory::class, 'hive_id')
             ->orderBy('transitioned_at', 'desc');
     }
 

@@ -5,24 +5,43 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Farmer extends Model
 {
     use SoftDeletes;
 
     protected $fillable = [
+        // Core identity
         'first_name',
         'last_name',
         'email',
+
+        // Phone – both column names accepted (phone_number is the original DB
+        // column; phone is the model-preferred alias added by migration).
         'phone',
+        'phone_number',
         'phone_secondary',
+
+        // Location
         'country',
         'region',
         'village',
+
+        // Identity documents
         'national_id',
         'id_document_path',
         'photo_path',
-        'status',
+
+        // Status columns
+        'status',           // enum: Active | Inactive | Suspended  (added by migration)
+        'profile_status',   // active | pending | incomplete
+        'is_active',        // original boolean column – kept for API backward compat
+
+        // Farmer code (original DB column)
+        'farmer_code',
+
+        // Timestamps
         'registration_date',
         'last_login_at',
     ];
@@ -30,8 +49,35 @@ class Farmer extends Model
     protected $casts = [
         'registration_date' => 'datetime',
         'last_login_at'     => 'datetime',
+        'is_active'         => 'boolean',
         'deleted_at'        => 'datetime',
     ];
+
+    protected static function booted(): void
+    {
+        static::creating(function (Farmer $farmer): void {
+            if (empty($farmer->farmer_code)) {
+                $farmer->farmer_code = static::generateFarmerCode(
+                    $farmer->country ?? 'UG'
+                );
+            }
+        });
+    }
+
+    /**
+     * Generate a unique farmer code in the format: {COUNTRY}{10-char alphanum}
+     * e.g. UG4a9f2c1b3d — matches the pattern of existing codes like CM0092u32eu8uew.
+     */
+    public static function generateFarmerCode(string $country = 'UG'): string
+    {
+        $prefix = strtoupper(substr($country, 0, 2));
+
+        do {
+            $code = $prefix . strtolower(Str::random(10));
+        } while (static::withTrashed()->where('farmer_code', $code)->exists());
+
+        return $code;
+    }
 
     public function apiaries(): HasMany
     {

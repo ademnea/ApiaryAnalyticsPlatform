@@ -4,10 +4,14 @@ use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
-class CreateFarmerMessagesTable extends Migration
+return new class extends Migration
 {
     public function up(): void
     {
+        if (Schema::hasTable('farmer_messages')) {
+            return; // Already created by an earlier migration on this DB.
+        }
+
         Schema::create('farmer_messages', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('farmer_id');
@@ -18,12 +22,10 @@ class CreateFarmerMessagesTable extends Migration
             $table->timestamps();
 
             $table->foreign('farmer_id')
-                ->references('id')
-                ->on('farmers')
+                ->references('id')->on('farmers')
                 ->onDelete('cascade');
             $table->foreign('hive_id')
-                ->references('id')
-                ->on('hives')
+                ->references('id')->on('hives')
                 ->onDelete('set null');
             $table->index('farmer_id');
             $table->index('status');
@@ -34,4 +36,4 @@ class CreateFarmerMessagesTable extends Migration
     {
         Schema::dropIfExists('farmer_messages');
     }
-}
+};
