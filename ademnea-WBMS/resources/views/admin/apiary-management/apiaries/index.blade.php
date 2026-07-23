@@ -29,7 +29,7 @@
                             <span class="text-muted">Organization-managed</span>
                         @endif
                     </td>
-                    <td>{{ $apiary->hives_count ?? $apiary->hives->count() }} / {{ $apiary->hive_capacity }}</td>
+                    <td>{{ $apiary->hives_count ?? $apiary->hives->count() }}</td>
                     <td><span class="badge bg-{{ $apiary->status === 'Active' ? 'success' : 'secondary' }}">{{ ucfirst($apiary->status) }}</span></td>
                     <td>
                         <a href="{{ route('admin.apiaries.show', $apiary) }}" class="btn btn-sm btn-outline-primary">View</a>

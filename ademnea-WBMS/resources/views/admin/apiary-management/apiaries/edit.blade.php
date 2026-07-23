@@ -29,17 +29,6 @@
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">District</label>
-                <input type="text" name="district" class="form-control" value="{{ old('district', $apiary->district) }}">
-            </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Hive Capacity *</label>
-                <input type="number" name="hive_capacity" min="0" max="10000" class="form-control" value="{{ old('hive_capacity', $apiary->hive_capacity) }}" required>
-            </div>
-        </div>
-
         <div class="mb-3">
             <label class="form-label">Managing Farmer</label>
             <select name="farmer_id" class="form-select @error('farmer_id') is-invalid @enderror">
