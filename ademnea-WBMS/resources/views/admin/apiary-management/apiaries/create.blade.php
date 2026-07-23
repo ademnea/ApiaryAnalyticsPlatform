@@ -48,7 +48,7 @@
                 <option value="">— Organization-managed (no individual farmer) —</option>
                 @foreach($farmers as $farmer)
                     <option value="{{ $farmer->id }}" {{ old('farmer_id') == $farmer->id ? 'selected' : '' }}>
-                        {{ $farmer->full_name }} — {{ $farmer->country }}
+                        {{ $farmer->select_label }}
                     </option>
                 @endforeach
             </select>

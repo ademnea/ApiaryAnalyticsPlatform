@@ -10,11 +10,11 @@
         <label for="apiary_id" class="form-label">Apiary *</label>
         <select name="apiary_id" id="apiary_id" class="form-select @error('apiary_id') is-invalid @enderror" required>
             <option value="">— Select apiary —</option>
-            @foreach($apiaries as $apiary)
-                <option value="{{ $apiary->id }}" @selected(old('apiary_id') == $apiary->id)>
-                    {{ $apiary->name }} ({{ $apiary->country }})
-                </option>
-            @endforeach
+                @foreach($apiaries as $apiary)
+                    <option value="{{ $apiary->id }}" @selected(old('apiary_id') == $apiary->id)>
+                        {{ $apiary->select_label }}
+                    </option>
+                @endforeach
         </select>
         @error('apiary_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
     </div>

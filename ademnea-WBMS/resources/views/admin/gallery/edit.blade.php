@@ -9,6 +9,15 @@
 
 @section('content')
 <div class="container-fluid mt-4">
+
+    {{-- Success flash --}}
+    @if(session('success'))
+        <div class="alert alert-success alert-dismissible fade show" role="alert">
+            {{ session('success') }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+        </div>
+    @endif
+
     <div class="card shadow-sm mb-4">
         <div class="card-body">
             <form id="gallery-edit-form" method="POST" action="{{ route('admin.gallery.update', $gallery) }}" enctype="multipart/form-data">
@@ -33,7 +42,7 @@
                     </div>
                     <div class="col-lg-6">
                         <label class="form-label">Slug</label>
-                        <input type="text" name="slug" class="form-control" value="{{ old('slug', $gallery->slug) }}" placeholder="gallery-album-title">
+                        <input type="text" name="slug" class="form-control" value="{{ old('slug', $gallery->slug) }}" placeholder="leave-blank-to-auto-generate">
                         <div class="form-text">Leave blank to generate automatically from the title.</div>
                     </div>
                     <div class="col-lg-4">
@@ -60,7 +69,9 @@
                         <label class="form-label">Visibility <span class="text-danger">*</span></label>
                         <select name="visibility" class="form-select" required>
                             @foreach($visibilityOptions as $key => $label)
-                                <option value="{{ $key }}" {{ old('visibility', $gallery->visibility) === $key ? 'selected' : '' }}>{{ $label }}</option>
+                                <option value="{{ $key }}" {{ old('visibility', $gallery->visibility) === $key ? 'selected' : '' }}>
+                                    {{ $label }}
+                                </option>
                             @endforeach
                         </select>
                         @error('visibility') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
@@ -72,6 +83,8 @@
                             <option value="0" {{ old('is_published', $gallery->is_published ? '1' : '0') == '0' ? 'selected' : '' }}>Draft</option>
                         </select>
                     </div>
+
+                    {{-- Cover image --}}
                     <div class="col-md-6">
                         <label class="form-label">Cover image</label>
                         <input type="file" name="cover_image" class="form-control" accept="image/jpeg,image/png,image/webp">
@@ -79,6 +92,8 @@
                             <img src="{{ Storage::disk('public')->url($gallery->cover_image) }}" alt="Cover" class="img-fluid mt-2 rounded" style="max-height:160px;">
                         @endif
                     </div>
+
+                    {{-- Add more images --}}
                     <div class="col-md-6">
                         <label class="form-label">Add images</label>
                         <div class="border border-dashed rounded-4 p-3 text-center" id="upload-zone" style="border-color: rgba(27, 48, 34, 0.25); background: rgba(212, 175, 55, 0.05); cursor: pointer;">
@@ -110,6 +125,7 @@
         </div>
     </div>
 
+    {{-- Existing album images --}}
     <div class="card shadow-sm">
         <div class="card-body">
             <h5 class="mb-3">Album Images</h5>
@@ -137,6 +153,7 @@
             </div>
         </div>
     </div>
+
 </div>
 @endsection
 
@@ -148,7 +165,6 @@
     const MAX_SIZE_MB = 30;
     const ALLOWED_TYPES = ['image/jpeg', 'image/jpg', 'image/png', 'image/webp'];
     let selectedFiles = [];
-    let coverFile = null;
 
     const zone = document.getElementById('upload-zone');
     const input = document.getElementById('gallery-images-input');

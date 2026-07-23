@@ -36,6 +36,15 @@ class User extends Authenticatable
     }
 
     /**
+     * REQ-F-FAPI-01: every farmer User has exactly one linked Farmer
+     * profile record (telephone, address, fcm_token, farm/hive access).
+     */
+        public function farmer()
+    {
+        return $this->hasOne(Farmer::class);
+    }
+
+    /**
      * Send the password reset notification via a custom mailable.
      *
      * @todo ResetPasswordMail created in Task 7

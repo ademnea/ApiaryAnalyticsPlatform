@@ -22,7 +22,7 @@ class HiveStatusChangeService
             throw InvalidHiveStatusTransitionException::notAllowed($currentStatus, $newStatus);
         }
 
-        return DB::transaction(function () use ($hive, $newStatus, $changedBy, $changeNotes) {
+        return DB::transaction(function () use ($hive, $currentStatus, $newStatus, $changedBy, $changeNotes) {
             $hive->update(['current_status' => $newStatus]);
 
             HiveStatusHistory::create([

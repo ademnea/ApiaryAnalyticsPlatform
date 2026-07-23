@@ -63,7 +63,8 @@
         </a>
     </div>
 
-    {{-- Team Members --}}
+    {{-- Team Members — admin only --}}
+    @if($isAdmin)
     <div class="col-6 col-sm-4 col-xl-2">
         <a href="{{ route('admin.users.index') }}" class="text-decoration-none">
             <div class="stat-card h-100">
@@ -80,6 +81,7 @@
             </div>
         </a>
     </div>
+    @endif
 
     {{-- IoT Devices --}}
     <div class="col-6 col-sm-4 col-xl-2">
@@ -103,7 +105,8 @@
         </a>
     </div>
 
-    {{-- Total Users --}}
+    {{-- Total Users — admin only --}}
+    @if($isAdmin)
     <div class="col-6 col-sm-4 col-xl-2">
         <a href="{{ route('admin.users.index') }}" class="text-decoration-none">
             <div class="stat-card h-100">
@@ -118,5 +121,6 @@
             </div>
         </a>
     </div>
+    @endif
 
 </div>

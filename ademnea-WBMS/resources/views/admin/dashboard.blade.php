@@ -65,7 +65,7 @@
 {{-- ================================================================== --}}
 {{-- SECTION 1 — Summary Cards                                          --}}
 {{-- ================================================================== --}}
-@include('admin.dashboard.partials.summary-cards', ['summary' => $summary])
+@include('admin.dashboard.partials.summary-cards', ['summary' => $summary, 'isAdmin' => $isAdmin])
 
 {{-- ================================================================== --}}
 {{-- SECTION 2 — Hive Monitoring Summary                                --}}
@@ -84,12 +84,12 @@
 
     {{-- Alerts (col-lg-5) --}}
     <div class="col-12 col-lg-5">
-        @include('admin.dashboard.partials.alerts-section', ['alerts' => $alerts])
+        @include('admin.dashboard.partials.alerts-section', ['alerts' => $alerts, 'isAdmin' => $isAdmin])
     </div>
 
     {{-- Recent Activity (col-lg-7) --}}
     <div class="col-12 col-lg-7">
-        @include('admin.dashboard.partials.recent-activity', ['activity' => $activity])
+        @include('admin.dashboard.partials.recent-activity', ['activity' => $activity, 'isAdmin' => $isAdmin])
     </div>
 
 </div>
@@ -97,6 +97,6 @@
 {{-- ================================================================== --}}
 {{-- SECTION 6 — Quick Navigation                                       --}}
 {{-- ================================================================== --}}
-@include('admin.dashboard.partials.quick-nav')
+@include('admin.dashboard.partials.quick-nav', ['isAdmin' => $isAdmin])
 
 @endsection

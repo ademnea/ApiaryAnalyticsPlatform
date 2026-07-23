@@ -91,8 +91,12 @@ class LoginController extends Controller
             ]);
         }
 
-        // Block farmer accounts from admin dashboard (REQ 1.10)
-        if ($user->hasRole('farmer')) {
+        // Block farmer-only accounts from admin dashboard (REQ 1.10).
+        // Users with 'farmer' AND another role (e.g. researcher, admin) are allowed through.
+        $roles        = $user->getRoleNames();
+        $isFarmerOnly = $roles->count() > 0 && $roles->every(fn ($r) => $r === 'farmer');
+
+        if ($isFarmerOnly) {
             Auth::logout();
             $request->session()->invalidate();
             throw ValidationException::withMessages([

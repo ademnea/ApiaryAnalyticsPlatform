@@ -8,15 +8,15 @@ return new class extends Migration
 {
     /**
      * Table: hives
-     * Purpose: Individual hive registry linked to apiaries; central
-     * reference for all hive-related data (inspections, harvests,
-     * device assignments, alert thresholds).
-     * Soft delete: Yes (Rule 5) — see Decision 4: hive records are soft
-     * deleted to preserve linked historical data, but sensor data
-     * (owned by Developer C) is append-only and never deleted.
+     * Purpose: Individual hive registry linked to apiaries.
+     * Soft delete: Yes (Rule 5).
      */
     public function up(): void
     {
+        if (Schema::hasTable('hives')) {
+            return; // Already exists on this DB — alignment handled by 2026_07_14_000002 and 2026_07_14_000006.
+        }
+
         Schema::create('hives', function (Blueprint $table) {
             $table->id();
 
@@ -53,7 +53,6 @@ return new class extends Migration
 
             $table->index('apiary_id', 'idx_hives_apiary_id');
             $table->index('current_status', 'idx_hives_current_status');
-
             $table->index(['latitude', 'longitude'], 'idx_hives_coords');
         });
     }

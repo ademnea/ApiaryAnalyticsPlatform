@@ -41,7 +41,7 @@
                                 @error('title') <div class="text-danger small mt-1">{{ $message }}</div> @enderror
                             </div>
                             <div class="col-lg-6">
-                                <label class="form-label">Slug <small class="text-muted">optional</small></label>
+                                <label class="form-label">Slug <small class="text-muted">(optional)</small></label>
                                 <input type="text" name="slug" class="form-control" value="{{ old('slug') }}" placeholder="auto-generated-from-title">
                                 <div class="form-text">Leave blank to generate automatically.</div>
                             </div>
@@ -103,10 +103,10 @@
                         </div>
 
                         <div class="mt-4 d-flex flex-column flex-sm-row gap-2">
-                            <button type="submit" class="btn btn-primary px-4 btn-animate" style="background: #1B3022; border-color: #1B3022;">
+                            <button type="submit" class="btn btn-primary px-4" style="background: #1B3022; border-color: #1B3022;">
                                 <i class="bi bi-check-lg me-2"></i>Save Album
                             </button>
-                            <a href="{{ route('admin.gallery.index') }}" class="btn btn-outline-secondary px-4 btn-animate">Cancel</a>
+                            <a href="{{ route('admin.gallery.index') }}" class="btn btn-outline-secondary px-4">Cancel</a>
                         </div>
                     </form>
                 </div>

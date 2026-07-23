@@ -14,16 +14,18 @@
             @php
                 $shortcuts = [
                     [
-                        'label'  => 'Users',
-                        'route'  => 'admin.users.index',
-                        'icon'   => 'bi-shield-lock',
-                        'color'  => 'blue',
+                        'label'      => 'Users',
+                        'route'      => 'admin.users.index',
+                        'icon'       => 'bi-shield-lock',
+                        'color'      => 'blue',
+                        'admin_only' => true,
                     ],
                     [
                         'label'  => 'Farmers',
                         'route'  => 'admin.farmers.index',
                         'icon'   => 'bi-people-fill',
                         'color'  => 'green',
+                        'admin_only' => true,
                     ],
                     [
                         'label'  => 'Farms',
@@ -89,6 +91,7 @@
             @endphp
 
             @foreach($shortcuts as $s)
+                @if(!isset($s['admin_only']) || $isAdmin)
                 <div class="col-6 col-sm-4 col-md-3 col-lg-2">
                     <a href="{{ route($s['route']) }}"
                        class="d-flex flex-column align-items-center justify-content-center text-decoration-none
@@ -105,6 +108,7 @@
                         </span>
                     </a>
                 </div>
+                @endif
             @endforeach
 
         </div>
