@@ -27,7 +27,6 @@ class StoreApiaryRequest extends FormRequest
             'region' => ['nullable', 'string', 'max:100'],
             'district' => ['nullable', 'string', 'max:100'],
             'farmer_id' => ['nullable', 'integer', 'exists:farmers,id'],
-            'hive_capacity' => ['nullable', 'integer', 'min:0'],
             'description' => ['nullable', 'string'],
             'status' => ['nullable', 'in:Active,Inactive,Under Maintenance'],
         ];
@@ -39,7 +38,6 @@ class StoreApiaryRequest extends FormRequest
             'farmer_id' => 'managing farmer',
             'name' => 'apiary name',
             'country' => 'country of deployment',
-            'hive_capacity' => 'hive capacity',
         ];
     }
 
