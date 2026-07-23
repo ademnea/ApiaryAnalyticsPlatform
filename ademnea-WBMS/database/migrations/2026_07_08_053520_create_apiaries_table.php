@@ -35,7 +35,6 @@ return new class extends Migration
                 ->references('id')->on('farmers')
                 ->onDelete('set null');
 
-            $table->integer('hive_capacity')->default(0);
             $table->text('description')->nullable();
 
             $table->enum('status', ['Active', 'Inactive', 'Under Maintenance'])->default('Active');

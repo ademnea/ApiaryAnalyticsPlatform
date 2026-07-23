@@ -18,13 +18,12 @@ class Apiary extends Model
         'region',
         'district',
         'farmer_id',
-        'hive_capacity',
         'description',
         'status',
     ];
 
     protected $casts = [
-        'hive_capacity' => 'integer',
+        //
     ];
 
     public function farmer(): BelongsTo
@@ -111,15 +110,5 @@ class Apiary extends Model
     public function scopeUnassigned($query)
     {
         return $query->whereNull('farmer_id');
-    }
-
-    public function hiveCount(): int
-    {
-        return $this->hives()->count();
-    }
-
-    public function activeHiveCount(): int
-    {
-        return $this->hives()->where('current_status', 'Active')->count();
     }
 }
