@@ -114,7 +114,6 @@
                                 <th>Farm Name</th>
                                 <th>Country</th>
                                 <th>Region</th>
-                                <th>Hive Capacity</th>
                                 <th>Added</th>
                             </tr>
                         </thead>
@@ -124,12 +123,11 @@
                                     <td>{{ $apiary->name }}</td>
                                     <td>{{ $apiary->country }}</td>
                                     <td>{{ $apiary->region ?? '—' }}</td>
-                                    <td>{{ $apiary->hive_capacity }}</td>
                                     <td class="text-muted">{{ $apiary->created_at->diffForHumans() }}</td>
                                 </tr>
                             @empty
                                 <tr>
-                                    <td colspan="5" class="text-muted text-center py-3">
+                                    <td colspan="4" class="text-muted text-center py-3">
                                         No farms registered yet.
                                     </td>
                                 </tr>

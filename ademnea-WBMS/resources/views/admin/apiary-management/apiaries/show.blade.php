@@ -25,7 +25,6 @@
                 Organization-managed
             @endif
         </dd>
-        <dt class="col-sm-3">Hive Capacity</dt><dd class="col-sm-9">{{ $apiary->hives_count ?? $apiary->hives->count() }} / {{ $apiary->hive_capacity }}</dd>
         <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ ucfirst($apiary->status) }}</dd>
         <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ $apiary->description ?? '—' }}</dd>
     </dl>
