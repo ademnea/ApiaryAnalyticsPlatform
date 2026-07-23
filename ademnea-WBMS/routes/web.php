@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveController;
+use App\Http\Controllers\Admin\ApiaryManagement\HiveMapController;
 use App\Http\Controllers\Admin\ApiaryManagement\ApiaryController;
 use App\Http\Controllers\Admin\ApiaryManagement\FarmerController;
 use App\Http\Controllers\Admin\ProfileController;
@@ -195,6 +196,14 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->name('admin.hives.create');
         Route::post('/admin/hives', [HiveController::class, 'store'])
             ->name('admin.hives.store');
+
+        Route::get('/admin/hives/map', function () {
+            return view('admin.apiary-management.hives.map');
+        })->name('admin.hives.map');
+
+        Route::get('/admin/hives/map-data', [HiveMapController::class, 'index'])
+            ->name('admin.hives.map.data');
+
         Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
         Route::get('/admin/hives/{hive}/edit', [HiveController::class, 'edit'])->name('admin.hives.edit');
         Route::put('/admin/hives/{hive}', [HiveController::class, 'update'])->name('admin.hives.update');
@@ -202,7 +211,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->name('admin.hives.updateStatus');
         Route::delete('/admin/hives/{hive}', [HiveController::class, 'destroy'])->name('admin.hives.destroy');
 
-        foreach (['hives.map', 'inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
+        foreach (['inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
             })->name('admin.' . $name);

@@ -117,6 +117,12 @@ class Hive extends Model
         });
     }
 
+    public function scopeWithinBounds($query, float $minLat, float $maxLat, float $minLng, float $maxLng)
+    {
+        return $query->whereBetween('latitude', [$minLat, $maxLat])
+                    ->whereBetween('longitude', [$minLng, $maxLng]);
+    }
+
     public function getLatestStatusHistory()
     {
         return $this->statusHistory()->latest('transitioned_at')->first();
