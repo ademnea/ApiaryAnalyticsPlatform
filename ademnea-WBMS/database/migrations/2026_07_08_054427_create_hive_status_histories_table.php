@@ -7,17 +7,21 @@ use Illuminate\Support\Facades\Schema;
 return new class extends Migration
 {
     /**
-     * Table: hive_status_history
-     * Purpose: Append-only audit trail of all hive status transitions.
-     * Soft delete: No — this is a permanent audit record.
-     *
-     * NOTE: changed_by_user_id references users.id, owned by Developer A
-     * (User Management module). This migration must run after Developer
-     * A's users table migration. Confirm ordering in the shared SDD /
-     * migration ownership table (Section 4.2) before merging.
+     * Table: hive_status_history (singular — matches the existing DB table name).
+     * Note: this migration targets hive_status_histories (plural) which does NOT
+     * exist on this DB; the actual table is hive_status_history (singular),
+     * created before this migration was introduced.
+     * Column alignment is handled by 2026_07_14_000007_align_hive_status_history_columns.
      */
     public function up(): void
     {
+        // The plural table name from this migration never existed on this DB.
+        // The singular table (hive_status_history) already exists and is aligned
+        // by our 2026_07_14_000007 migration. Skip to avoid creating a duplicate.
+        if (Schema::hasTable('hive_status_histories') || Schema::hasTable('hive_status_history')) {
+            return;
+        }
+
         Schema::create('hive_status_histories', function (Blueprint $table) {
             $table->id();
 
@@ -36,7 +40,6 @@ return new class extends Migration
                 ->onDelete('set null');
 
             $table->timestamp('transitioned_at')->useCurrent();
-
             $table->timestamp('created_at')->useCurrent();
 
             $table->index('hive_id', 'idx_hive_status_history_hive_id');

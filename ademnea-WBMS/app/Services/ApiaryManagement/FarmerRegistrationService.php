@@ -13,13 +13,28 @@ class FarmerRegistrationService
     public function register(array $data): Farmer
     {
         $data['registration_date'] = $data['registration_date'] ?? now();
-        $data['status'] = $data['status'] ?? 'Active';
+        $data['status']            = $data['status'] ?? 'Active';
+
+        // Keep both phone column names in sync:
+        // The model/forms use `phone`; the original DB column is `phone_number`.
+        if (isset($data['phone']) && !isset($data['phone_number'])) {
+            $data['phone_number'] = $data['phone'];
+        } elseif (isset($data['phone_number']) && !isset($data['phone'])) {
+            $data['phone'] = $data['phone_number'];
+        }
 
         return Farmer::create($data);
     }
 
     public function update(Farmer $farmer, array $data): Farmer
     {
+        // Same sync on update.
+        if (isset($data['phone']) && !isset($data['phone_number'])) {
+            $data['phone_number'] = $data['phone'];
+        } elseif (isset($data['phone_number']) && !isset($data['phone'])) {
+            $data['phone'] = $data['phone_number'];
+        }
+
         $farmer->update($data);
 
         return $farmer->fresh();

@@ -18,7 +18,7 @@
             $hasAnyAlert =
                 $alerts['critical_hives']->isNotEmpty()          ||
                 $alerts['hives_needing_inspection']->isNotEmpty() ||
-                $alerts['pending_farmers']->isNotEmpty()          ||
+                ($isAdmin && $alerts['pending_farmers']->isNotEmpty()) ||
                 $alerts['offline_devices']->isNotEmpty()          ||
                 $alerts['high_temperature_alerts']->isNotEmpty()  ||
                 $alerts['low_humidity_alerts']->isNotEmpty();
@@ -89,8 +89,8 @@
                 </div>
             @endif
 
-            {{-- ── Pending Farmer Approvals ─────────────────────────── --}}
-            @if($alerts['pending_farmers']->isNotEmpty())
+            {{-- ── Pending Farmer Approvals — admin only ────────────── --}}
+            @if($isAdmin && $alerts['pending_farmers']->isNotEmpty())
                 <div class="alert alert-warning d-flex align-items-start gap-2 mb-3" role="alert"
                      style="font-size:0.82rem;">
                     <i class="bi bi-person-fill-exclamation flex-shrink-0 mt-1"></i>

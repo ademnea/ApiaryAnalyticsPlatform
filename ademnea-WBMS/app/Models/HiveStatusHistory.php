@@ -17,6 +17,8 @@ class HiveStatusHistory extends Model
         'new_status',
         'reason_note',
         'changed_by_user_id',
+        'transitioned_at',
+        'created_at',
     ];
 
     protected $casts = [

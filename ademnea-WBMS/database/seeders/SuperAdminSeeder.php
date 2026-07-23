@@ -95,7 +95,7 @@ class SuperAdminSeeder extends Seeder
             );
             $superAdminRole->syncPermissions($this->permissions);
 
-            // Also create the standard farmer roles
+            // Also create the standard roles with sensible default permissions
             \Spatie\Permission\Models\Role::firstOrCreate(
                 ['name' => 'farmer', 'guard_name' => 'web']
             );
@@ -105,9 +105,18 @@ class SuperAdminSeeder extends Seeder
             \Spatie\Permission\Models\Role::firstOrCreate(
                 ['name' => 'field-officer', 'guard_name' => 'web']
             );
-            \Spatie\Permission\Models\Role::firstOrCreate(
+
+            // Researcher: read-only access to hive data, monitoring, and reports by default.
+            // Admins can expand this via the Roles → Permissions UI.
+            $researcherRole = \Spatie\Permission\Models\Role::firstOrCreate(
                 ['name' => 'researcher', 'guard_name' => 'web']
             );
+            $researcherRole->syncPermissions([
+                'view-hive-data',
+                'view-monitoring-dashboard',
+                'view-anomaly-analytics',
+                'generate-reports',
+            ]);
 
             $this->command->info('✓ Permissions and roles seeded.');
         } else {

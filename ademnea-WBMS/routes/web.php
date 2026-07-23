@@ -172,12 +172,21 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->withTrashed();
     });
 
-    // Apiaries
-    Route::middleware(['permission:manage-apiaries'])->group(function () {
+    // Apiaries — read-only (view-hive-data or manage-apiaries)
+    Route::middleware(['permission:view-hive-data|manage-apiaries'])->group(function () {
         Route::get('/admin/apiaries', [ApiaryController::class, 'index'])->name('admin.apiaries.index');
-        Route::get('/admin/apiaries/create', [ApiaryController::class, 'create'])->name('admin.apiaries.create');
-        Route::post('/admin/apiaries', [ApiaryController::class, 'store'])->name('admin.apiaries.store');
+
+        // Static paths before wildcard.
+        Route::get('/admin/apiaries/create', [ApiaryController::class, 'create'])
+            ->name('admin.apiaries.create')
+            ->can('manage-apiaries');
+
         Route::get('/admin/apiaries/{apiary}', [ApiaryController::class, 'show'])->name('admin.apiaries.show');
+    });
+
+    // Apiaries — write access (manage-apiaries only)
+    Route::middleware(['permission:manage-apiaries'])->group(function () {
+        Route::post('/admin/apiaries', [ApiaryController::class, 'store'])->name('admin.apiaries.store');
         Route::get('/admin/apiaries/{apiary}/edit', [ApiaryController::class, 'edit'])->name('admin.apiaries.edit');
         Route::put('/admin/apiaries/{apiary}', [ApiaryController::class, 'update'])->name('admin.apiaries.update');
         Route::delete('/admin/apiaries/{apiary}', [ApiaryController::class, 'destroy'])->name('admin.apiaries.destroy');
@@ -188,25 +197,41 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->name('admin.apiaries.deactivate');
     });
 
-    // Hives
-    Route::middleware(['permission:manage-hives'])->group(function () {
+    // Hives — read-only access (view-hive-data or manage-hives) covers researchers and anyone
+    // with manage-hives. The permission middleware accepts either, so we use
+    // a single group with pipe-separated permissions.
+    Route::middleware(['permission:view-hive-data|manage-hives'])->group(function () {
         Route::get('/admin/hives', [HiveController::class, 'index'])->name('admin.hives.index');
+
+        // ALL static literal paths must come before {hive} wildcard — otherwise
+        // Laravel resolves e.g. /hives/create and /hives/map as hive IDs.
+        // The create route carries its own tighter permission check via can().
         Route::get('/admin/hives/create', [HiveController::class, 'create'])
-            ->name('admin.hives.create');
-        Route::post('/admin/hives', [HiveController::class, 'store'])
-            ->name('admin.hives.store');
+            ->name('admin.hives.create')
+            ->can('manage-hives');
+
+        Route::get('/admin/hives/map', function () {
+            return view('admin.placeholder', ['title' => 'Hive Map', 'subtitle' => 'Placeholder for hives.map']);
+        })->name('admin.hives.map');
+
+        foreach (['inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
+            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
+                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
+            })->name('admin.' . $name);
+        }
+
+        // Wildcard last.
         Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
+    });
+
+    // Hives — write access (manage-hives only)
+    Route::middleware(['permission:manage-hives'])->group(function () {
+        Route::post('/admin/hives', [HiveController::class, 'store'])->name('admin.hives.store');
         Route::get('/admin/hives/{hive}/edit', [HiveController::class, 'edit'])->name('admin.hives.edit');
         Route::put('/admin/hives/{hive}', [HiveController::class, 'update'])->name('admin.hives.update');
         Route::patch('/admin/hives/{hive}/status', [HiveController::class, 'updateStatus'])
             ->name('admin.hives.updateStatus');
         Route::delete('/admin/hives/{hive}', [HiveController::class, 'destroy'])->name('admin.hives.destroy');
-
-        foreach (['hives.map', 'inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
     });
 
     // ============================================================
@@ -226,7 +251,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     });
 
     // Sensor Monitoring
-    Route::middleware(['permission:view-monitoring-dashboard'])->group(function () {
+    Route::middleware(['permission:view-monitoring-dashboard|view-hive-data'])->group(function () {
         foreach (['monitoring.temperature', 'monitoring.humidity', 'monitoring.weight', 'monitoring.co2', 'monitoring.audio', 'monitoring.video', 'monitoring.photos', 'alerts.index'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
