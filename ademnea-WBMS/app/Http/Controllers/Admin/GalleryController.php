@@ -47,7 +47,7 @@ class GalleryController extends Controller
 
         $stats = [
             'totalAlbums' => GalleryAlbum::count(),
-            'totalImages' => GalleryImage::count(),
+            'totalImages' => GalleryImage::whereHas('album')->count(),
             'publishedAlbums' => GalleryAlbum::where('is_published', true)->count(),
             'totalViews' => GalleryAlbum::sum('views'),
         ];
@@ -69,7 +69,8 @@ class GalleryController extends Controller
 
     public function store(GalleryAlbumRequest $request): RedirectResponse
     {
-        $this->galleryService->createAlbum($request);
+        $album = $this->galleryService->createAlbum($request);
+        dd($album);
 
         return redirect()->route('admin.gallery.index')->with('success', 'Gallery album created successfully.');
     }
@@ -89,6 +90,12 @@ class GalleryController extends Controller
 
         return redirect()->route('admin.gallery.edit', $gallery)->with('success', 'Gallery album updated successfully.');
     }
+    public function show(GalleryAlbum $gallery): View
+{
+    $gallery->load('images');
+
+    return view('admin.gallery.show', compact('gallery'));
+}
 
     public function destroy(GalleryAlbum $gallery): RedirectResponse
     {

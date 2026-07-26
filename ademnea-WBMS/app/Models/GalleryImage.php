@@ -19,4 +19,4 @@ class GalleryImage extends Model
     {
         return $this->belongsTo(GalleryAlbum::class, 'gallery_album_id');
     }
-}
+} 
