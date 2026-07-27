@@ -1,0 +1,26 @@
+<?php
+
+use Illuminate\Database\Migrations\Migration;
+use Illuminate\Database\Schema\Blueprint;
+use Illuminate\Support\Facades\Schema;
+
+class AddFcmTokenToUsersTable extends Migration
+{
+    public function up(): void
+    {
+        if (Schema::hasColumn('users', 'fcm_token')) {
+            return; // Already added by an earlier migration on this DB.
+        }
+
+        Schema::table('users', function (Blueprint $table) {
+            $table->string('fcm_token')->nullable()->after('remember_token');
+        });
+    }
+
+    public function down(): void
+    {
+        Schema::table('users', function (Blueprint $table) {
+            $table->dropColumn('fcm_token');
+        });
+    }
+}

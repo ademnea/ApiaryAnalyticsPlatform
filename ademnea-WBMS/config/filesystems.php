@@ -38,10 +38,17 @@ return [
             'report' => false,
         ],
 
+         'local_iot_mock' => [
+        'driver' => 'local',
+        'root' => storage_path('app/iot-media-mock'),
+        'url' => env('APP_URL') . '/storage/iot-media-mock',
+        'visibility' => 'private',
+    ],
+
         'public' => [
             'driver' => 'local',
             'root' => storage_path('app/public'),
-            'url' => '/storage',
+            'url' => env('APP_URL') . '/storage',
             'visibility' => 'public',
             'throw' => false,
             'report' => false,

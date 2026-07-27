@@ -21,6 +21,10 @@ return new class extends Migration
      */
     public function up(): void
     {
+        if (Schema::hasTable('apiaries')) {
+            return; // Already exists on this DB — alignment handled by 2026_07_14_000005.
+        }
+
         Schema::create('apiaries', function (Blueprint $table) {
             $table->id();
 

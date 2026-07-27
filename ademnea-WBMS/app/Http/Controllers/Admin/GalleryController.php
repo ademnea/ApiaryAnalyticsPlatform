@@ -99,7 +99,7 @@ class GalleryController extends Controller
     public function replaceImage(Request $request, GalleryImage $image): RedirectResponse
     {
         $request->validate([
-            'image' => ['required', 'file', 'mimes:jpg,jpeg,png,webp', 'max:2048'],
+            'image' => ['required', 'file', 'image', 'max:10240'],
         ]);
 
         $this->galleryService->replaceImage($image, $request->file('image'));

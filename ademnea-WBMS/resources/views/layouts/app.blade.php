@@ -580,7 +580,7 @@
                 </li>
                 <li><hr class="dropdown-divider"></li>
                 <li>
-                    <form method="POST" action="{{ route('logout') }}">
+                    <form method="POST" action="{{ route('admin.logout') }}">
                         @csrf
                         <button class="dropdown-item text-danger" type="submit">
                             <i class="bi bi-box-arrow-right me-2"></i>Sign Out
@@ -669,27 +669,52 @@
     <div class="sidebar-section">IoT & Monitoring</div>
 
     {{-- IoT Devices --}}
-    <div x-data="{ open: {{ request()->routeIs('admin.devices.*') ? 'true' : 'false' }} }">
-        <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
-            <i class="bi bi-cpu nav-icon"></i>
-            <span class="nav-dropdown-label">IoT Devices</span>
-            <i class="bi bi-chevron-right nav-chevron"></i>
-        </div>
-        <div class="nav-dropdown-children" x-show="open" x-collapse>
-            <a href="{{ route('admin.devices.index') }}"
-               class="{{ request()->routeIs('admin.devices.index') ? 'active' : '' }}">
-                <i class="bi bi-list-ul"></i> Device Registry
-            </a>
-            <a href="{{ route('admin.devices.create') }}"
-               class="{{ request()->routeIs('admin.devices.create') ? 'active' : '' }}">
-                <i class="bi bi-plus-circle"></i> Register Device
-            </a>
+    {{-- Hardware Teams --}}
+<div x-data="{ open: {{ request()->routeIs('admin.hardware-teams.*') ? 'true' : 'false' }} }">
+    <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
+        <i class="bi bi-people-fill nav-icon"></i>
+        <span class="nav-dropdown-label">Hardware Teams</span>
+        <i class="bi bi-chevron-right nav-chevron"></i>
+    </div>
+    <div class="nav-dropdown-children" x-show="open" x-collapse>
+        <a href="{{ route('admin.hardware-teams.index') }}"
+           class="{{ request()->routeIs('admin.hardware-teams.index') ? 'active' : '' }}">
+            <i class="bi bi-list-ul"></i> All Teams
+        </a>
+        <a href="{{ route('admin.hardware-teams.create') }}"
+           class="{{ request()->routeIs('admin.hardware-teams.create') ? 'active' : '' }}">
+            <i class="bi bi-plus-circle"></i> Register Team
+        </a>
+    </div>
+</div>
+
+{{-- IoT Devices --}}
+<div x-data="{ open: {{ request()->routeIs('admin.iot-devices.*') ? 'true' : 'false' }} }">
+    <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
+        <i class="bi bi-cpu nav-icon"></i>
+        <span class="nav-dropdown-label">IoT Devices</span>
+        <i class="bi bi-chevron-right nav-chevron"></i>
+    </div>
+    <div class="nav-dropdown-children" x-show="open" x-collapse>
+        <a href="{{ route('admin.iot-devices.index') }}"
+           class="{{ request()->routeIs('admin.iot-devices.index') ? 'active' : '' }}">
+            <i class="bi bi-list-ul"></i> Device Registry
+        </a>
+        <a href="{{ route('admin.iot-devices.create') }}"
+           class="{{ request()->routeIs('admin.iot-devices.create') ? 'active' : '' }}">
+            <i class="bi bi-plus-circle"></i> Register Device
+        </a>
+        {{-- Fleet Health belongs to the IoT Condition Monitoring module (§4.4/4.6),
+             not this one. Guarded so the sidebar doesn't break before that
+             route exists; appears automatically once Developer E defines it. --}}
+        @if(Route::has('admin.devices.fleet'))
             <a href="{{ route('admin.devices.fleet') }}"
                class="{{ request()->routeIs('admin.devices.fleet') ? 'active' : '' }}">
                 <i class="bi bi-grid-3x3-gap"></i> Fleet Health
             </a>
-        </div>
+        @endif
     </div>
+</div>
 
     {{-- Sensor Monitoring --}}
     <div x-data="{ open: {{ request()->routeIs('admin.monitoring.*') ? 'true' : 'false' }} }">
@@ -1067,6 +1092,26 @@
             evt.detail.headers['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
         });
     });
+</script>
+
+{{-- Persist sidebar scroll position across full-page navigations --}}
+<script>
+    (function () {
+        var KEY = 'sidebarScrollTop';
+        var sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        // Restore immediately so there's no visible jump.
+        var saved = sessionStorage.getItem(KEY);
+        if (saved !== null) {
+            sidebar.scrollTop = parseInt(saved, 10);
+        }
+
+        // Save whenever the user scrolls the sidebar.
+        sidebar.addEventListener('scroll', function () {
+            sessionStorage.setItem(KEY, sidebar.scrollTop);
+        }, { passive: true });
+    })();
 </script>
 
 @stack('scripts')

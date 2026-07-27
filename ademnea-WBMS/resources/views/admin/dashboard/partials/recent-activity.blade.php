@@ -12,6 +12,7 @@
 
         <ul class="nav nav-tabs px-3 pt-2 border-0" id="activityTabs" role="tablist"
             style="gap:0.25rem;">
+            @if($isAdmin)
             <li class="nav-item" role="presentation">
                 <button class="nav-link active" id="tab-farmers" data-bs-toggle="tab"
                         data-bs-target="#pane-farmers" type="button" role="tab"
@@ -19,8 +20,9 @@
                     <i class="bi bi-people me-1"></i>Farmers
                 </button>
             </li>
+            @endif
             <li class="nav-item" role="presentation">
-                <button class="nav-link" id="tab-apiaries" data-bs-toggle="tab"
+                <button class="nav-link {{ $isAdmin ? '' : 'active' }}" id="tab-apiaries" data-bs-toggle="tab"
                         data-bs-target="#pane-apiaries" type="button" role="tab"
                         style="font-size:0.78rem;">
                     <i class="bi bi-building me-1"></i>Farms
@@ -58,7 +60,8 @@
 
         <div class="tab-content" id="activityTabContent">
 
-            {{-- ── Recent Farmers ────────────────────────────────────── --}}
+            {{-- ── Recent Farmers — admin only ──────────────────────── --}}
+            @if($isAdmin)
             <div class="tab-pane fade show active" id="pane-farmers" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
@@ -104,9 +107,10 @@
                     </div>
                 @endif
             </div>
+            @endif {{-- end isAdmin farmers pane --}}
 
             {{-- ── Recent Farms (Apiaries) ───────────────────────────── --}}
-            <div class="tab-pane fade" id="pane-apiaries" role="tabpanel">
+            <div class="tab-pane fade {{ $isAdmin ? '' : 'show active' }}" id="pane-apiaries" role="tabpanel">
                 <div class="table-responsive">
                     <table class="table table-hover mb-0">
                         <thead>

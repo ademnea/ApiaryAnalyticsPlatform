@@ -91,7 +91,8 @@ class GalleryService
 
     protected function storeImages(GalleryAlbum $album, array $files): void
     {
-        $files = array_filter(is_array($files) ? $files : [$files]);
+        // Filter out any null slots that browsers may include in the array.
+        $files = array_filter($files, fn ($f) => $f !== null);
         $order = $album->images()->count();
 
         foreach ($files as $file) {

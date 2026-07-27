@@ -5,6 +5,10 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\IotDeviceRegistryController;
+use App\Http\Controllers\Admin\IotHardwareTeamRegistryController;
+use App\Http\Controllers\Admin\IotHardwareTeamMemberController;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveController;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveMapController;
 use App\Http\Controllers\Admin\ApiaryManagement\ApiaryController;
@@ -91,6 +95,8 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // ============================================================
     // ROLE MANAGEMENT — additional middleware: permission:manage-roles
     // ============================================================
+
+
     Route::middleware(['permission:manage-roles'])->group(function () {
         Route::get('/admin/roles', [RoleController::class, 'index'])->name('admin.roles.index');
         Route::get('/admin/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
@@ -173,12 +179,80 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->withTrashed();
     });
 
-    // Apiaries
-    Route::middleware(['permission:manage-apiaries'])->group(function () {
+    // Apiaries — read-only (view-hive-data or manage-apiaries)
+    Route::middleware(['permission:view-hive-data|manage-apiaries'])->group(function () {
         Route::get('/admin/apiaries', [ApiaryController::class, 'index'])->name('admin.apiaries.index');
-        Route::get('/admin/apiaries/create', [ApiaryController::class, 'create'])->name('admin.apiaries.create');
-        Route::post('/admin/apiaries', [ApiaryController::class, 'store'])->name('admin.apiaries.store');
+
+        // Static paths before wildcard.
+        Route::get('/admin/apiaries/create', [ApiaryController::class, 'create'])
+            ->name('admin.apiaries.create')
+            ->can('manage-apiaries');
+
+   //=================================================================
+   //IOT device registray,teammanagement and ingetion module
+   //================================================================= 
+    // Hardware teams (never hard/soft deleted — deactivate only)
+    Route::resource('hardware-teams', IotHardwareTeamRegistryController::class)->except(['destroy']);
+    Route::patch('hardware-teams/{hardwareTeam}/deactivate', [IotHardwareTeamRegistryController::class, 'deactivate'])
+        ->name('hardware-teams.deactivate');
+    Route::patch('hardware-teams/{hardwareTeam}/reactivate', [IotHardwareTeamRegistryController::class, 'reactivate'])
+        ->name('hardware-teams.reactivate');
+
+    // Team members (nested under a team)
+    Route::prefix('hardware-teams/{hardwareTeam}/members')->name('hardware-teams.members.')->group(function () {
+        Route::get('create', [IotHardwareTeamMemberController::class, 'create'])->name('create');
+        Route::post('/', [IotHardwareTeamMemberController::class, 'store'])->name('store');
+        Route::get('{member}/edit', [IotHardwareTeamMemberController::class, 'edit'])->name('edit');
+        Route::put('{member}', [IotHardwareTeamMemberController::class, 'update'])->name('update');
+        Route::patch('{member}/deactivate', [IotHardwareTeamMemberController::class, 'deactivate'])->name('deactivate');
+        Route::patch('{member}/reactivate', [IotHardwareTeamMemberController::class, 'reactivate'])->name('reactivate');
+    });
+
+    // Devices scoped to a team (the "Add Device" flow from a team page)
+    Route::prefix('hardware-teams/{hardwareTeam}/devices')->name('hardware-teams.devices.')->group(function () {
+        Route::get('/', [IotDeviceRegistryController::class, 'indexForTeam'])->name('index');
+        Route::get('create', [IotDeviceRegistryController::class, 'createForTeam'])->name('create');
+        Route::post('/', [IotDeviceRegistryController::class, 'storeForTeam'])->name('store');
+    });
+
+    // Global IoT device registry
+    Route::resource('iot-devices', IotDeviceRegistryController::class);
+    Route::patch('iot-devices/{iotDevice}/revoke', [IotDeviceRegistryController::class, 'revoke'])
+        ->name('iot-devices.revoke');
+    Route::patch('iot-devices/{iotDevice}/reactivate', [IotDeviceRegistryController::class, 'reactivate'])
+        ->name('iot-devices.reactivate');
+
+    // Device-to-hive assignment wizard
+    Route::get('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assignForm'])
+        ->name('iot-devices.assign.form');
+    Route::get('iot-devices/{iotDevice}/assign/hives', [IotDeviceRegistryController::class, 'assignHives'])
+        ->name('iot-devices.assign.hives');
+    Route::post('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assign'])
+        ->name('iot-devices.assign.store');
+    Route::patch('iot-devices/{iotDevice}/unassign', [IotDeviceRegistryController::class, 'unassign'])
+        ->name('iot-devices.unassign');
+});
+
+//===========================
+ // ENDS HERE
+//============================================================
+
+
+
+
+
+
+
+
+
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+
         Route::get('/admin/apiaries/{apiary}', [ApiaryController::class, 'show'])->name('admin.apiaries.show');
+    });
+
+    // Apiaries — write access (manage-apiaries only)
+    Route::middleware(['permission:manage-apiaries'])->group(function () {
+        Route::post('/admin/apiaries', [ApiaryController::class, 'store'])->name('admin.apiaries.store');
         Route::get('/admin/apiaries/{apiary}/edit', [ApiaryController::class, 'edit'])->name('admin.apiaries.edit');
         Route::put('/admin/apiaries/{apiary}', [ApiaryController::class, 'update'])->name('admin.apiaries.update');
         Route::delete('/admin/apiaries/{apiary}', [ApiaryController::class, 'destroy'])->name('admin.apiaries.destroy');
@@ -189,33 +263,41 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->name('admin.apiaries.deactivate');
     });
 
-    // Hives
-    Route::middleware(['permission:manage-hives'])->group(function () {
+    // Hives — read-only access (view-hive-data or manage-hives) covers researchers and anyone
+    // with manage-hives. The permission middleware accepts either, so we use
+    // a single group with pipe-separated permissions.
+    Route::middleware(['permission:view-hive-data|manage-hives'])->group(function () {
         Route::get('/admin/hives', [HiveController::class, 'index'])->name('admin.hives.index');
+
+        // ALL static literal paths must come before {hive} wildcard — otherwise
+        // Laravel resolves e.g. /hives/create and /hives/map as hive IDs.
+        // The create route carries its own tighter permission check via can().
         Route::get('/admin/hives/create', [HiveController::class, 'create'])
-            ->name('admin.hives.create');
-        Route::post('/admin/hives', [HiveController::class, 'store'])
-            ->name('admin.hives.store');
+            ->name('admin.hives.create')
+            ->can('manage-hives');
 
         Route::get('/admin/hives/map', function () {
-            return view('admin.apiary-management.hives.map');
+            return view('admin.placeholder', ['title' => 'Hive Map', 'subtitle' => 'Placeholder for hives.map']);
         })->name('admin.hives.map');
-
-        Route::get('/admin/hives/map-data', [HiveMapController::class, 'index'])
-            ->name('admin.hives.map.data');
-
-        Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
-        Route::get('/admin/hives/{hive}/edit', [HiveController::class, 'edit'])->name('admin.hives.edit');
-        Route::put('/admin/hives/{hive}', [HiveController::class, 'update'])->name('admin.hives.update');
-        Route::patch('/admin/hives/{hive}/status', [HiveController::class, 'updateStatus'])
-            ->name('admin.hives.updateStatus');
-        Route::delete('/admin/hives/{hive}', [HiveController::class, 'destroy'])->name('admin.hives.destroy');
 
         foreach (['inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
             })->name('admin.' . $name);
         }
+
+        // Wildcard last.
+        Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
+    });
+
+    // Hives — write access (manage-hives only)
+    Route::middleware(['permission:manage-hives'])->group(function () {
+        Route::post('/admin/hives', [HiveController::class, 'store'])->name('admin.hives.store');
+        Route::get('/admin/hives/{hive}/edit', [HiveController::class, 'edit'])->name('admin.hives.edit');
+        Route::put('/admin/hives/{hive}', [HiveController::class, 'update'])->name('admin.hives.update');
+        Route::patch('/admin/hives/{hive}/status', [HiveController::class, 'updateStatus'])
+            ->name('admin.hives.updateStatus');
+        Route::delete('/admin/hives/{hive}', [HiveController::class, 'destroy'])->name('admin.hives.destroy');
     });
 
     // ============================================================
@@ -235,7 +317,7 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     });
 
     // Sensor Monitoring
-    Route::middleware(['permission:view-monitoring-dashboard'])->group(function () {
+    Route::middleware(['permission:view-monitoring-dashboard|view-hive-data'])->group(function () {
         foreach (['monitoring.temperature', 'monitoring.humidity', 'monitoring.weight', 'monitoring.co2', 'monitoring.audio', 'monitoring.video', 'monitoring.photos', 'alerts.index'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);

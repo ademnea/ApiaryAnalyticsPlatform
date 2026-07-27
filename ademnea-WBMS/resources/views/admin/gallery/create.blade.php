@@ -37,11 +37,13 @@
                         <div class="row g-3">
                             <div class="col-lg-6">
                                 <label class="form-label">Album Title</label>
-                                <input type="text" name="title" class="form-control" value="{{ old('title') }}" required>
+                                <input type="text" name="title" class="form-control @error('title') is-invalid @enderror" value="{{ old('title') }}" required>
+                                @error('title')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-lg-6">
                                 <label class="form-label">Slug <small class="text-muted">optional</small></label>
-                                <input type="text" name="slug" class="form-control" value="{{ old('slug') }}" placeholder="gallery-album-title">
+                                <input type="text" name="slug" class="form-control @error('slug') is-invalid @enderror" value="{{ old('slug') }}" placeholder="gallery-album-title">
+                                @error('slug')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-lg-6">
                                 <label class="form-label">Status</label>
@@ -51,9 +53,33 @@
                                 </select>
                             </div>
                             <div class="col-lg-6">
+                                <label class="form-label">Visibility</label>
+                                <select name="visibility" class="form-select @error('visibility') is-invalid @enderror">
+                                    @foreach($visibilityOptions as $value => $label)
+                                        <option value="{{ $value }}" {{ old('visibility', 'public') === $value ? 'selected' : '' }}>
+                                            {{ $label }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('visibility')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-lg-6">
+                                <label class="form-label">Category <small class="text-muted">optional</small></label>
+                                <select name="category" class="form-select @error('category') is-invalid @enderror">
+                                    <option value="">— None —</option>
+                                    @foreach($categories as $category)
+                                        <option value="{{ $category }}" {{ old('category') === $category ? 'selected' : '' }}>
+                                            {{ $category }}
+                                        </option>
+                                    @endforeach
+                                </select>
+                                @error('category')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                            </div>
+                            <div class="col-lg-6">
                                 <label class="form-label">Cover image</label>
-                                <input type="file" name="cover_image" class="form-control" accept="image/jpeg,image/png,image/webp">
-                                <div class="form-text">Upload a strong visual for the album cover.</div>
+                                <input type="file" name="cover_image" class="form-control @error('cover_image') is-invalid @enderror" accept="image/*">
+                                <div class="form-text">Any image format accepted. Max 10 MB.</div>
+                                @error('cover_image')<div class="invalid-feedback">{{ $message }}</div>@enderror
                             </div>
                             <div class="col-12">
                                 <label class="form-label">Description</label>
@@ -63,8 +89,8 @@
                                 <label class="form-label">Album images</label>
                                 <div class="border border-dashed rounded-4 p-4 text-center" style="border-color: rgba(27, 48, 34, 0.25); background: rgba(212, 175, 55, 0.05);">
                                     <p class="mb-2 text-muted">Drag &amp; drop image files here or click to browse.</p>
-                                    <input type="file" name="images[]" class="form-control border-0 p-0" multiple accept="image/jpeg,image/png,image/webp">
-                                    <div class="form-text">You may select multiple images at once. Max file size: 2 MB.</div>
+                                    <input type="file" name="images[]" class="form-control border-0 p-0" multiple accept="image/*">
+                                    <div class="form-text">Any image format accepted. Max 10 MB per file.</div>
                                 </div>
                             </div>
                         </div>

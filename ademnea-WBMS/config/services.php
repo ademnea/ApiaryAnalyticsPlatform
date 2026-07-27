@@ -33,6 +33,25 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
+        
+    ],
+  'fcm' => [
+        'project_id' => env('FCM_PROJECT_ID'),
+        'access_token' => env('FCM_ACCESS_TOKEN'),
     ],
 
+    'iot' => [
+    'queue_driver' => env('IOT_QUEUE_DRIVER', 'redis'), // redis | sqs
+    'queue_name' => env('IOT_QUEUE_NAME', 'ademnea-iot-queue'),
+    'dead_letter_name' => env('IOT_QUEUE_NAME', 'ademnea-iot-queue') . '-dlq',
+    'redis_connection' => env('IOT_REDIS_CONNECTION', 'default'),
+    'max_delivery_attempts' => (int) env('IOT_MAX_DELIVERY_ATTEMPTS', 5),
+    'sqs_queue_url' => env('IOT_SQS_QUEUE_URL'),
+    'aws_region' => env('AWS_DEFAULT_REGION', 'eu-west-1'),
+],
+
+    'africastalking' => [
+        'api_key' => env('AFRICASTALKING_API_KEY'),
+        'username' => env('AFRICASTALKING_USERNAME'),
+           ],
 ];
