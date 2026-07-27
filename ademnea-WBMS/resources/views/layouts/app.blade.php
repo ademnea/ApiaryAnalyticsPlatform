@@ -642,8 +642,8 @@
                class="{{ request()->routeIs('admin.hives.index') ? 'active' : '' }}">
                 <i class="bi bi-list-ul"></i> All Hives
             </a>
-            <a href="{{ route('admin.hives.create') }}"
-               class="{{ request()->routeIs('admin.hives.create') ? 'active' : '' }}">
+             <a href="{{ route('admin.hives.create') }}"
+                class="{{ request()->routeIs('admin.hives.create*') ? 'active' : '' }}">
                 <i class="bi bi-plus-circle"></i> Register Hive
             </a>
             <a href="{{ route('admin.hives.map') }}"
@@ -1092,6 +1092,26 @@
             evt.detail.headers['X-CSRF-TOKEN'] = document.querySelector('meta[name="csrf-token"]').content;
         });
     });
+</script>
+
+{{-- Persist sidebar scroll position across full-page navigations --}}
+<script>
+    (function () {
+        var KEY = 'sidebarScrollTop';
+        var sidebar = document.querySelector('.sidebar');
+        if (!sidebar) return;
+
+        // Restore immediately so there's no visible jump.
+        var saved = sessionStorage.getItem(KEY);
+        if (saved !== null) {
+            sidebar.scrollTop = parseInt(saved, 10);
+        }
+
+        // Save whenever the user scrolls the sidebar.
+        sidebar.addEventListener('scroll', function () {
+            sessionStorage.setItem(KEY, sidebar.scrollTop);
+        }, { passive: true });
+    })();
 </script>
 
 @stack('scripts')
