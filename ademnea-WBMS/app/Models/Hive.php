@@ -56,18 +56,18 @@ class Hive extends Model
     /**
      * Relationship: A hive has many inspection records.
      */
-    public function inspections(): HasMany
-    {
-        return $this->hasMany(Inspection::class);
-    }
+    // public function inspections(): HasMany
+    // {
+    //     return $this->hasMany(Inspection::class);
+    // }
 
     /**
      * Relationship: A hive has many harvest records.
      */
-    public function harvestRecords(): HasMany
-    {
-        return $this->hasMany(HarvestRecord::class);
-    }
+    // public function harvestRecords(): HasMany
+    // {
+    //     return $this->hasMany(HarvestRecord::class);
+    // }
 
     /**
      * Relationship: A hive has many IoT devices assigned to it.

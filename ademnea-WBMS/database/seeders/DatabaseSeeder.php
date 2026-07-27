@@ -24,6 +24,10 @@ class DatabaseSeeder extends Seeder
 
         $this->call([
             SuperAdminSeeder::class,
+            IotHardwareTeamSeeder::class,
+            ApiarySeeder::class,
+            HiveSeeder::class,
+            IotDeviceSeeder::class,
         ]);
     }
 }
