@@ -6,9 +6,12 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Hive extends Model
 {
+    use HasFactory;
     use SoftDeletes;
 
     protected $fillable = [
@@ -100,11 +103,18 @@ class Hive extends Model
             ->orderBy('transitioned_at', 'desc');
     }
 
+    /**
+     * Relationship: A hive has many inspection records.
+     */
     // TODO: Uncomment when Inspection model is implemented
     // public function inspections(): HasMany
     // {
     //     return $this->hasMany(Inspection::class);
     // }
+
+    /**
+     * Relationship: A hive has many harvest records.
+     */
 
     // TODO: Uncomment when HarvestRecord model is implemented
     // public function harvestRecords(): HasMany

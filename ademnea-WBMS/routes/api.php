@@ -1,6 +1,8 @@
-<?php
+<?php 
 
 use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\Api\Iot\IotLocalMediaMockController;
+use App\Http\Controllers\Api\Iot\IotMediaUploadUrlController;
 use App\Http\Controllers\Api\Farmer\AuthController;
 use App\Http\Controllers\Api\Farmer\FarmController;
 use App\Http\Controllers\Api\Farmer\SensorController;
@@ -8,6 +10,19 @@ use App\Http\Controllers\Api\Farmer\MediaController;
 use App\Http\Controllers\Api\Farmer\InspectionController;
 use App\Http\Controllers\Api\Farmer\AlertController;
 use App\Http\Controllers\Api\Farmer\MessageController;
+
+
+
+// media upload URL request for IoT devices, which will be used to upload media to S3 (or local mock storage).
+Route::post('iot/media/upload-url', [IotMediaUploadUrlController::class, 'requestUploadUrl']);
+
+// TEMPORARY — local S3-mock receiver, only used while IOT_MEDIA_DISK != s3.
+Route::put('iot/media-mock/{key}', [IotLocalMediaMockController::class, 'receive'])
+    ->name('iot.media.mock-upload')
+    ->middleware('signed');
+
+
+
 
 /*
 |--------------------------------------------------------------------------
