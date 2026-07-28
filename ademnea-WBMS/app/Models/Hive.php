@@ -210,4 +210,9 @@ class Hive extends Model
     {
         return $this->current_status === 'Active';
     }
+
+    public function getHybridCodeAttribute(): string
+    {
+        return $this->hybrid_identifier ?: $this->hive_code ?: '—';
+    }
 }

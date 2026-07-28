@@ -2,18 +2,18 @@
 
 namespace App\Http\Controllers\Admin\ApiaryManagement;
 
+use App\Contracts\FarmerRegistryServiceContract;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApiaryManagement\FarmerStoreRequest;
 use App\Http\Requests\ApiaryManagement\FarmerUpdateRequest;
 use App\Models\Farmer;
-use App\Services\ApiaryManagement\FarmerRegistrationService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
 class FarmerController extends Controller
 {
-    public function __construct(private readonly FarmerRegistrationService $farmerService)
+    public function __construct(private readonly FarmerRegistryServiceContract $farmerService)
     {
         $this->middleware('auth');
     }

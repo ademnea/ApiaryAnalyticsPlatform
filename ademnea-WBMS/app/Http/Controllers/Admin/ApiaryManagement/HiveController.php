@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Admin\ApiaryManagement;
 
+use App\Contracts\HiveRegistryServiceContract;
+use App\Contracts\HiveStatusChangeServiceContract;
 use App\Exceptions\ApiaryManagement\InvalidHiveStatusTransitionException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApiaryManagement\ChangeHiveStatusRequest;
@@ -9,8 +11,6 @@ use App\Http\Requests\ApiaryManagement\StoreHiveRequest;
 use App\Http\Requests\ApiaryManagement\UpdateHiveRequest;
 use App\Models\Apiary;
 use App\Models\Hive;
-use App\Services\ApiaryManagement\HiveRegistrationService;
-use App\Services\ApiaryManagement\HiveStatusChangeService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -18,8 +18,8 @@ use Illuminate\View\View;
 class HiveController extends Controller
 {
     public function __construct(
-        private readonly HiveRegistrationService $registrationService,
-        private readonly HiveStatusChangeService $statusService
+        private readonly HiveRegistryServiceContract $registrationService,
+        private readonly HiveStatusChangeServiceContract $statusService
     ) {
         $this->middleware('auth');
     }

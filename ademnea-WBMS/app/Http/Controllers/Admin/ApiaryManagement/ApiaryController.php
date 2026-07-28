@@ -2,28 +2,21 @@
 
 namespace App\Http\Controllers\Admin\ApiaryManagement;
 
+use App\Contracts\ApiaryRegistryServiceContract;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ApiaryManagement\StoreApiaryRequest;
 use App\Http\Requests\ApiaryManagement\UpdateApiaryRequest;
 use App\Models\Apiary;
-use App\Services\ApiaryManagement\ApiaryRegistrationService;
 use Illuminate\Http\Request;
 
 class ApiaryController extends Controller
 {
-    private ApiaryRegistrationService $service;
-
-    public function __construct(ApiaryRegistrationService $service)
+    public function __construct(private ApiaryRegistryServiceContract $service)
     {
-        $this->service = $service;
-
         $this->middleware('auth');
         $this->middleware('permission:manage-apiaries');
     }
 
-    /**
-     * GET /admin/apiaries
-     */
     public function index(Request $request)
     {
         $filters = $request->only(['country', 'status', 'managing_entity', 'farmer_id', 'unassigned', 'all']);
@@ -36,9 +29,6 @@ class ApiaryController extends Controller
         ]);
     }
 
-    /**
-     * GET /admin/apiaries/create
-     */
     public function create()
     {
         return view('admin.apiary-management.apiaries.create', [
@@ -47,9 +37,6 @@ class ApiaryController extends Controller
         ]);
     }
 
-    /**
-     * POST /admin/apiaries
-     */
     public function store(StoreApiaryRequest $request)
     {
         try {
@@ -62,9 +49,6 @@ class ApiaryController extends Controller
         }
     }
 
-    /**
-     * GET /admin/apiaries/{apiary}
-     */
     public function show(Apiary $apiary)
     {
         $apiary = $this->service->find($apiary->id);
@@ -72,9 +56,6 @@ class ApiaryController extends Controller
         return view('admin.apiary-management.apiaries.show', ['apiary' => $apiary]);
     }
 
-    /**
-     * GET /admin/apiaries/{apiary}/edit
-     */
     public function edit(Apiary $apiary)
     {
         return view('admin.apiary-management.apiaries.edit', [
@@ -84,9 +65,6 @@ class ApiaryController extends Controller
         ]);
     }
 
-    /**
-     * PUT /admin/apiaries/{apiary}
-     */
     public function update(UpdateApiaryRequest $request, Apiary $apiary)
     {
         try {
@@ -99,9 +77,6 @@ class ApiaryController extends Controller
         }
     }
 
-    /**
-     * PATCH /admin/apiaries/{apiary}/deactivate
-     */
     public function deactivate(Apiary $apiary)
     {
         $this->service->deactivate($apiary);
@@ -109,9 +84,6 @@ class ApiaryController extends Controller
         return redirect()->route('admin.apiaries.index')->with('success', 'Apiary deactivated successfully.');
     }
 
-    /**
-     * DELETE /admin/apiaries/{apiary}
-     */
     public function destroy(Apiary $apiary)
     {
         $apiary->delete();

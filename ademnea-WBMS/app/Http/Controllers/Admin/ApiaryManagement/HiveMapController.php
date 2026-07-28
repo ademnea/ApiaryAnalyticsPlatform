@@ -6,10 +6,16 @@ use App\Http\Controllers\Controller;
 use App\Models\Hive;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
-use Illuminate\Support\Facades\Validator;
+use Illuminate\View\View;
+use Validator;
 
 class HiveMapController extends Controller
 {
+    public function map(): View
+    {
+        return view('admin.apiary-management.hives.map');
+    }
+
     public function index(Request $request): JsonResponse
     {
         $validator = Validator::make($request->query(), [
