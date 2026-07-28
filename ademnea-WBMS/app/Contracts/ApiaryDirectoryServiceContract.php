@@ -7,16 +7,10 @@ use Illuminate\Support\Collection;
 /**
  * Owned by the Apiary Management module (Developer B). The IoT module only
  * depends on this interface — it never touches the apiaries/hives tables
- * directly. Implementation is currently mocked (see
- * App\Services\External\ApiaryDirectoryServiceMock) so the device
- * assignment interface can be built and demoed before Developer B's
- * module is ready.
+ * directly. The real implementation is App\Services\ApiaryManagement\ApiaryDirectoryService.
  *
- * TO DEVELOPER B: implement this against apiaries / hives /
- * hive_device_assignments and rebind it in AppServiceProvider in place of
- * the mock. Please don't change these two method signatures without
- * coordinating — the assign wizard (admin/iot-devices/assign.blade.php)
- * depends on this exact shape.
+ * Do not change these two method signatures without coordinating — the
+ * assign wizard (admin/iot-devices/assign.blade.php) depends on this shape.
  */
 interface ApiaryDirectoryServiceContract
 {

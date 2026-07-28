@@ -5,6 +5,10 @@ namespace App\Providers;
 use App\Models\Farmer;
 use App\Models\Hive;
 use App\Services\DashboardService;
+use App\Contracts\ApiaryRegistryServiceContract;
+use App\Contracts\HiveRegistryServiceContract;
+use App\Contracts\HiveStatusChangeServiceContract;
+use App\Contracts\FarmerRegistryServiceContract;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -15,10 +19,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function register(): void
     {
-                $this->app->bind(
-                \App\Contracts\ApiaryDirectoryServiceContract::class,
-                \App\Services\External\ApiaryDirectoryServiceMock::class
-                            );
+        $this->app->bind(
+            \App\Contracts\ApiaryDirectoryServiceContract::class,
+            \App\Services\ApiaryManagement\ApiaryDirectoryService::class
+        );
 
                 $this->app->bind(\App\Contracts\MediaUploadStorageContract::class, function () {
                     return config('filesystems.default_iot_media_driver', env('IOT_MEDIA_DISK')) === 's3'
@@ -45,6 +49,11 @@ class AppServiceProvider extends ServiceProvider
         // Bind DashboardService as a singleton so only one instance is
         // created per request cycle — avoids redundant DB connections.
         $this->app->singleton(DashboardService::class);
+
+        $this->app->bind(ApiaryRegistryServiceContract::class, \App\Services\ApiaryManagement\ApiaryRegistrationService::class);
+        $this->app->bind(HiveRegistryServiceContract::class, \App\Services\ApiaryManagement\HiveRegistrationService::class);
+        $this->app->bind(HiveStatusChangeServiceContract::class, \App\Services\ApiaryManagement\HiveStatusChangeService::class);
+        $this->app->bind(FarmerRegistryServiceContract::class, \App\Services\ApiaryManagement\FarmerRegistrationService::class);
     }
 
     /**
