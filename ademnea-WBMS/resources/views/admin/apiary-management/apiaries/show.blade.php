@@ -1,47 +1,50 @@
 @extends('layouts.app')
 
+@section('title', $apiary->name)
+@section('page-title', $apiary->name)
+@section('breadcrumbs')
+    <li class="breadcrumb-item"><a href="{{ route('admin.apiaries.index') }}">Apiaries</a></li>
+    <li class="breadcrumb-item active" aria-current="page">{{ $apiary->name }}</li>
+@endsection
+
 @section('content')
-<div class="container-fluid">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h1 class="h3">{{ $apiary->name }}</h1>
-        <div>
-            <a href="{{ route('admin.apiaries.edit', $apiary) }}" class="btn btn-outline-secondary">Edit</a>
+
+@if(session('success'))
+    <div class="alert alert-success">{{ session('success') }}</div>
+@endif
+
+<div class="row g-4">
+    <div class="col-md-4">
+        <div class="card h-100">
+            <div class="card-header"><i class="bi bi-info-circle me-1"></i>Details</div>
+            <div class="card-body">
+                <dl class="row mb-0" style="font-size:0.85rem;">
+                    <dt class="col-sm-4 text-muted">Country</dt>
+                    <dd class="col-sm-8">{{ $apiary->country_name }}</dd>
+                    <dt class="col-sm-4 text-muted">Region</dt>
+                    <dd class="col-sm-8">{{ $apiary->region ?? '—' }}</dd>
+                    <dt class="col-sm-4 text-muted">District</dt>
+                    <dd class="col-sm-8">{{ $apiary->district ?? '—' }}</dd>
+                    <dt class="col-sm-4 text-muted">Status</dt>
+                    <dd class="col-sm-8">{{ ucfirst($apiary->status) }}</dd>
+                </dl>
+            </div>
         </div>
     </div>
-
-    @if(session('success'))
-        <div class="alert alert-success">{{ session('success') }}</div>
-    @endif
-
-    <dl class="row">
-        <dt class="col-sm-3">Country</dt>        <dd class="col-sm-9">{{ $apiary->country_name }}</dd>
-        <dt class="col-sm-3">Region</dt><dd class="col-sm-9">{{ $apiary->region ?? '—' }}</dd>
-        <dt class="col-sm-3">District</dt><dd class="col-sm-9">{{ $apiary->district ?? '—' }}</dd>
-        <dt class="col-sm-3">Managing Farmer</dt>
-        <dd class="col-sm-9">
-            @if($apiary->farmer)
-                <a href="{{ route('admin.farmers.show', $apiary->farmer) }}">{{ $apiary->farmer->full_name }}</a>
-            @else
-                Organization-managed
-            @endif
-        </dd>
-        <dt class="col-sm-3">Status</dt><dd class="col-sm-9">{{ ucfirst($apiary->status) }}</dd>
-        <dt class="col-sm-3">Description</dt><dd class="col-sm-9">{{ $apiary->description ?? '—' }}</dd>
-    </dl>
-
-    <h2 class="h5 mt-4">Hives</h2>
-    <table class="table table-sm">
-        <thead><tr><th>Code</th><th>Name</th><th>Status</th><th>Last Inspection</th></tr></thead>
-        <tbody>
-            @foreach($apiary->hives as $hive)
-                <tr>
-                    <td><a href="{{ route('admin.hives.show', $hive) }}">{{ $hive->hybrid_identifier }}</a></td>
-                    <td>{{ $hive->display_name }}</td>
-                    <td>{{ ucfirst($hive->current_status) }}</td>
-                    <td>{{ $hive->last_inspection_date?->format('d M Y') ?? 'Never' }}</td>
-                </tr>
-            @endforeach
-        </tbody>
-    </table>
+    <div class="col-md-8">
+        <div class="card h-100">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-people me-1"></i>Managing Farmer</span>
+            </div>
+            <div class="card-body">
+                @if($apiary->farmer)
+                    <a href="{{ route('admin.farmers.show', $apiary->farmer) }}">{{ $apiary->farmer->full_name }}</a>
+                @else
+                    <span class="text-muted">Organization-managed</span>
+                @endif
+            </div>
+        </div>
+    </div>
 </div>
+
 @endsection

@@ -1,54 +1,62 @@
 @extends('layouts.app')
 
+@section('title', 'Edit Apiary — ' . $apiary->name)
+@section('page-title', 'Edit Apiary')
+@section('breadcrumbs')
+    <li class="breadcrumb-item"><a href="{{ route('admin.apiaries.index') }}">Apiaries</a></li>
+    <li class="breadcrumb-item"><a href="{{ route('admin.apiaries.show', $apiary) }}">{{ $apiary->name }}</a></li>
+    <li class="breadcrumb-item active" aria-current="page">Edit</li>
+@endsection
+
 @section('content')
-<div class="container-fluid">
-    <h1 class="h3 mb-3">Edit Apiary — {{ $apiary->name }}</h1>
+<div class="card" style="max-width:640px;">
+    <div class="card-header">Apiary Details</div>
+    <div class="card-body">
+        <form method="POST" action="{{ route('admin.apiaries.update', $apiary) }}">
+            @csrf
+            @method('PUT')
+            <div class="mb-3">
+                <label class="form-label">Apiary Name *</label>
+                <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $apiary->name) }}" required>
+                @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
+            </div>
 
-    <form method="POST" action="{{ route('admin.apiaries.update', $apiary) }}">
-        @csrf
-        @method('PUT')
+            <div class="row">
+                <div class="col-md-6 mb-3">
+                    <label class="form-label">Country of Deployment *</label>
+                    <select name="country" class="form-select @error('country') is-invalid @enderror" required>
+                        @foreach($countries as $code => $name)
+                            <option value="{{ $code }}" {{ old('country', $apiary->country) == $code ? 'selected' : '' }}>{{ $name }}</option>
+                        @endforeach
+                    </select>
+                    @error('country')<div class="invalid-feedback">{{ $message }}</div>@enderror
+                </div>
+            </div>
 
-        <div class="mb-3">
-            <label class="form-label">Apiary Name *</label>
-            <input type="text" name="name" class="form-control @error('name') is-invalid @enderror" value="{{ old('name', $apiary->name) }}" required>
-            @error('name')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-
-        <div class="row">
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Country of Deployment *</label>
-                <select name="country" class="form-select" required>
-                    @foreach($countries as $code => $name)
-                        <option value="{{ $code }}" {{ old('country', $apiary->country) == $code ? 'selected' : '' }}>{{ $name }}</option>
+            <div class="mb-3">
+                <label class="form-label">Managing Farmer</label>
+                <select name="farmer_id" class="form-select @error('farmer_id') is-invalid @enderror">
+                    <option value="">— None —</option>
+                    @foreach($farmers as $farmer)
+                        <option value="{{ $farmer->id }}" {{ old('farmer_id', $apiary->farmer_id) == $farmer->id ? 'selected' : '' }}>
+                            {{ $farmer->full_name }}
+                        </option>
                     @endforeach
                 </select>
+                @error('farmer_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-            <div class="col-md-6 mb-3">
-                <label class="form-label">Region</label>
-                <input type="text" name="region" class="form-control" value="{{ old('region', $apiary->region) }}">
+
+            <div class="mb-3">
+                <label class="form-label">Description</label>
+                <textarea name="description" class="form-control @error('description') is-invalid @enderror" rows="3">{{ old('description', $apiary->description) }}</textarea>
+                @error('description')<div class="invalid-feedback">{{ $message }}</div>@enderror
             </div>
-        </div>
 
-        <div class="mb-3">
-            <label class="form-label">Managing Farmer</label>
-            <select name="farmer_id" class="form-select @error('farmer_id') is-invalid @enderror">
-                <option value="">— Organization-managed (no individual farmer) —</option>
-                @foreach($farmers as $farmer)
-                    <option value="{{ $farmer->id }}" {{ old('farmer_id', $apiary->farmer_id) == $farmer->id ? 'selected' : '' }}>
-                        {{ $farmer->select_label }}
-                    </option>
-                @endforeach
-            </select>
-            @error('farmer_id')<div class="invalid-feedback">{{ $message }}</div>@enderror
-        </div>
-
-        <div class="mb-3">
-            <label class="form-label">Description</label>
-            <textarea name="description" class="form-control" rows="3">{{ old('description', $apiary->description) }}</textarea>
-        </div>
-
-        <button type="submit" class="btn btn-primary">Save Changes</button>
-        <a href="{{ route('admin.apiaries.show', $apiary) }}" class="btn btn-secondary">Cancel</a>
-    </form>
+            <div class="d-flex gap-2 mt-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Save Changes</button>
+                <a href="{{ route('admin.apiaries.show', $apiary) }}" class="btn btn-outline-forest">Cancel</a>
+            </div>
+        </form>
+    </div>
 </div>
 @endsection
