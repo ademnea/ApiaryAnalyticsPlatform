@@ -95,8 +95,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // ============================================================
     // ROLE MANAGEMENT — additional middleware: permission:manage-roles
     // ============================================================
-
-
     Route::middleware(['permission:manage-roles'])->group(function () {
         Route::get('/admin/roles', [RoleController::class, 'index'])->name('admin.roles.index');
         Route::get('/admin/roles/create', [RoleController::class, 'create'])->name('admin.roles.create');
@@ -152,10 +150,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     });
 
     // ============================================================
-    // PLACEHOLDER ROUTES — sidebar links not yet implemented.
-    // Each group carries the correct Spatie permission so that
-    // when other developers replace placeholders with real
-    // controllers the RBAC is already wired up.
     // APIARY MANAGEMENT MODULE (SDD §4.2.4)
     // ============================================================
 
@@ -188,65 +182,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->name('admin.apiaries.create')
             ->can('manage-apiaries');
 
-   //=================================================================
-   //IOT device registray,teammanagement and ingetion module
-   //================================================================= 
-    // Hardware teams (never hard/soft deleted — deactivate only)
-    Route::resource('hardware-teams', IotHardwareTeamRegistryController::class)->except(['destroy']);
-    Route::patch('hardware-teams/{hardwareTeam}/deactivate', [IotHardwareTeamRegistryController::class, 'deactivate'])
-        ->name('hardware-teams.deactivate');
-    Route::patch('hardware-teams/{hardwareTeam}/reactivate', [IotHardwareTeamRegistryController::class, 'reactivate'])
-        ->name('hardware-teams.reactivate');
-
-    // Team members (nested under a team)
-    Route::prefix('hardware-teams/{hardwareTeam}/members')->name('hardware-teams.members.')->group(function () {
-        Route::get('create', [IotHardwareTeamMemberController::class, 'create'])->name('create');
-        Route::post('/', [IotHardwareTeamMemberController::class, 'store'])->name('store');
-        Route::get('{member}/edit', [IotHardwareTeamMemberController::class, 'edit'])->name('edit');
-        Route::put('{member}', [IotHardwareTeamMemberController::class, 'update'])->name('update');
-        Route::patch('{member}/deactivate', [IotHardwareTeamMemberController::class, 'deactivate'])->name('deactivate');
-        Route::patch('{member}/reactivate', [IotHardwareTeamMemberController::class, 'reactivate'])->name('reactivate');
-    });
-
-    // Devices scoped to a team (the "Add Device" flow from a team page)
-    Route::prefix('hardware-teams/{hardwareTeam}/devices')->name('hardware-teams.devices.')->group(function () {
-        Route::get('/', [IotDeviceRegistryController::class, 'indexForTeam'])->name('index');
-        Route::get('create', [IotDeviceRegistryController::class, 'createForTeam'])->name('create');
-        Route::post('/', [IotDeviceRegistryController::class, 'storeForTeam'])->name('store');
-    });
-
-    // Global IoT device registry
-    Route::resource('iot-devices', IotDeviceRegistryController::class);
-    Route::patch('iot-devices/{iotDevice}/revoke', [IotDeviceRegistryController::class, 'revoke'])
-        ->name('iot-devices.revoke');
-    Route::patch('iot-devices/{iotDevice}/reactivate', [IotDeviceRegistryController::class, 'reactivate'])
-        ->name('iot-devices.reactivate');
-
-    // Device-to-hive assignment wizard
-    Route::get('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assignForm'])
-        ->name('iot-devices.assign.form');
-    Route::get('iot-devices/{iotDevice}/assign/hives', [IotDeviceRegistryController::class, 'assignHives'])
-        ->name('iot-devices.assign.hives');
-    Route::post('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assign'])
-        ->name('iot-devices.assign.store');
-    Route::patch('iot-devices/{iotDevice}/unassign', [IotDeviceRegistryController::class, 'unassign'])
-        ->name('iot-devices.unassign');
-});
-
-//===========================
- // ENDS HERE
-//============================================================
-
-
-
-
-
-
-
-
-
-Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
-
         Route::get('/admin/apiaries/{apiary}', [ApiaryController::class, 'show'])->name('admin.apiaries.show');
     });
 
@@ -263,22 +198,20 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             ->name('admin.apiaries.deactivate');
     });
 
-    // Hives — read-only access (view-hive-data or manage-hives) covers researchers and anyone
-    // with manage-hives. The permission middleware accepts either, so we use
-    // a single group with pipe-separated permissions.
+    // Hives — read-only access (view-hive-data or manage-hives)
     Route::middleware(['permission:view-hive-data|manage-hives'])->group(function () {
         Route::get('/admin/hives', [HiveController::class, 'index'])->name('admin.hives.index');
 
-        // ALL static literal paths must come before {hive} wildcard — otherwise
-        // Laravel resolves e.g. /hives/create and /hives/map as hive IDs.
-        // The create route carries its own tighter permission check via can().
+        // Static paths before wildcard
         Route::get('/admin/hives/create', [HiveController::class, 'create'])
             ->name('admin.hives.create')
             ->can('manage-hives');
 
-        Route::get('/admin/hives/map', function () {
-            return view('admin.placeholder', ['title' => 'Hive Map', 'subtitle' => 'Placeholder for hives.map']);
-        })->name('admin.hives.map');
+        Route::get('/admin/hives/map', [HiveMapController::class, 'map'])
+            ->name('admin.hives.map');
+
+        Route::get('/admin/hives/map-data', [HiveMapController::class, 'index'])
+            ->name('admin.hives.map-data');
 
         foreach (['inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
@@ -286,7 +219,7 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
             })->name('admin.' . $name);
         }
 
-        // Wildcard last.
+        // Wildcard last
         Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
     });
 
@@ -298,6 +231,65 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
         Route::patch('/admin/hives/{hive}/status', [HiveController::class, 'updateStatus'])
             ->name('admin.hives.updateStatus');
         Route::delete('/admin/hives/{hive}', [HiveController::class, 'destroy'])->name('admin.hives.destroy');
+    });
+
+    // ============================================================
+    // IOT DEVICE REGISTRY, TEAM MANAGEMENT, AND INGESTION MODULE
+    // ============================================================
+    Route::middleware(['permission:manage-iot-devices'])->prefix('/admin/iot')->name('admin.')->group(function () {
+
+        // --- Hardware Teams (never hard/soft deleted — deactivate only) ---
+        Route::prefix('hardware-teams')->name('hardware-teams.')->group(function () {
+            Route::get('/', [IotHardwareTeamRegistryController::class, 'index'])->name('index');
+            Route::get('/create', [IotHardwareTeamRegistryController::class, 'create'])->name('create');
+            Route::post('/', [IotHardwareTeamRegistryController::class, 'store'])->name('store');
+            Route::get('/{hardwareTeam}', [IotHardwareTeamRegistryController::class, 'show'])->name('show');
+            Route::get('/{hardwareTeam}/edit', [IotHardwareTeamRegistryController::class, 'edit'])->name('edit');
+            Route::put('/{hardwareTeam}', [IotHardwareTeamRegistryController::class, 'update'])->name('update');
+            Route::patch('/{hardwareTeam}/deactivate', [IotHardwareTeamRegistryController::class, 'deactivate'])->name('deactivate');
+            Route::patch('/{hardwareTeam}/reactivate', [IotHardwareTeamRegistryController::class, 'reactivate'])->name('reactivate');
+
+            // --- Team Members (nested under a team) ---
+            Route::prefix('/{hardwareTeam}/members')->name('members.')->group(function () {
+                Route::get('/', [IotHardwareTeamMemberController::class, 'index'])->name('index');
+                Route::get('/create', [IotHardwareTeamMemberController::class, 'create'])->name('create');
+                Route::post('/', [IotHardwareTeamMemberController::class, 'store'])->name('store');
+                Route::get('/{member}/edit', [IotHardwareTeamMemberController::class, 'edit'])->name('edit');
+                Route::put('/{member}', [IotHardwareTeamMemberController::class, 'update'])->name('update');
+                Route::patch('/{member}/deactivate', [IotHardwareTeamMemberController::class, 'deactivate'])->name('deactivate');
+                Route::patch('/{member}/reactivate', [IotHardwareTeamMemberController::class, 'reactivate'])->name('reactivate');
+            });
+
+            // --- Devices scoped to a team (team device management) ---
+            Route::prefix('/{hardwareTeam}/devices')->name('devices.')->group(function () {
+                Route::get('/', [IotDeviceRegistryController::class, 'indexForTeam'])->name('index');
+                Route::get('/create', [IotDeviceRegistryController::class, 'createForTeam'])->name('create');
+                Route::post('/', [IotDeviceRegistryController::class, 'storeForTeam'])->name('store');
+            });
+        });
+
+        // --- Global IoT Device Registry ---
+        Route::prefix('iot-devices')->name('iot-devices.')->group(function () {
+            Route::get('/', [IotDeviceRegistryController::class, 'index'])->name('index');
+            Route::get('/create', [IotDeviceRegistryController::class, 'create'])->name('create');
+            Route::post('/', [IotDeviceRegistryController::class, 'store'])->name('store');
+            Route::get('/{iotDevice}', [IotDeviceRegistryController::class, 'show'])->name('show');
+            Route::get('/{iotDevice}/edit', [IotDeviceRegistryController::class, 'edit'])->name('edit');
+            Route::put('/{iotDevice}', [IotDeviceRegistryController::class, 'update'])->name('update');
+            Route::delete('/{iotDevice}', [IotDeviceRegistryController::class, 'destroy'])->name('destroy');
+
+            // Device status management
+            Route::patch('/{iotDevice}/revoke', [IotDeviceRegistryController::class, 'revoke'])->name('revoke');
+            Route::patch('/{iotDevice}/reactivate', [IotDeviceRegistryController::class, 'reactivate'])->name('reactivate');
+
+            // Device-to-hive assignment wizard
+            Route::prefix('/{iotDevice}/assign')->name('assign.')->group(function () {
+                Route::get('/', [IotDeviceRegistryController::class, 'assignForm'])->name('form');
+                Route::get('/hives', [IotDeviceRegistryController::class, 'assignHives'])->name('hives');
+                Route::post('/', [IotDeviceRegistryController::class, 'assign'])->name('store');
+            });
+            Route::patch('/{iotDevice}/unassign', [IotDeviceRegistryController::class, 'unassign'])->name('unassign');
+        });
     });
 
     // ============================================================
@@ -341,19 +333,6 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
             })->name('admin.' . $name);
         }
-    });
-
-    // Farmer Management (non-CRUD placeholders)
-    Route::middleware(['permission:approve-farmer-registrations'])->group(function () {
-        Route::get('/admin/farmers/pending', function () {
-            return view('admin.placeholder', ['title' => 'Pending Farmers', 'subtitle' => 'Placeholder for farmers.pending']);
-        })->name('admin.farmers.pending');
-    });
-
-    Route::middleware(['permission:manage-farmer-messages'])->group(function () {
-        Route::get('/admin/farmers/messages', function () {
-            return view('admin.placeholder', ['title' => 'Farmer Messages', 'subtitle' => 'Placeholder for farmers.messages']);
-        })->name('admin.farmers.messages');
     });
 
     // Newsletter
