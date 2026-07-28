@@ -21,6 +21,7 @@ class Apiary extends Model
         'district',
         'farmer_id',
         'description',
+        'managing_entity',
         'status',
     ];
 

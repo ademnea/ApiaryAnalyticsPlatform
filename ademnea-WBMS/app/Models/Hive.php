@@ -35,13 +35,10 @@ class Hive extends Model
         'current_status',
         'status',
 
-        // GPS – latitude/longitude are model-preferred aliases (added by migration);
-        // gps_latitude/gps_longitude are the original DB columns.
+        // GPS
         'latitude',
         'longitude',
-        'gps_latitude',
-        'gps_longitude',
-        'gps_accuracy_meters',
+        'accuracy_meters',
 
         'last_inspection_date',
         'notes',
@@ -52,8 +49,7 @@ class Hive extends Model
         'last_inspection_date'  => 'date',
         'latitude'              => 'decimal:8',
         'longitude'             => 'decimal:8',
-        'gps_latitude'          => 'decimal:8',
-        'gps_longitude'         => 'decimal:8',
+        'accuracy_meters'       => 'decimal:2',
         'deleted_at'            => 'datetime',
     ];
 

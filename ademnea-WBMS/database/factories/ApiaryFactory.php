@@ -13,15 +13,10 @@ class ApiaryFactory extends Factory
     {
         return [
             'name'             => $this->faker->unique()->company() . ' Apiary',
-            'country'          => $this->faker->country(),
+            'country'          => $this->faker->countryISOAlpha2(),
             'region'           => $this->faker->optional()->state(),
             'managing_entity'  => $this->faker->optional()->company(),
-            'hive_capacity'    => $this->faker->numberBetween(0, 200),
-            'contact_name'     => $this->faker->optional()->name(),
-            'contact_phone'    => $this->faker->optional()->phoneNumber(),
-            'contact_email'    => $this->faker->optional()->safeEmail(),
-            'status'           => $this->faker->randomElement(['active', 'inactive', 'decommissioned']),
-            'is_active'        => $this->faker->boolean(80), // 80% chance true
+            'status'           => $this->faker->randomElement(['Active', 'Inactive', 'Under Maintenance']),
         ];
     }
 
@@ -31,8 +26,7 @@ class ApiaryFactory extends Factory
     public function active(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status'    => 'active',
-            'is_active' => true,
+            'status' => 'Active',
         ]);
     }
 
@@ -42,8 +36,7 @@ class ApiaryFactory extends Factory
     public function inactive(): static
     {
         return $this->state(fn (array $attributes) => [
-            'status'    => 'inactive',
-            'is_active' => false,
+            'status' => 'Inactive',
         ]);
     }
 }
