@@ -2,6 +2,7 @@
 
 namespace App\Services\ApiaryManagement;
 
+use App\Contracts\ApiaryRegistryServiceContract;
 use App\Exceptions\ApiaryManagement\ApiaryDeactivationException;
 use App\Models\Apiary;
 use App\Models\Farmer;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-class ApiaryRegistrationService
+class ApiaryRegistrationService implements ApiaryRegistryServiceContract
 {
     public function register(array $data): Apiary
     {
@@ -93,8 +94,6 @@ class ApiaryRegistrationService
             if (! empty($filters['status'])) {
                 $query->where('current_status', $filters['status']);
             }
-            // TODO: Uncomment when DeviceAssignment model is implemented
-            // $query->withCount('deviceAssignments');
         }, 'farmer'])->findOrFail($apiaryId);
     }
 
@@ -103,15 +102,6 @@ class ApiaryRegistrationService
         return [
             'hive_count' => $apiary->hives()->count(),
             'active_hive_count' => $apiary->hives()->where('current_status', 'Active')->count(),
-            // 'device_count' => $apiary->hives()
-            //     ->withCount('deviceAssignments')
-            //     ->get()
-            //     ->sum('device_assignments_count'),
-            // 'seasonal_yield_kg' => $apiary->getTotalSeasonalYield($year),
-            // 'inspection_count' => $apiary->hives()
-            //     ->withCount('inspections')
-            //     ->get()
-            //     ->sum('inspections_count'),
         ];
     }
 

@@ -2,15 +2,17 @@
 
 namespace App\Services\ApiaryManagement;
 
+use App\Contracts\HiveRegistryServiceContract;
+use App\Contracts\HiveStatusChangeServiceContract;
 use App\Exceptions\ApiaryManagement\InvalidHiveStatusTransitionException;
 use App\Models\Hive;
 use App\Models\HiveStatusHistory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 
-class HiveStatusChangeService
+class HiveStatusChangeService implements HiveStatusChangeServiceContract
 {
-    public function __construct(private HiveRegistrationService $registrationService)
+    public function __construct(private HiveRegistryServiceContract $registrationService)
     {
     }
 

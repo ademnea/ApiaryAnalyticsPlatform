@@ -2,6 +2,7 @@
 
 namespace App\Services\ApiaryManagement;
 
+use App\Contracts\HiveRegistryServiceContract;
 use App\Events\ApiaryManagement\HiveRegistered;
 use App\Models\Apiary;
 use App\Models\Hive;
@@ -9,9 +10,10 @@ use App\Models\HiveStatusHistory;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 use RuntimeException;
 
-class HiveRegistrationService
+class HiveRegistrationService implements HiveRegistryServiceContract
 {
     public function register(Apiary $apiary, array $data): Hive
     {
@@ -129,9 +131,6 @@ class HiveRegistrationService
         return Hive::with([
             'apiary',
             'statusHistory',
-            // 'inspections',       // TODO: Uncomment when Inspection model is implemented
-            // 'harvestRecords',    // TODO: Uncomment when HarvestRecord model is implemented
-            // 'alertThresholds',   // TODO: Uncomment when AlertThreshold model is implemented
         ])->findOrFail($hiveId);
     }
 
