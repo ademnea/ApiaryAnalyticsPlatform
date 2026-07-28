@@ -14,16 +14,13 @@ return new class extends Migration
 
         Schema::create('farmer_audit_logs', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('farmer_id');
+            $table->foreignId('farmer_id')->constrained('farmers')->onDelete('cascade');
             $table->string('action_type');
             $table->string('affected_record_type');
-            $table->unsignedBigInteger('affected_record_id');
+            $table->unsignedBigInteger('affected_record_id')->nullable();
             $table->text('details')->nullable();
             $table->timestamps();
 
-            $table->foreign('farmer_id')
-                ->references('id')->on('farmers')
-                ->onDelete('cascade');
             $table->index(['farmer_id', 'action_type']);
             $table->index('created_at');
         });

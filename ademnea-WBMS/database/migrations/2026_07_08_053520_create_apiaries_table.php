@@ -41,6 +41,8 @@ return new class extends Migration
 
             $table->text('description')->nullable();
 
+            $table->string('managing_entity', 150)->nullable();
+
             $table->enum('status', ['Active', 'Inactive', 'Under Maintenance'])->default('Active');
 
             $table->timestamps();
