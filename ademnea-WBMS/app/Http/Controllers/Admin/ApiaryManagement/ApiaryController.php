@@ -90,4 +90,12 @@ class ApiaryController extends Controller
 
         return redirect()->route('admin.apiaries.index')->with('success', 'Apiary deleted successfully.');
     }
+
+    public function restore($id)
+    {
+        $apiary = Apiary::withTrashed()->findOrFail($id);
+        $apiary->restore();
+
+        return redirect()->route('admin.apiaries.index')->with('success', 'Apiary restored successfully.');
+    }
 }

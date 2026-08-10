@@ -7,6 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ApiaryManagement\FarmerStoreRequest;
 use App\Http\Requests\ApiaryManagement\FarmerUpdateRequest;
 use App\Models\Farmer;
+use App\Models\FarmerMessage;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -85,5 +86,68 @@ class FarmerController extends Controller
         return redirect()
             ->route('admin.farmers.show', $farmer)
             ->with('success', 'Farmer restored.');
+    }
+
+    public function pending(Request $request): View
+    {
+        $farmers = Farmer::query()
+            ->where('profile_status', 'pending')
+            ->orderByDesc('registration_date')
+            ->paginate(20);
+
+        return view('admin.apiary-management.farmers.pending', compact('farmers'));
+    }
+
+    public function approve(Farmer $farmer): RedirectResponse
+    {
+        $farmer->update(['profile_status' => 'active']);
+
+        return redirect()
+            ->route('admin.farmers.pending')
+            ->with('success', "Farmer \"{$farmer->full_name}\" approved.");
+    }
+
+    public function reject(Farmer $farmer): RedirectResponse
+    {
+        $farmer->update(['profile_status' => 'incomplete']);
+
+        return redirect()
+            ->route('admin.farmers.pending')
+            ->with('success', "Farmer \"{$farmer->full_name}\" rejected.");
+    }
+
+    public function messages(Request $request): View
+    {
+        $status = $request->input('status');
+
+        $messages = FarmerMessage::query()
+            ->with(['farmer', 'hive'])
+            ->when($status, fn ($q) => $q->where('status', $status))
+            ->latest()
+            ->paginate(20);
+
+        $statuses = ['sent', 'read', 'resolved'];
+
+        return view('admin.apiary-management.farmers.messages', compact('messages', 'statuses'));
+    }
+
+    public function showMessage(FarmerMessage $farmerMessage): View
+    {
+        $farmerMessage->load(['farmer', 'hive']);
+
+        if ($farmerMessage->status === 'sent') {
+            $farmerMessage->update(['status' => 'read']);
+        }
+
+        return view('admin.apiary-management.farmers.show-message', compact('farmerMessage'));
+    }
+
+    public function resolveMessage(FarmerMessage $farmerMessage): RedirectResponse
+    {
+        $farmerMessage->update(['status' => 'resolved']);
+
+        return redirect()
+            ->route('admin.farmers.messages')
+            ->with('success', 'Message marked as resolved.');
     }
 }

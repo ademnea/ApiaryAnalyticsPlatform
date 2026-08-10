@@ -13,6 +13,9 @@ use App\Http\Controllers\Admin\ApiaryManagement\HiveController;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveMapController;
 use App\Http\Controllers\Admin\ApiaryManagement\ApiaryController;
 use App\Http\Controllers\Admin\ApiaryManagement\FarmerController;
+use App\Http\Controllers\Admin\ApiaryManagement\AlertThresholdController;
+use App\Http\Controllers\Admin\ApiaryManagement\InspectionController;
+use App\Http\Controllers\Admin\ApiaryManagement\HarvestController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
@@ -158,12 +161,12 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         Route::get('/admin/farmers', [FarmerController::class, 'index'])->name('admin.farmers.index');
         Route::get('/admin/farmers/create', [FarmerController::class, 'create'])->name('admin.farmers.create');
         Route::post('/admin/farmers', [FarmerController::class, 'store'])->name('admin.farmers.store');
-        Route::get('/admin/farmers/pending', function () {
-            return view('admin.placeholder', ['title' => 'Pending Farmers', 'subtitle' => 'Placeholder for farmers.pending']);
-        })->name('admin.farmers.pending');
-        Route::get('/admin/farmers/messages', function () {
-            return view('admin.placeholder', ['title' => 'Farmer Messages', 'subtitle' => 'Placeholder for farmers.messages']);
-        })->name('admin.farmers.messages');
+        Route::get('/admin/farmers/pending', [FarmerController::class, 'pending'])->name('admin.farmers.pending');
+        Route::get('/admin/farmers/messages', [FarmerController::class, 'messages'])->name('admin.farmers.messages');
+        Route::get('/admin/farmers/messages/{farmerMessage}', [FarmerController::class, 'showMessage'])->name('admin.farmers.messages.show');
+        Route::patch('/admin/farmers/messages/{farmerMessage}/resolve', [FarmerController::class, 'resolveMessage'])->name('admin.farmers.messages.resolve');
+        Route::post('/admin/farmers/{farmer}/approve', [FarmerController::class, 'approve'])->name('admin.farmers.approve');
+        Route::post('/admin/farmers/{farmer}/reject', [FarmerController::class, 'reject'])->name('admin.farmers.reject');
         Route::get('/admin/farmers/{farmer}', [FarmerController::class, 'show'])->name('admin.farmers.show');
         Route::get('/admin/farmers/{farmer}/edit', [FarmerController::class, 'edit'])->name('admin.farmers.edit');
         Route::put('/admin/farmers/{farmer}', [FarmerController::class, 'update'])->name('admin.farmers.update');
@@ -213,14 +216,45 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         Route::get('/admin/hives/map-data', [HiveMapController::class, 'index'])
             ->name('admin.hives.map-data');
 
-        foreach (['inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
+        // Inspections — read-only
+        Route::get('/admin/inspections', [InspectionController::class, 'index'])->name('admin.inspections.index');
+        Route::get('/admin/inspections/create', [InspectionController::class, 'create'])
+            ->name('admin.inspections.create')
+            ->can('manage-hives');
+        Route::get('/admin/inspections/{inspection}', [InspectionController::class, 'show'])->name('admin.inspections.show');
+
+        // Harvests — read-only
+        Route::get('/admin/harvests', [HarvestController::class, 'index'])->name('admin.harvests.index');
+        Route::get('/admin/harvests/create', [HarvestController::class, 'create'])
+            ->name('admin.harvests.create')
+            ->can('manage-hives');
+        Route::get('/admin/harvests/{harvest}', [HarvestController::class, 'show'])->name('admin.harvests.show');
+
+        // Alert Thresholds — read-only
+        Route::get('/admin/alert-thresholds', [AlertThresholdController::class, 'index'])->name('admin.alert-thresholds.index');
+        Route::get('/admin/alert-thresholds/create', [AlertThresholdController::class, 'create'])
+            ->name('admin.alert-thresholds.create')
+            ->can('manage-hives');
+        Route::get('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'edit'])
+            ->name('admin.alert-thresholds.edit');
 
         // Wildcard last
         Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
+    });
+
+    // Hives — write access (manage-hives only)
+    Route::middleware(['permission:manage-hives'])->group(function () {
+        Route::post('/admin/inspections', [InspectionController::class, 'store'])->name('admin.inspections.store');
+        Route::put('/admin/inspections/{inspection}', [InspectionController::class, 'update'])->name('admin.inspections.update');
+        Route::delete('/admin/inspections/{inspection}', [InspectionController::class, 'destroy'])->name('admin.inspections.destroy');
+
+        Route::post('/admin/harvests', [HarvestController::class, 'store'])->name('admin.harvests.store');
+        Route::put('/admin/harvests/{harvest}', [HarvestController::class, 'update'])->name('admin.harvests.update');
+        Route::delete('/admin/harvests/{harvest}', [HarvestController::class, 'destroy'])->name('admin.harvests.destroy');
+
+        Route::post('/admin/alert-thresholds', [AlertThresholdController::class, 'store'])->name('admin.alert-thresholds.store');
+        Route::put('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'update'])->name('admin.alert-thresholds.update');
+        Route::delete('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'destroy'])->name('admin.alert-thresholds.destroy');
     });
 
     // Hives — write access (manage-hives only)

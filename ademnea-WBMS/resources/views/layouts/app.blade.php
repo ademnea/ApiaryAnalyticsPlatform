@@ -833,7 +833,7 @@
                 <i class="bi bi-clock-history"></i> Pending Approvals
             </a>
             <a href="{{ route('admin.farmers.messages') }}"
-               class="{{ request()->routeIs('admin.farmers.messages') ? 'active' : '' }}">
+               class="{{ request()->routeIs('admin.farmers.messages.*') ? 'active' : '' }}">
                 <i class="bi bi-envelope"></i> Farmer Messages
             </a>
         </div>
