@@ -15,12 +15,14 @@ class HiveSeeder extends Seeder
 
         // 6 hives at Mukono
         for ($i = 1; $i <= 6; $i++) {
-            $code = sprintf('HIVE-UG-MUK-%03d', $i);
+            $code = sprintf('HIVE-%s-%s-%03d', strtoupper($mukono->country), strtoupper($mukono->apiary_code ?? 'MUK'), $i);
 
-            Hive::firstOrCreate(
+            Hive::updateOrCreate(
                 ['hive_code' => $code],
                 [
                     'apiary_id' => $mukono->id,
+                    'hive_code' => $code,
+                    'hybrid_identifier' => $code,
                     'display_name' => "Mukono Colony {$i}",
                     'hive_type' => 'Langstroth',
                     'construction_material' => 'Pine wood',
@@ -39,12 +41,14 @@ class HiveSeeder extends Seeder
 
         // 4 hives at Jinja
         for ($i = 1; $i <= 4; $i++) {
-            $code = sprintf('HIVE-UG-JIN-%03d', $i);
+            $code = sprintf('HIVE-%s-%s-%03d', strtoupper($jinja->country), strtoupper($jinja->apiary_code ?? 'JIN'), $i);
 
-            Hive::firstOrCreate(
+            Hive::updateOrCreate(
                 ['hive_code' => $code],
                 [
                     'apiary_id' => $jinja->id,
+                    'hive_code' => $code,
+                    'hybrid_identifier' => $code,
                     'display_name' => "Jinja Colony {$i}",
                     'hive_type' => 'TopBar',
                     'construction_material' => 'Cedar wood',

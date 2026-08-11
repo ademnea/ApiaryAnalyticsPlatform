@@ -29,6 +29,19 @@ class HiveManagementTest extends TestCase
     }
 
     #[Test]
+    public function admin_can_see_apiary_selection_when_creating_a_hive(): void
+    {
+        $this->actingAsAdminWithPermission('manage-hives');
+        $apiary = Apiary::factory()->active()->create(['name' => 'Main Apiary']);
+
+        $response = $this->get(route('admin.hives.create'));
+
+        $response->assertOk();
+        $response->assertSee('Parent apiary');
+        $response->assertSee('Main Apiary');
+    }
+
+    #[Test]
     public function admin_can_create_a_hive(): void
     {
         $this->actingAsAdminWithPermission('manage-hives');

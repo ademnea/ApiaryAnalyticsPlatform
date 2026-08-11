@@ -15,7 +15,7 @@
         <form method="POST" action="{{ route('admin.hives.update', $hive) }}">
             @csrf
             @method('PUT')
-            @include('admin.apiary-management.hives._form', ['hive' => $hive, 'apiary' => $hive->apiary])
+            @include('admin.apiary-management.hives._form', ['hive' => $hive, 'apiary' => $hive->apiary, 'apiaries' => App\Models\Apiary::where('status', 'Active')->get()])
             <div class="d-flex gap-2 mt-3">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Save Changes</button>
                 <a href="{{ route('admin.hives.show', $hive) }}" class="btn btn-outline-forest">Cancel</a>

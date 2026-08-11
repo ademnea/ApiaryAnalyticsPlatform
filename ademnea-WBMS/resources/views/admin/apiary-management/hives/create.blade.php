@@ -13,7 +13,7 @@
     <div class="card-body">
         <form method="POST" action="{{ route('admin.hives.store') }}">
             @csrf
-            @include('admin.apiary-management.hives._form', ['apiary' => null, 'hive' => null])
+            @include('admin.apiary-management.hives._form', ['apiary' => null, 'hive' => null, 'apiaries' => $apiaries])
             <div class="d-flex gap-2 mt-3">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-circle me-1"></i>Register Hive</button>
                 <a href="{{ route('admin.hives.index') }}" class="btn btn-outline-forest">Cancel</a>
