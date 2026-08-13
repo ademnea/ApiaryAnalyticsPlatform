@@ -47,6 +47,20 @@ class HarvestManagementTest extends TestCase
     }
 
     #[Test]
+    public function admin_can_open_harvest_create_and_edit_forms(): void
+    {
+        $this->actingAsAdminWithPermission('manage-harvests');
+        $harvest = HarvestRecord::factory()->create();
+
+        $this->get(route('admin.harvests.create'))
+            ->assertOk()
+            ->assertViewHas('hives');
+        $this->get(route('admin.harvests.edit', $harvest))
+            ->assertOk()
+            ->assertViewHas('hives');
+    }
+
+    #[Test]
     public function admin_can_view_a_single_harvest(): void
     {
         $this->actingAsAdminWithPermission('manage-harvests');

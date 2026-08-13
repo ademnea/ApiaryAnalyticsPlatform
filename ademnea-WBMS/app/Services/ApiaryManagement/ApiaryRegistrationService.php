@@ -159,4 +159,5 @@ class ApiaryRegistrationService implements ApiaryRegistryServiceContract
     {
         return ApiaryCodeGenerator::generate($name, $country);
     }
+
 }

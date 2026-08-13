@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Admin\ApiaryManagement;
 
 use App\Http\Controllers\Controller;
 use App\Models\Inspection;
+use App\Models\Hive;
 use App\Http\Requests\ApiaryManagement\StoreInspectionRequest;
 use App\Http\Requests\ApiaryManagement\UpdateInspectionRequest;
 use Illuminate\Http\RedirectResponse;
@@ -24,12 +25,15 @@ class InspectionController extends Controller
 
     public function create(): View
     {
-        return view('admin.apiary-management.inspections.create');
+        return view('admin.apiary-management.inspections.create', [
+            'hives' => $this->hivesForSelection(),
+        ]);
     }
 
     public function store(StoreInspectionRequest $request): RedirectResponse
     {
-        Inspection::create($request->validated());
+        $inspection = Inspection::create($request->validated());
+        $this->syncHiveLastInspectionDate($inspection->hive);
 
         return redirect()
             ->route('admin.inspections.index')
@@ -45,12 +49,18 @@ class InspectionController extends Controller
 
     public function edit(Inspection $inspection): View
     {
-        return view('admin.apiary-management.inspections.edit', compact('inspection'));
+        return view('admin.apiary-management.inspections.edit', [
+            'inspection' => $inspection,
+            'hives' => $this->hivesForSelection(),
+        ]);
     }
 
     public function update(UpdateInspectionRequest $request, Inspection $inspection): RedirectResponse
     {
+        $previousHive = $inspection->hive;
         $inspection->update($request->validated());
+        $this->syncHiveLastInspectionDate($previousHive);
+        $this->syncHiveLastInspectionDate($inspection->fresh()->hive);
 
         return redirect()
             ->route('admin.inspections.show', $inspection)
@@ -59,10 +69,32 @@ class InspectionController extends Controller
 
     public function destroy(Inspection $inspection): RedirectResponse
     {
+        $hive = $inspection->hive;
         $inspection->delete();
+        $this->syncHiveLastInspectionDate($hive);
 
         return redirect()
             ->route('admin.inspections.index')
             ->with('success', 'Inspection record removed.');
+    }
+
+    private function hivesForSelection()
+    {
+        return Hive::query()
+            ->with('apiary')
+            ->orderBy('hybrid_identifier')
+            ->orderBy('display_name')
+            ->get();
+    }
+
+    private function syncHiveLastInspectionDate(?Hive $hive): void
+    {
+        if (! $hive) {
+            return;
+        }
+
+        $hive->update([
+            'last_inspection_date' => $hive->inspections()->max('inspected_at'),
+        ]);
     }
 }

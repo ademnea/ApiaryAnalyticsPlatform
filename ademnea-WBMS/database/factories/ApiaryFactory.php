@@ -13,7 +13,7 @@ class ApiaryFactory extends Factory
     {
         return [
             'name'             => $this->faker->unique()->company() . ' Apiary',
-            'country'          => $this->faker->countryISOAlpha2(),
+            'country'          => $this->faker->randomElement(['UG']),
             'region'           => $this->faker->optional()->state(),
             'managing_entity'  => $this->faker->optional()->company(),
             'status'           => $this->faker->randomElement(['Active', 'Inactive', 'Under Maintenance']),

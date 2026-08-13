@@ -216,20 +216,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         Route::get('/admin/hives/map-data', [HiveMapController::class, 'index'])
             ->name('admin.hives.map-data');
 
-        // Inspections — read-only
-        Route::get('/admin/inspections', [InspectionController::class, 'index'])->name('admin.inspections.index');
-        Route::get('/admin/inspections/create', [InspectionController::class, 'create'])
-            ->name('admin.inspections.create')
-            ->can('manage-hives');
-        Route::get('/admin/inspections/{inspection}', [InspectionController::class, 'show'])->name('admin.inspections.show');
-
-        // Harvests — read-only
-        Route::get('/admin/harvests', [HarvestController::class, 'index'])->name('admin.harvests.index');
-        Route::get('/admin/harvests/create', [HarvestController::class, 'create'])
-            ->name('admin.harvests.create')
-            ->can('manage-hives');
-        Route::get('/admin/harvests/{harvest}', [HarvestController::class, 'show'])->name('admin.harvests.show');
-
         // Alert Thresholds — read-only
         Route::get('/admin/alert-thresholds', [AlertThresholdController::class, 'index'])->name('admin.alert-thresholds.index');
         Route::get('/admin/alert-thresholds/create', [AlertThresholdController::class, 'create'])
@@ -242,16 +228,36 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
     });
 
-    // Hives — write access (manage-hives only)
-    Route::middleware(['permission:manage-hives'])->group(function () {
+    // Inspections — read access is shared with data viewers; writes require the
+    // dedicated inspection permission.
+    Route::middleware(['permission:view-hive-data|manage-inspections'])->group(function () {
+        Route::get('/admin/inspections', [InspectionController::class, 'index'])->name('admin.inspections.index');
+        Route::get('/admin/inspections/{inspection}', [InspectionController::class, 'show'])->name('admin.inspections.show');
+    });
+    Route::middleware(['permission:manage-inspections'])->group(function () {
+        Route::get('/admin/inspections/create', [InspectionController::class, 'create'])->name('admin.inspections.create');
+        Route::get('/admin/inspections/{inspection}/edit', [InspectionController::class, 'edit'])->name('admin.inspections.edit');
         Route::post('/admin/inspections', [InspectionController::class, 'store'])->name('admin.inspections.store');
         Route::put('/admin/inspections/{inspection}', [InspectionController::class, 'update'])->name('admin.inspections.update');
         Route::delete('/admin/inspections/{inspection}', [InspectionController::class, 'destroy'])->name('admin.inspections.destroy');
+    });
 
+    // Harvests — read access is shared with data viewers; writes require the
+    // dedicated harvest permission.
+    Route::middleware(['permission:view-hive-data|manage-harvests'])->group(function () {
+        Route::get('/admin/harvests', [HarvestController::class, 'index'])->name('admin.harvests.index');
+        Route::get('/admin/harvests/{harvest}', [HarvestController::class, 'show'])->name('admin.harvests.show');
+    });
+    Route::middleware(['permission:manage-harvests'])->group(function () {
+        Route::get('/admin/harvests/create', [HarvestController::class, 'create'])->name('admin.harvests.create');
+        Route::get('/admin/harvests/{harvest}/edit', [HarvestController::class, 'edit'])->name('admin.harvests.edit');
         Route::post('/admin/harvests', [HarvestController::class, 'store'])->name('admin.harvests.store');
         Route::put('/admin/harvests/{harvest}', [HarvestController::class, 'update'])->name('admin.harvests.update');
         Route::delete('/admin/harvests/{harvest}', [HarvestController::class, 'destroy'])->name('admin.harvests.destroy');
+    });
 
+    // Hives — write access (manage-hives only)
+    Route::middleware(['permission:manage-hives'])->group(function () {
         Route::post('/admin/alert-thresholds', [AlertThresholdController::class, 'store'])->name('admin.alert-thresholds.store');
         Route::put('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'update'])->name('admin.alert-thresholds.update');
         Route::delete('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'destroy'])->name('admin.alert-thresholds.destroy');

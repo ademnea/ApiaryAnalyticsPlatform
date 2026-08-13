@@ -40,7 +40,7 @@
                 @if($apiary->farmer)
                     <a href="{{ route('admin.farmers.show', $apiary->farmer) }}">{{ $apiary->farmer->full_name }}</a>
                 @else
-                    <span class="text-muted">Organization-managed</span>
+                    <span class="text-muted">Unassigned</span>
                 @endif
             </div>
         </div>

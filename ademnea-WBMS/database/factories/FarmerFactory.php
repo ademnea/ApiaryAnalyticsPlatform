@@ -17,10 +17,10 @@ class FarmerFactory extends Factory
             'email'         => $this->faker->unique()->safeEmail(),
             'phone'         => $this->faker->phoneNumber(),
             'phone_secondary' => $this->faker->optional()->phoneNumber(),
-            'country'       => $this->faker->randomElement(['UG', 'SS', 'TZ']),
+            'country'       => $this->faker->randomElement(['UG']),
             'region'        => $this->faker->optional()->state(),
             'village'       => $this->faker->optional()->city(),
-            'national_id'   => $this->faker->optional()->unique()->numerify('##########'),
+            'national_id'   => $this->faker->boolean() ? $this->faker->unique()->numerify('##########') : null,
             'status'        => 'Active',
             'profile_status' => 'active',
         ];

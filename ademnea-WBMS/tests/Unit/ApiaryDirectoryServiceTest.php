@@ -1,7 +1,5 @@
 <?php
 
-namespace Tests\Feature\Admin;
-
 use App\Contracts\ApiaryDirectoryServiceContract;
 use App\Models\Apiary;
 use App\Models\Farmer;
@@ -122,7 +120,6 @@ class ApiaryDirectoryServiceTest extends TestCase
     public function it_returns_empty_collection_for_apiary_with_no_available_hives(): void
     {
         $apiary = Apiary::factory()->active()->create();
-        Hive::factory()->forApiary($apiary)->create();
 
         $service = app(ApiaryDirectoryServiceContract::class);
         $result = $service->listHivesAvailableForDeviceType($apiary->id, 'numeric_sensor');

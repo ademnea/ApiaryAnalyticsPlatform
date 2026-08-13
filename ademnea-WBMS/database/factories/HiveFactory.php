@@ -26,7 +26,7 @@ class HiveFactory extends Factory
             'colony_origin'          => $this->faker->optional()->randomElement([
                 'Wild Capture', 'Package', 'Split', 'NUC', 'Unknown'
             ]),
-            'queen_status'           => $this->faker->optional()->randomElement([
+            'queen_status'           => $this->faker->randomElement([
                 'Present', 'Absent', 'New', 'Old', 'Superseded', 'Unknown'
             ]),
             'status'                 => $this->faker->randomElement([

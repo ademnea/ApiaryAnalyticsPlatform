@@ -56,7 +56,7 @@
                             @if($apiary->farmer)
                                 {{ $apiary->farmer->full_name }}
                             @else
-                                <span class="text-muted">Organization-managed</span>
+                                <span class="text-muted">Unassigned</span>
                             @endif
                         </td>
                         <td>{{ $apiary->hives_count ?? $apiary->hives->count() }}</td>

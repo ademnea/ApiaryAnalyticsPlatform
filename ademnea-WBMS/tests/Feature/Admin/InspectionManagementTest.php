@@ -44,6 +44,24 @@ class InspectionManagementTest extends TestCase
             'hive_id' => $hive->id,
             'strength_rating' => 'Strong',
         ]);
+        $this->assertDatabaseHas('hives', [
+            'id' => $hive->id,
+            'last_inspection_date' => now()->format('Y-m-d'),
+        ]);
+    }
+
+    #[Test]
+    public function admin_can_open_inspection_create_and_edit_forms(): void
+    {
+        $this->actingAsAdminWithPermission('manage-inspections');
+        $inspection = Inspection::factory()->create();
+
+        $this->get(route('admin.inspections.create'))
+            ->assertOk()
+            ->assertViewHas('hives');
+        $this->get(route('admin.inspections.edit', $inspection))
+            ->assertOk()
+            ->assertViewHas('hives');
     }
 
     #[Test]

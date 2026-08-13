@@ -4,7 +4,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\Api\Farmer\{
     AuthController,
     ProfileController,
-    FarmController,
+    ApiaryController,
     HiveController,
     SensorDataController,
     MediaController,
@@ -51,11 +51,9 @@ Route::prefix('v1/farmer')->group(function () {
         // FCM device token — REQ-F-FAPI-27
         Route::post('device-token', [AlertController::class, 'storeDeviceToken']);
 
-        // Farms — REQ-F-FAPI-06
-        Route::get('farms', [FarmController::class, 'index']);
-
-        // Hives under a farm — REQ-F-FAPI-07
-        Route::get('farms/{farm_id}/hives', [HiveController::class, 'index']);
+        // Apiaries and their hives — apiary is the single physical-site model.
+        Route::get('apiaries', [ApiaryController::class, 'index']);
+        Route::get('apiaries/{apiaryId}/hives', [ApiaryController::class, 'hives']);
 
         // Hive-scoped routes (all require hive ownership check in Form Request)
         Route::prefix('hives/{hive_id}')->group(function () {

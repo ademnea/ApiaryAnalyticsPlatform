@@ -17,7 +17,7 @@ class HiveRegistrationService implements HiveRegistryServiceContract
 {
     public function register(Apiary $apiary, array $data): Hive
     {
-        if (!$apiary->status === 'Active') {
+        if ($apiary->status !== 'Active') {
             throw new \Exception('Cannot register hive under an inactive apiary.');
         }
 
