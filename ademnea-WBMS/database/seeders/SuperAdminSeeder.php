@@ -95,6 +95,12 @@ class SuperAdminSeeder extends Seeder
             );
             $superAdminRole->syncPermissions($this->permissions);
 
+            $adminRole = \Spatie\Permission\Models\Role::firstOrCreate(
+                ['name' => 'admin', 'guard_name' => 'web']
+            );
+            $adminRole->syncPermissions($this->permissions);
+
+            // Also create the standard farmer roles
             // Also create the standard roles with sensible default permissions
             \Spatie\Permission\Models\Role::firstOrCreate(
                 ['name' => 'farmer', 'guard_name' => 'web']

@@ -24,6 +24,7 @@ class DatabaseSeeder extends Seeder
             HiveSeeder::class,
             IotDeviceSeeder::class,
             FeedbackCategorySeeder::class,
+            UserSeeder::class,
         ]);
     }
 }

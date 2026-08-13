@@ -25,7 +25,7 @@
             <div class="col-md-6 col-lg-4">
                 <div class="card h-100 shadow-sm rounded-4 overflow-hidden" style="border:1px solid rgba(27,48,34,0.08);">
                     @if($album->cover_image)
-                        <img src="{{ Storage::disk('public')->url($album->cover_image) }}" class="card-img-top" alt="{{ $album->title }}" style="height:240px;object-fit:cover;">
+                        <img src="{{ Storage::disk('public')->url($album->cover_image) }}" class="card-img-top" alt="{{ $album->title }}" style="height:240px;object-fit:cover;" loading="lazy">
                     @else
                         <div class="card-img-top bg-light d-flex align-items-center justify-content-center" style="height:240px;">No cover image</div>
                     @endif

@@ -27,6 +27,16 @@ class GalleryService
 
         if ($request->hasFile('images')) {
             $this->storeImages($album, $request->file('images'));
+
+            // If no separate cover image was uploaded, allow selecting one from the batch
+            if (!$album->cover_image && $request->filled('cover_image_index')) {
+                $index = (int) $request->input('cover_image_index');
+                $images = $album->images()->orderBy('order')->orderBy('id')->get();
+                if (isset($images[$index])) {
+                    $album->cover_image = $images[$index]->path;
+                    $album->save();
+                }
+            }
         }
 
         return $album;
@@ -51,6 +61,19 @@ class GalleryService
 
         if ($request->hasFile('images')) {
             $this->storeImages($gallery, $request->file('images'));
+        }
+
+        if ($request->filled('deleted_images')) {
+            foreach ($request->input('deleted_images', []) as $imageId) {
+                $image = $gallery->images()->find($imageId);
+                if ($image) {
+                    $this->deleteImage($image);
+                }
+            }
+        }
+
+        if ($request->filled('ordered_ids')) {
+            $this->reorderImages($gallery, $request->input('ordered_ids', []));
         }
 
         return $gallery;
@@ -87,6 +110,18 @@ class GalleryService
     {
         Storage::disk('public')->delete($image->path);
         $image->delete();
+    }
+
+    public function reorderImages(GalleryAlbum $album, array $orderedIds): void
+    {
+        $images = $album->images()->get()->keyBy('id');
+        $order = 0;
+
+        foreach ($orderedIds as $id) {
+            if (isset($images[$id])) {
+                $images[$id]->update(['order' => $order++]);
+            }
+        }
     }
 
     protected function storeImages(GalleryAlbum $album, array $files): void
