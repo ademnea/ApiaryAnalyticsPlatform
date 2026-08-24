@@ -28,7 +28,7 @@
                         'admin_only' => true,
                     ],
                     [
-                        'label'  => 'Farms',
+                        'label'  => 'Apiaries',
                         'route'  => 'admin.apiaries.index',
                         'icon'   => 'bi-building',
                         'color'  => 'green',
