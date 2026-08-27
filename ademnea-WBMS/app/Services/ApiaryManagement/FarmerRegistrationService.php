@@ -2,21 +2,16 @@
 
 namespace App\Services\ApiaryManagement;
 
+use App\Contracts\FarmerRegistryServiceContract;
 use App\Models\Farmer;
-use Illuminate\Contracts\Filesystem\Filesystem;
-use Illuminate\Database\Eloquent\Collection;
-use Illuminate\Http\UploadedFile;
-use Illuminate\Support\Facades\Storage;
 
-class FarmerRegistrationService
+class FarmerRegistrationService implements FarmerRegistryServiceContract
 {
     public function register(array $data): Farmer
     {
         $data['registration_date'] = $data['registration_date'] ?? now();
         $data['status']            = $data['status'] ?? 'Active';
 
-        // Keep both phone column names in sync:
-        // The model/forms use `phone`; the original DB column is `phone_number`.
         if (isset($data['phone']) && !isset($data['phone_number'])) {
             $data['phone_number'] = $data['phone'];
         } elseif (isset($data['phone_number']) && !isset($data['phone'])) {
@@ -28,7 +23,6 @@ class FarmerRegistrationService
 
     public function update(Farmer $farmer, array $data): Farmer
     {
-        // Same sync on update.
         if (isset($data['phone']) && !isset($data['phone_number'])) {
             $data['phone_number'] = $data['phone'];
         } elseif (isset($data['phone_number']) && !isset($data['phone'])) {

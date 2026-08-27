@@ -4,7 +4,8 @@ namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Farmer\Sensor\SensorDataRequest;
-use App\Models\Hive;
+use App\Models\Farmer;
+use App\Services\Farmer\FarmerHiveAccessService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 
@@ -26,10 +27,14 @@ class SensorDataController extends Controller
 {
     use ApiResponse;
 
+    public function __construct(private readonly FarmerHiveAccessService $hiveAccess)
+    {
+    }
+
     /** REQ-F-FAPI-14 */
     public function temperature(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = Hive::findOrFail($hiveId);
+        $hive = $this->ownedHive($request, $hiveId);
         $data = $this->buildQuery($hive->temperatures(), $request)->paginate($request->perPage());
 
         return $this->success($data);
@@ -38,7 +43,7 @@ class SensorDataController extends Controller
     /** REQ-F-FAPI-15 */
     public function humidity(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = Hive::findOrFail($hiveId);
+        $hive = $this->ownedHive($request, $hiveId);
         $data = $this->buildQuery($hive->humidities(), $request)->paginate($request->perPage());
 
         return $this->success($data);
@@ -47,8 +52,8 @@ class SensorDataController extends Controller
     /** REQ-F-FAPI-16 */
     public function carbonDioxide(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = Hive::findOrFail($hiveId);
-        $data = $this->buildQuery($hive->co2Levels(), $request)->paginate($request->perPage());
+        $hive = $this->ownedHive($request, $hiveId);
+        $data = $this->buildQuery($hive->carbondioxides(), $request)->paginate($request->perPage());
 
         return $this->success($data);
     }
@@ -56,7 +61,7 @@ class SensorDataController extends Controller
     /** REQ-F-FAPI-17 */
     public function weight(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = Hive::findOrFail($hiveId);
+        $hive = $this->ownedHive($request, $hiveId);
         $data = $this->buildQuery($hive->weights(), $request)->paginate($request->perPage());
 
         return $this->success($data);
@@ -68,13 +73,13 @@ class SensorDataController extends Controller
      */
     public function latest(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = Hive::findOrFail($hiveId);
+        $hive = $this->ownedHive($request, $hiveId);
 
         return $this->success([
             'hive_id'      => $hiveId,
             'temperature'  => $hive->temperatures()->latest()->first(),
             'humidity'     => $hive->humidities()->latest()->first(),
-            'co2'          => $hive->co2Levels()->latest()->first(),
+            'co2'          => $hive->carbondioxides()->latest()->first(),
             'weight'       => $hive->weights()->latest()->first(),
             'fetched_at'   => now()->toISOString(),
         ]);
@@ -93,5 +98,12 @@ class SensorDataController extends Controller
         }
 
         return $query->orderByDesc('created_at');
+    }
+
+    private function ownedHive(SensorDataRequest $request, int $hiveId)
+    {
+        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
+
+        return $this->hiveAccess->findOwnedHive($farmer, $hiveId);
     }
 }

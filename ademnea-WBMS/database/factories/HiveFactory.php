@@ -17,24 +17,24 @@ class HiveFactory extends Factory
             'hive_code'              => $this->faker->unique()->regexify('HIVE-[A-Z]{2}-[A-Z]{3}-[0-9]{3}'),
             'display_name'           => $this->faker->words(3, true),
             'hive_type'              => $this->faker->randomElement([
-                'Langstroth', 'Top-Bar', 'Warre', 'Skep', 'Flow Hive', 'National'
+                'Langstroth', 'TopBar', 'Warre', 'Kenya', 'Other'
             ]),
             'construction_material'  => $this->faker->optional()->randomElement([
                 'Wood', 'Polystyrene', 'Plastic', 'Cement'
             ]),
             'installation_date'      => $this->faker->optional()->date(),
             'colony_origin'          => $this->faker->optional()->randomElement([
-                'Wild capture', 'Purchased package', 'Split', 'Nucleus', 'Swarms'
+                'Wild Capture', 'Package', 'Split', 'NUC', 'Unknown'
             ]),
-            'queen_status'           => $this->faker->optional()->randomElement([
-                'present', 'absent', 'queenless', 'unknown'
+            'queen_status'           => $this->faker->randomElement([
+                'Present', 'Absent', 'New', 'Old', 'Superseded', 'Unknown'
             ]),
             'status'                 => $this->faker->randomElement([
                 'active', 'active', 'active', 'inactive', 'under_inspection', 'queenless', 'absconded'
             ]),
-            'gps_latitude'           => $this->faker->optional()->latitude(-90, 90),
-            'gps_longitude'          => $this->faker->optional()->longitude(-180, 180),
-            'gps_accuracy_meters'    => $this->faker->optional()->numberBetween(1, 100),
+            'latitude'              => $this->faker->optional()->latitude(-90, 90),
+            'longitude'             => $this->faker->optional()->longitude(-180, 180),
+            'accuracy_meters'      => $this->faker->optional()->numberBetween(1, 100),
 
             // Fixed line – now safely handles null with ?->
             'last_inspection_date'   => $this->faker->optional()
@@ -54,7 +54,7 @@ class HiveFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status'       => 'active',
-            'queen_status' => 'present',
+            'queen_status' => 'Present',
         ]);
     }
 
@@ -62,7 +62,7 @@ class HiveFactory extends Factory
     {
         return $this->state(fn (array $attributes) => [
             'status'       => 'queenless',
-            'queen_status' => 'absent',
+            'queen_status' => 'Absent',
         ]);
     }
 }

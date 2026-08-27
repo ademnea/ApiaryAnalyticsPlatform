@@ -124,8 +124,8 @@ class IotDeviceRegistryController extends Controller
     }
 
     // ---- Device-to-hive assignment wizard ----
-    // Reads apiary/hive data through ApiaryDirectoryServiceContract, currently
-    // bound to a mock (App\Services\External\ApiaryDirectoryServiceMock).
+    // Reads apiary/hive data through ApiaryDirectoryServiceContract,
+    // bound to App\Services\ApiaryManagement\ApiaryDirectoryService.
 
     public function assignForm(IotDevice $iotDevice): View
     {

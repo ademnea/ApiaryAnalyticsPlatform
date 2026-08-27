@@ -20,13 +20,14 @@ class Apiary extends Model
         'region',
         'district',
         'farmer_id',
-        'hive_capacity',
         'description',
+        'managing_entity',
         'status',
+        'apiary_code',
     ];
 
     protected $casts = [
-        'hive_capacity' => 'integer',
+        //
     ];
 
     public function farmer(): BelongsTo
@@ -66,29 +67,10 @@ class Apiary extends Model
         return $this->hasMany(Hive::class);
     }
 
-    // TODO: Uncomment when HarvestRecord model is implemented
-    // public function harvestRecords(): HasMany
-    // {
-    //     return $this->hasMany(HarvestRecord::class);
-    // }
-
-    // TODO: Uncomment when Inspection model is implemented
-    // public function inspections(): HasManyThrough
-    // {
-    //     return $this->hasManyThrough(Inspection::class, Hive::class);
-    // }
-
-    // TODO: Uncomment when HarvestRecord model is implemented
-    // public function getTotalSeasonalYield(?int $year = null): float
-    // {
-    //     $query = $this->harvestRecords();
-    //
-    //     if ($year) {
-    //         $query->whereYear('harvest_date', $year);
-    //     }
-    //
-    //     return (float) $query->sum('honey_yield_kg');
-    // }
+    public function inspections(): HasManyThrough
+    {
+        return $this->hasManyThrough(Inspection::class, Hive::class);
+    }
 
     public function scopeActive($query)
     {
@@ -113,15 +95,5 @@ class Apiary extends Model
     public function scopeUnassigned($query)
     {
         return $query->whereNull('farmer_id');
-    }
-
-    public function hiveCount(): int
-    {
-        return $this->hives()->count();
-    }
-
-    public function activeHiveCount(): int
-    {
-        return $this->hives()->where('current_status', 'Active')->count();
     }
 }

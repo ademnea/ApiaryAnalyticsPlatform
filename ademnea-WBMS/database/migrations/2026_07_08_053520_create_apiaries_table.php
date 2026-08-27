@@ -29,7 +29,7 @@ return new class extends Migration
             $table->id();
 
             $table->string('name', 150);
-            $table->string('apiary_code', 10)->nullable()->unique()->after('name');
+            $table->string('apiary_code', 10)->nullable()->unique();
             $table->string('country', 2)->default('UG');
             $table->string('region', 100)->nullable();
             $table->string('district', 100)->nullable();
@@ -39,8 +39,9 @@ return new class extends Migration
                 ->references('id')->on('farmers')
                 ->onDelete('set null');
 
-            $table->integer('hive_capacity')->default(0);
             $table->text('description')->nullable();
+
+            $table->string('managing_entity', 150)->nullable();
 
             $table->enum('status', ['Active', 'Inactive', 'Under Maintenance'])->default('Active');
 

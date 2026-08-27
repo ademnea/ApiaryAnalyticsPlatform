@@ -11,6 +11,9 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class MediaService
 {
+    public function __construct(private readonly FarmerHiveAccessService $hiveAccess)
+    {
+    }
     /**
      * Get photos for a hive
      */
@@ -54,10 +57,6 @@ class MediaService
      */
     private function verifyHiveOwnership(Farmer $farmer, int $hiveId): void
     {
-        Hive::where('id', $hiveId)
-            ->whereHas('farm', function ($query) use ($farmer) {
-                $query->where('farmer_id', $farmer->id);
-            })
-            ->firstOrFail();
+        $this->hiveAccess->findOwnedHive($farmer, $hiveId);
     }
 }

@@ -15,22 +15,25 @@ class HiveSeeder extends Seeder
 
         // 6 hives at Mukono
         for ($i = 1; $i <= 6; $i++) {
-            $code = sprintf('HIVE-UG-MUK-%03d', $i);
+            $code = sprintf('HIVE-%s-%s-%03d', strtoupper($mukono->country), strtoupper($mukono->apiary_code ?? 'MUK'), $i);
 
-            Hive::firstOrCreate(
+            Hive::updateOrCreate(
                 ['hive_code' => $code],
                 [
                     'apiary_id' => $mukono->id,
+                    'hive_code' => $code,
+                    'hybrid_identifier' => $code,
                     'display_name' => "Mukono Colony {$i}",
                     'hive_type' => 'Langstroth',
                     'construction_material' => 'Pine wood',
                     'installation_date' => now()->subMonths(rand(1, 18)),
-                    'colony_origin' => 'purchased package',
-                    'queen_status' => 'present',
+                    'colony_origin' => 'Package',
+                    'queen_status' => 'Present',
                     'status' => 'active',
-                    'gps_latitude' => 0.3533 + (rand(-50, 50) / 10000),
-                    'gps_longitude' => 32.7553 + (rand(-50, 50) / 10000),
-                    'gps_accuracy_meters' => rand(3, 12),
+                    'current_status' => 'Active',
+                    'latitude' => 0.3533 + (rand(-50, 50) / 10000),
+                    'longitude' => 32.7553 + (rand(-50, 50) / 10000),
+                    'accuracy_meters' => rand(3, 12),
                     'last_inspection_date' => now()->subDays(rand(1, 45)),
                 ]
             );
@@ -38,22 +41,25 @@ class HiveSeeder extends Seeder
 
         // 4 hives at Jinja
         for ($i = 1; $i <= 4; $i++) {
-            $code = sprintf('HIVE-UG-JIN-%03d', $i);
+            $code = sprintf('HIVE-%s-%s-%03d', strtoupper($jinja->country), strtoupper($jinja->apiary_code ?? 'JIN'), $i);
 
-            Hive::firstOrCreate(
+            Hive::updateOrCreate(
                 ['hive_code' => $code],
                 [
                     'apiary_id' => $jinja->id,
+                    'hive_code' => $code,
+                    'hybrid_identifier' => $code,
                     'display_name' => "Jinja Colony {$i}",
-                    'hive_type' => 'Top-Bar',
+                    'hive_type' => 'TopBar',
                     'construction_material' => 'Cedar wood',
                     'installation_date' => now()->subMonths(rand(1, 12)),
-                    'colony_origin' => 'wild capture',
-                    'queen_status' => 'present',
+                    'colony_origin' => 'Wild Capture',
+                    'queen_status' => 'Present',
                     'status' => 'active',
-                    'gps_latitude' => 0.4478 + (rand(-50, 50) / 10000),
-                    'gps_longitude' => 33.2026 + (rand(-50, 50) / 10000),
-                    'gps_accuracy_meters' => rand(3, 12),
+                    'current_status' => 'Active',
+                    'latitude' => 0.4478 + (rand(-50, 50) / 10000),
+                    'longitude' => 33.2026 + (rand(-50, 50) / 10000),
+                    'accuracy_meters' => rand(3, 12),
                     'last_inspection_date' => now()->subDays(rand(1, 45)),
                 ]
             );

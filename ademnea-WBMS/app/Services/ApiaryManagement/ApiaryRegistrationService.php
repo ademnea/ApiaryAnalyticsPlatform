@@ -2,6 +2,7 @@
 
 namespace App\Services\ApiaryManagement;
 
+use App\Contracts\ApiaryRegistryServiceContract;
 use App\Exceptions\ApiaryManagement\ApiaryDeactivationException;
 use App\Models\Apiary;
 use App\Models\Farmer;
@@ -10,7 +11,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 
-class ApiaryRegistrationService
+class ApiaryRegistrationService implements ApiaryRegistryServiceContract
 {
     public function register(array $data): Apiary
     {
@@ -93,8 +94,6 @@ class ApiaryRegistrationService
             if (! empty($filters['status'])) {
                 $query->where('current_status', $filters['status']);
             }
-            // TODO: Uncomment when DeviceAssignment model is implemented
-            // $query->withCount('deviceAssignments');
         }, 'farmer'])->findOrFail($apiaryId);
     }
 
@@ -103,15 +102,6 @@ class ApiaryRegistrationService
         return [
             'hive_count' => $apiary->hives()->count(),
             'active_hive_count' => $apiary->hives()->where('current_status', 'Active')->count(),
-            // 'device_count' => $apiary->hives()
-            //     ->withCount('deviceAssignments')
-            //     ->get()
-            //     ->sum('device_assignments_count'),
-            // 'seasonal_yield_kg' => $apiary->getTotalSeasonalYield($year),
-            // 'inspection_count' => $apiary->hives()
-            //     ->withCount('inspections')
-            //     ->get()
-            //     ->sum('inspections_count'),
         ];
     }
 
@@ -167,28 +157,7 @@ class ApiaryRegistrationService
 
     private function generateApiaryCode(string $name, string $country): string
     {
-        $words = preg_split('/\s+/', trim($name)) ?: [];
-        $words = array_filter($words, fn ($w) => $w !== '');
-
-        if (count($words) >= 2) {
-            $initials = collect($words)
-                ->map(fn ($w) => strtoupper(Str::substr($w, 0, 1)))
-                ->implode('');
-            $base = Str::substr($initials, 0, 4);
-        } else {
-            $base = strtoupper(Str::substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 4));
-        }
-
-        $base = $base !== '' ? $base : strtoupper(Str::substr($country, 0, 2)).'X';
-
-        $candidate = $base;
-        $suffix = 1;
-
-        while (Apiary::where('apiary_code', $candidate)->exists()) {
-            $candidate = $base.$suffix;
-            $suffix++;
-        }
-
-        return $candidate;
+        return ApiaryCodeGenerator::generate($name, $country);
     }
+
 }

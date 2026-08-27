@@ -14,19 +14,14 @@ return new class extends Migration
 
         Schema::create('alerts', function (Blueprint $table) {
             $table->id();
-            $table->unsignedBigInteger('farmer_id');
-            $table->unsignedBigInteger('hive_id')->nullable();
+            $table->foreignId('farmer_id')->constrained('farmers')->onDelete('cascade');
+            $table->foreignId('hive_id')->nullable()->constrained('hives')->cascadeOnDelete();
             $table->enum('type', ['feed_required', 'malfunction', 'critical_event', 'low_battery', 'weak_signal', 'data_anomaly']);
             $table->text('message');
             $table->boolean('is_read')->default(false);
+            $table->timestamp('read_at')->nullable();
             $table->timestamps();
 
-            $table->foreign('farmer_id')
-                ->references('id')->on('farmers')
-                ->onDelete('cascade');
-            $table->foreign('hive_id')
-                ->references('id')->on('hives')
-                ->onDelete('cascade');
             $table->index(['farmer_id', 'is_read']);
             $table->index('created_at');
         });
