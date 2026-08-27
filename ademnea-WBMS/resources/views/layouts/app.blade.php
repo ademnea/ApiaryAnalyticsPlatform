@@ -938,38 +938,38 @@
     </div>
 
     {{-- Work Packages --}}
-    <div x-data="{ open: {{ request()->routeIs('admin.workpackages.*') ? 'true' : 'false' }} }">
+    <div x-data="{ open: {{ request()->routeIs('admin.work-packages.*') ? 'true' : 'false' }} }">
         <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
             <i class="bi bi-box-seam nav-icon"></i>
             <span class="nav-dropdown-label">Work Packages</span>
             <i class="bi bi-chevron-right nav-chevron"></i>
         </div>
         <div class="nav-dropdown-children" x-show="open" x-collapse>
-            <a href="{{ route('admin.workpackages.index') }}"
-               class="{{ request()->routeIs('admin.workpackages.index') ? 'active' : '' }}">
+            <a href="{{ route('admin.work-packages.index') }}"
+               class="{{ request()->routeIs('admin.work-packages.index') ? 'active' : '' }}">
                 <i class="bi bi-list-ul"></i> All Work Packages
             </a>
-            <a href="{{ route('admin.workpackages.create') }}"
-               class="{{ request()->routeIs('admin.workpackages.create') ? 'active' : '' }}">
+            <a href="{{ route('admin.work-packages.create') }}"
+               class="{{ request()->routeIs('admin.work-packages.create') ? 'active' : '' }}">
                 <i class="bi bi-plus-circle"></i> Add Work Package
             </a>
         </div>
     </div>
 
     {{-- Team Profiles --}}
-    <div x-data="{ open: {{ request()->routeIs('admin.team.*') ? 'true' : 'false' }} }">
+    <div x-data="{ open: {{ request()->routeIs('admin.team-profiles.*') ? 'true' : 'false' }} }">
         <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
             <i class="bi bi-person-badge nav-icon"></i>
             <span class="nav-dropdown-label">Team Profiles</span>
             <i class="bi bi-chevron-right nav-chevron"></i>
         </div>
         <div class="nav-dropdown-children" x-show="open" x-collapse>
-            <a href="{{ route('admin.team.index') }}"
-               class="{{ request()->routeIs('admin.team.index') ? 'active' : '' }}">
+            <a href="{{ route('admin.team-profiles.index') }}"
+               class="{{ request()->routeIs('admin.team-profiles.index') ? 'active' : '' }}">
                 <i class="bi bi-list-ul"></i> All Members
             </a>
-            <a href="{{ route('admin.team.create') }}"
-               class="{{ request()->routeIs('admin.team.create') ? 'active' : '' }}">
+            <a href="{{ route('admin.team-profiles.create') }}"
+               class="{{ request()->routeIs('admin.team-profiles.create') ? 'active' : '' }}">
                 <i class="bi bi-person-plus"></i> Add Member
             </a>
         </div>

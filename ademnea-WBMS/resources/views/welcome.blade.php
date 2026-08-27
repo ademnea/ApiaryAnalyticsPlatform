@@ -370,6 +370,10 @@
 
                 {{-- Nav Links --}}
                 <div class="d-none d-md-flex align-items-center gap-1">
+                    <a href="{{ route('public.work-packages.index') }}" class="nav-link-landing">Work Packages</a>
+                    <a href="{{ route('public.team.index') }}" class="nav-link-landing">Team</a>
+                    <a href="{{ route('public.gallery.index') }}" class="nav-link-landing">Gallery</a>
+                    <a href="{{ route('public.scholarships.index') }}" class="nav-link-landing">Scholarships</a>
                     <a href="#features" class="nav-link-landing">Features</a>
                     <a href="#about" class="nav-link-landing">About</a>
                     <a href="#contact" class="nav-link-landing">Contact</a>
@@ -527,9 +531,11 @@
                 {{-- Quick Links --}}
                 <div class="col-md-4 mb-4 mb-md-0">
                     <h4 class="footer-heading">Quick Links</h4>
+                    <a href="{{ route('public.work-packages.index') }}" class="footer-link">Work Packages</a>
+                    <a href="{{ route('public.team.index') }}" class="footer-link">Our Team</a>
+                    <a href="{{ route('public.gallery.index') }}" class="footer-link">Gallery</a>
+                    <a href="{{ route('public.scholarships.index') }}" class="footer-link">Scholarships</a>
                     <a href="{{ route('admin.login') }}" class="footer-link">Login</a>
-                    <a href="#features" class="footer-link">Features</a>
-                    <a href="#about" class="footer-link">About AdEMNEA</a>
                 </div>
 
                 {{-- Contact --}}

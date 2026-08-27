@@ -25,7 +25,11 @@ use App\Http\Controllers\Admin\FeedbackController as AdminFeedbackController;
 use App\Http\Controllers\Public\GalleryController as PublicGalleryController;
 use App\Http\Controllers\Public\ScholarshipController as PublicScholarshipController;
 use App\Http\Controllers\Public\FeedbackController as PublicFeedbackController;
+use App\Http\Controllers\Admin\WorkPackageController as AdminWorkPackageController;
+use App\Http\Controllers\Admin\TeamProfileController as AdminTeamProfileController;
 
+use App\Http\Controllers\Public\WorkPackageController as PublicWorkPackageController;
+use App\Http\Controllers\Public\TeamProfileController as PublicTeamProfileController;
 // ============================================================
 // PUBLIC ROUTES (no auth middleware)
 // ============================================================
@@ -46,6 +50,19 @@ Route::get('/scholarships/{scholarship}', [PublicScholarshipController::class, '
 Route::get('/feedback', [PublicFeedbackController::class, 'create'])->name('public.feedback.create');
 Route::post('/feedback', [PublicFeedbackController::class, 'store'])->name('public.feedback.store');
 Route::get('/feedback/success', [PublicFeedbackController::class, 'success'])->name('public.feedback.success');
+
+// ============================================================
+// PUBLIC INFORMATION MANAGEMENT
+// ============================================================
+
+// Public Work Packages
+Route::get('/work-packages',[PublicWorkPackageController::class, 'index'])->name('public.work-packages.index');
+Route::get('/work-packages/{workPackage}',[PublicWorkPackageController::class, 'show'])->name('public.work-packages.show');
+
+
+// Public Team Profiles
+Route::get('/team',[PublicTeamProfileController::class, 'index'])->name('public.team.index');
+Route::get('/team/{teamProfile}',[PublicTeamProfileController::class, 'show'])->name('public.team.show');
 
 // --- Auth: Login ---
 Route::get('/admin/login', [LoginController::class, 'showLoginForm'])->name('admin.login');
@@ -153,6 +170,47 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             Route::put('/{feedback}', [AdminFeedbackController::class, 'update'])->name('update');
             Route::delete('/{feedback}', [AdminFeedbackController::class, 'destroy'])->name('destroy');
         });
+    });
+    // ============================================================
+    // PUBLIC INFORMATION MANAGEMENT
+    // ============================================================
+
+    /*
+    |--------------------------------------------------------------------------
+    | WORK PACKAGE MANAGEMENT — permission: manage-work-packages
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['permission:manage-work-packages'])->group(function () {
+        Route::prefix('/admin/work-packages')
+            ->name('admin.work-packages.')
+            ->group(function () {
+                Route::get('/', [AdminWorkPackageController::class, 'index'])->name('index');
+                Route::get('/create', [AdminWorkPackageController::class, 'create'])->name('create');
+                Route::post('/', [AdminWorkPackageController::class, 'store'])->name('store');
+                Route::get('/{workPackage}', [AdminWorkPackageController::class, 'show'])->name('show');
+                Route::get('/{workPackage}/edit', [AdminWorkPackageController::class, 'edit'])->name('edit');
+                Route::put('/{workPackage}', [AdminWorkPackageController::class, 'update'])->name('update');
+                Route::delete('/{workPackage}', [AdminWorkPackageController::class, 'destroy'])->name('destroy');
+            });
+    });
+
+    /*
+    |--------------------------------------------------------------------------
+    | TEAM PROFILE MANAGEMENT — permission: manage-team-profiles
+    |--------------------------------------------------------------------------
+    */
+    Route::middleware(['permission:manage-team-profiles'])->group(function () {
+        Route::prefix('/admin/team-profiles')
+            ->name('admin.team-profiles.')
+            ->group(function () {
+                Route::get('/', [AdminTeamProfileController::class, 'index'])->name('index');
+                Route::get('/create', [AdminTeamProfileController::class, 'create'])->name('create');
+                Route::post('/', [AdminTeamProfileController::class, 'store'])->name('store');
+                Route::get('/{teamProfile}', [AdminTeamProfileController::class, 'show'])->name('show');
+                Route::get('/{teamProfile}/edit', [AdminTeamProfileController::class, 'edit'])->name('edit');
+                Route::put('/{teamProfile}', [AdminTeamProfileController::class, 'update'])->name('update');
+                Route::delete('/{teamProfile}', [AdminTeamProfileController::class, 'destroy'])->name('destroy');
+            });
     });
 
     // ============================================================
@@ -403,24 +461,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // Events
     Route::middleware(['permission:manage-events'])->group(function () {
         foreach (['events.index', 'events.create'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
-    });
-
-    // Team Profiles
-    Route::middleware(['permission:manage-team-profiles'])->group(function () {
-        foreach (['team.index', 'team.create'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
-    });
-
-    // Work Packages
-    Route::middleware(['permission:manage-work-packages'])->group(function () {
-        foreach (['workpackages.index', 'workpackages.create'] as $name) {
             Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
             })->name('admin.' . $name);

@@ -12,6 +12,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class AlertService
@@ -149,7 +150,10 @@ class AlertService
                 ],
             ]);
 
-            $success = $response->successful();
+        $alert->update([
+            'is_read' => true,
+            'read_at' => now(),
+        ]);
 
             NotificationLog::create([
                 'farmer_id'     => $farmer->id,
@@ -176,16 +180,33 @@ class AlertService
                 'error'     => $e->getMessage(),
             ]);
 
-            return false;
+
+    /**
+     * Create alert.
+     */
+    public function createAlert(
+        array $data
+    ): Alert {
+
+        $alert = Alert::create($data);
+
+
+        if ($this->notifications) {
+            $this->notifications->dispatch($alert);
         }
+
+
+        return $alert;
     }
 
     public function sendEmailNotification(Farmer $farmer, string $subject, string $content): bool
     {
-        try {
-            $user = $farmer->user;
 
-            Mail::to($user->email)->send(new \App\Mail\Farmer\AlertNotification($farmer, $subject, $content));
+        $weightThreshold =
+            (float) AlertThreshold::get(
+                'feed_required_weight_kg',
+                15
+            );
 
             NotificationLog::create([
                 'farmer_id' => $farmer->id,
@@ -211,7 +232,22 @@ class AlertService
                 'error'     => $e->getMessage(),
             ]);
 
-            return false;
+        foreach ($hives as $hive) {
+
+            $farmer =
+                $hive->farm->farmer ?? null;
+
+
+            if (!$farmer) {
+                continue;
+            }
+
+
+            $this->checkFeedRequired(
+                $hive,
+                $farmer->id,
+                $weightThreshold
+            );
         }
     }
 
@@ -232,7 +268,6 @@ class AlertService
                 'message'  => $message,
             ]);
 
-            $success = $response->successful();
 
             NotificationLog::create([
                 'farmer_id'     => $farmer->id,
@@ -258,9 +293,8 @@ class AlertService
                 'farmer_id' => $farmer->id,
                 'error'     => $e->getMessage(),
             ]);
-
-            return false;
         }
+
     }
 
     private function getFcmAccessToken(): string
