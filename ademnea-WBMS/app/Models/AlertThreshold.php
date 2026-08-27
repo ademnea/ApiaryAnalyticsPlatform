@@ -3,20 +3,38 @@
 namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Facades\Cache;
 
 class AlertThreshold extends Model
 {
-    protected $fillable = ['key', 'value', 'description'];
+    use HasFactory;
 
-    /**
-     * REQ-F-FAPI-24: thresholds are read on every hourly job run — cache
-     * briefly so the scheduled job doesn't hammer the DB for static config.
-     */
+    protected $fillable = ['key', 'value', 'description', 'hive_id'];
+
+    public function hive(): BelongsTo
+    {
+        return $this->belongsTo(Hive::class);
+    }
+
     public static function get(string $key, mixed $default = null): mixed
     {
-        return Cache::remember("alert_threshold:{$key}", 300, function () use ($key, $default) {
-            return static::where('key', $key)->value('value') ?? $default;
+        return Cache::remember("alert_threshold:global:{$key}", 300, function () use ($key, $default) {
+            return static::where('key', $key)->whereNull('hive_id')->value('value') ?? $default;
+        });
+    }
+
+    public static function getForHive(int $hiveId, string $key, mixed $default = null): mixed
+    {
+        return Cache::remember("alert_threshold:hive:{$hiveId}:{$key}", 300, function () use ($hiveId, $key, $default) {
+            $hiveSpecific = static::where('hive_id', $hiveId)->where('key', $key)->value('value');
+
+            if ($hiveSpecific !== null) {
+                return $hiveSpecific;
+            }
+
+            return static::where('key', $key)->whereNull('hive_id')->value('value') ?? $default;
         });
     }
 }

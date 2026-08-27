@@ -36,7 +36,7 @@
                 </div>
                 <div>
                     <div class="stat-value">{{ number_format($summary['total_apiaries']) }}</div>
-                    <div class="stat-label">Total Farms</div>
+                    <div class="stat-label">Total Apiaries</div>
                     <div style="font-size:0.7rem;color:var(--clr-muted);margin-top:2px;">
                         {{ $summary['active_apiaries'] }} active
                     </div>

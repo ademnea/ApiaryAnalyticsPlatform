@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\Farmer;
 use App\Models\Farm;
 use App\Models\Hive;
+use App\Contracts\ApiaryRegistryServiceContract;
+use App\Contracts\HiveRegistryServiceContract;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -169,5 +171,31 @@ class FarmTest extends TestCase
             ->getJson('/api/v1/farmer/farms/' . $otherFarm->id . '/hives');
 
         $response->assertStatus(403);
+    }
+
+    public function test_admin_managed_apiary_hives_are_visible_through_its_farmer_farm(): void
+    {
+        $auth = $this->createAuthenticatedFarmer();
+
+        $apiary = app(ApiaryRegistryServiceContract::class)->register([
+            'name' => 'Managed Apiary',
+            'country' => 'UG',
+            'district' => 'Kampala',
+            'farmer_id' => $auth['farmer']->id,
+        ]);
+        $hive = app(HiveRegistryServiceContract::class)->register($apiary, [
+            'display_name' => 'Managed Hive',
+            'hive_type' => 'Langstroth',
+            'latitude' => 0.3136,
+            'longitude' => 32.5811,
+        ]);
+
+        $this->assertNotNull($apiary->fresh()->farm_id);
+        $this->assertSame($apiary->fresh()->farm_id, $hive->fresh()->farm_id);
+
+        $this->withHeader('Authorization', 'Bearer ' . $auth['token'])
+            ->getJson('/api/v1/farmer/farms/' . $apiary->fresh()->farm_id . '/hives')
+            ->assertOk()
+            ->assertJsonPath('data.0.id', $hive->id);
     }
 }

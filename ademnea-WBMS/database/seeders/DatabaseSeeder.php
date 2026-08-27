@@ -19,6 +19,10 @@ class DatabaseSeeder extends Seeder
         $this->call([
             AlertThresholdSeeder::class,
             SuperAdminSeeder::class,
+            IotHardwareTeamSeeder::class,
+            ApiarySeeder::class,
+            HiveSeeder::class,
+            IotDeviceSeeder::class,
             FeedbackCategorySeeder::class,
             UserSeeder::class,
         ]);

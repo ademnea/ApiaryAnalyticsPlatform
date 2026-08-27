@@ -5,51 +5,42 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
 
 class Farmer extends Model
 {
-    use SoftDeletes;
+    use HasFactory, SoftDeletes;
 
     protected $fillable = [
-        // Core identity
         'first_name',
         'last_name',
         'email',
-
-        // Phone – both column names accepted (phone_number is the original DB
-        // column; phone is the model-preferred alias added by migration).
         'phone',
         'phone_number',
         'phone_secondary',
-
-        // Location
         'country',
         'region',
         'village',
-
-        // Identity documents
         'national_id',
         'id_document_path',
         'photo_path',
-
-        // Status columns
-        'status',           // enum: Active | Inactive | Suspended  (added by migration)
-        'profile_status',   // active | pending | incomplete
-        'is_active',        // original boolean column – kept for API backward compat
-
-        // Farmer code (original DB column)
+        'status',
+        'profile_status',
+        'is_active',
         'farmer_code',
-
-        // Timestamps
+        'fcm_token',
+        'telephone',
+        'address',
+        'gender',
         'registration_date',
         'last_login_at',
     ];
 
     protected $casts = [
+        'is_active'         => 'boolean',
         'registration_date' => 'datetime',
         'last_login_at'     => 'datetime',
-        'is_active'         => 'boolean',
         'deleted_at'        => 'datetime',
     ];
 
@@ -84,22 +75,15 @@ class Farmer extends Model
         return $this->hasMany(Apiary::class, 'farmer_id');
     }
 
+    public function farms(): HasMany
+    {
+        return $this->hasMany(Farm::class);
+    }
+
     public function getCountryNameAttribute(): string
     {
         return config("countries.{$this->country}", $this->country);
     }
-
-    // TODO: Uncomment when Inspection model is implemented
-    // public function inspections(): HasMany
-    // {
-    //     return $this->hasMany(Inspection::class);
-    // }
-
-    // TODO: Uncomment when HarvestRecord model is implemented
-    // public function harvestRecords(): HasMany
-    // {
-    //     return $this->hasMany(HarvestRecord::class);
-    // }
 
     public function getFullNameAttribute(): string
     {

@@ -3,54 +3,59 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Farmer\Alert\RegisterDeviceTokenRequest;
+use App\Models\Alert;
 use App\Models\Farmer;
 use App\Services\Farmer\AlertService;
-use Illuminate\Http\Request;
+use App\Services\Farmer\FarmerAuditService;
+use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
 class AlertController extends Controller
 {
-    protected AlertService $alertService;
+    use ApiResponse;
 
-    public function __construct(AlertService $alertService)
-    {
-        $this->alertService = $alertService;
-    }
+    public function __construct(
+        private readonly AlertService $alertService,
+        private readonly FarmerAuditService $audit
+    ) {}
 
-    /**
-     * Get all alerts for the authenticated farmer.
-     */
     public function index(Request $request): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
+        $alerts = $this->alertService->fetchForFarmer(
+            $request->user()->id,
+            (int) $request->input('per_page', 15)
+        );
 
-        $perPage = $request->input('per_page', 25);
-
-        $alerts = $this->alertService->getAlerts($farmer, $perPage);
-
-        return response()->json([
-            'data' => $alerts->items(),
-            'meta' => [
-                'current_page' => $alerts->currentPage(),
-                'last_page'    => $alerts->lastPage(),
-                'per_page'     => $alerts->perPage(),
-                'total'        => $alerts->total(),
-            ],
-        ]);
+        return $this->success($alerts);
     }
 
-    /**
-     * Mark an alert as read.
-     */
-    public function markAsRead(Request $request, int $alertId): JsonResponse
+    public function markRead(Request $request, int $alertId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
+        $alert = Alert::find($alertId);
 
-        $alert = $this->alertService->markAsRead($farmer, $alertId);
+        if (!$alert) {
+            return $this->notFound('Alert not found.');
+        }
 
-        return response()->json([
-            'message' => 'Alert marked as read.',
-            'data'    => $alert,
-        ]);
+        $ok = $this->alertService->markRead($alert, $request->user()->id);
+
+        if (!$ok) {
+            return $this->forbidden('This alert does not belong to you.');
+        }
+
+        return $this->success(['alert_id' => $alertId, 'is_read' => true], 'Alert marked as read.');
+    }
+
+    public function storeDeviceToken(RegisterDeviceTokenRequest $request): JsonResponse
+    {
+        $farmer = $request->user();
+
+        $farmer->update(['fcm_token' => $request->input('fcm_token')]);
+
+        $this->audit->log($farmer->id, 'device_token_registered', $farmer->id);
+
+        return $this->success(null, 'Device token registered.');
     }
 }

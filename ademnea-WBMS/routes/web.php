@@ -5,9 +5,17 @@ use App\Http\Controllers\Auth\LoginController;
 use App\Http\Controllers\Auth\ForgotPasswordController;
 use App\Http\Controllers\Auth\ResetPasswordController;
 use App\Http\Controllers\Admin\DashboardController;
+use App\Http\Controllers\Admin\IotDeviceRegistryController;
+use App\Http\Controllers\Admin\IotHardwareTeamRegistryController;
+use App\Http\Controllers\Admin\IotHardwareTeamMemberController;
+use Illuminate\Http\Request;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveController;
+use App\Http\Controllers\Admin\ApiaryManagement\HiveMapController;
 use App\Http\Controllers\Admin\ApiaryManagement\ApiaryController;
 use App\Http\Controllers\Admin\ApiaryManagement\FarmerController;
+use App\Http\Controllers\Admin\ApiaryManagement\AlertThresholdController;
+use App\Http\Controllers\Admin\ApiaryManagement\InspectionController;
+use App\Http\Controllers\Admin\ApiaryManagement\HarvestController;
 use App\Http\Controllers\Admin\ProfileController;
 use App\Http\Controllers\Admin\UserController;
 use App\Http\Controllers\Admin\RoleController;
@@ -206,10 +214,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     });
 
     // ============================================================
-    // PLACEHOLDER ROUTES — sidebar links not yet implemented.
-    // Each group carries the correct Spatie permission so that
-    // when other developers replace placeholders with real
-    // controllers the RBAC is already wired up.
     // APIARY MANAGEMENT MODULE (SDD §4.2.4)
     // ============================================================
 
@@ -218,12 +222,12 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         Route::get('/admin/farmers', [FarmerController::class, 'index'])->name('admin.farmers.index');
         Route::get('/admin/farmers/create', [FarmerController::class, 'create'])->name('admin.farmers.create');
         Route::post('/admin/farmers', [FarmerController::class, 'store'])->name('admin.farmers.store');
-        Route::get('/admin/farmers/pending', function () {
-            return view('admin.placeholder', ['title' => 'Pending Farmers', 'subtitle' => 'Placeholder for farmers.pending']);
-        })->name('admin.farmers.pending');
-        Route::get('/admin/farmers/messages', function () {
-            return view('admin.placeholder', ['title' => 'Farmer Messages', 'subtitle' => 'Placeholder for farmers.messages']);
-        })->name('admin.farmers.messages');
+        Route::get('/admin/farmers/pending', [FarmerController::class, 'pending'])->name('admin.farmers.pending');
+        Route::get('/admin/farmers/messages', [FarmerController::class, 'messages'])->name('admin.farmers.messages');
+        Route::get('/admin/farmers/messages/{farmerMessage}', [FarmerController::class, 'showMessage'])->name('admin.farmers.messages.show');
+        Route::patch('/admin/farmers/messages/{farmerMessage}/resolve', [FarmerController::class, 'resolveMessage'])->name('admin.farmers.messages.resolve');
+        Route::post('/admin/farmers/{farmer}/approve', [FarmerController::class, 'approve'])->name('admin.farmers.approve');
+        Route::post('/admin/farmers/{farmer}/reject', [FarmerController::class, 'reject'])->name('admin.farmers.reject');
         Route::get('/admin/farmers/{farmer}', [FarmerController::class, 'show'])->name('admin.farmers.show');
         Route::get('/admin/farmers/{farmer}/edit', [FarmerController::class, 'edit'])->name('admin.farmers.edit');
         Route::put('/admin/farmers/{farmer}', [FarmerController::class, 'update'])->name('admin.farmers.update');
@@ -258,31 +262,70 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->name('admin.apiaries.deactivate');
     });
 
-    // Hives — read-only access (view-hive-data or manage-hives) covers researchers and anyone
-    // with manage-hives. The permission middleware accepts either, so we use
-    // a single group with pipe-separated permissions.
+    // Hives — read-only access (view-hive-data or manage-hives)
     Route::middleware(['permission:view-hive-data|manage-hives'])->group(function () {
         Route::get('/admin/hives', [HiveController::class, 'index'])->name('admin.hives.index');
 
-        // ALL static literal paths must come before {hive} wildcard — otherwise
-        // Laravel resolves e.g. /hives/create and /hives/map as hive IDs.
-        // The create route carries its own tighter permission check via can().
+        // Static paths before wildcard
         Route::get('/admin/hives/create', [HiveController::class, 'create'])
             ->name('admin.hives.create')
             ->can('manage-hives');
 
-        Route::get('/admin/hives/map', function () {
-            return view('admin.placeholder', ['title' => 'Hive Map', 'subtitle' => 'Placeholder for hives.map']);
-        })->name('admin.hives.map');
+        Route::get('/admin/hives/map', [HiveMapController::class, 'map'])
+            ->name('admin.hives.map');
 
-        foreach (['inspections.index', 'harvests.index', 'alert-thresholds.index'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
+        Route::get('/admin/hives/map-data', [HiveMapController::class, 'index'])
+            ->name('admin.hives.map-data');
 
-        // Wildcard last.
+        // Alert Thresholds — read-only
+        Route::get('/admin/alert-thresholds', [AlertThresholdController::class, 'index'])->name('admin.alert-thresholds.index');
+        Route::get('/admin/alert-thresholds/create', [AlertThresholdController::class, 'create'])
+            ->name('admin.alert-thresholds.create')
+            ->can('manage-hives');
+        Route::get('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'edit'])
+            ->name('admin.alert-thresholds.edit');
+
+        // Wildcard last
         Route::get('/admin/hives/{hive}', [HiveController::class, 'show'])->name('admin.hives.show');
+    });
+
+    // Inspections — read access is shared with data viewers; writes require the
+    // dedicated inspection permission.
+    Route::middleware(['permission:view-hive-data|manage-inspections'])->group(function () {
+        Route::get('/admin/inspections', [InspectionController::class, 'index'])->name('admin.inspections.index');
+        Route::get('/admin/inspections/create', [InspectionController::class, 'create'])
+            ->name('admin.inspections.create')
+            ->can('manage-inspections');
+        Route::get('/admin/inspections/{inspection}', [InspectionController::class, 'show'])->name('admin.inspections.show');
+    });
+    Route::middleware(['permission:manage-inspections'])->group(function () {
+        Route::get('/admin/inspections/{inspection}/edit', [InspectionController::class, 'edit'])->name('admin.inspections.edit');
+        Route::post('/admin/inspections', [InspectionController::class, 'store'])->name('admin.inspections.store');
+        Route::put('/admin/inspections/{inspection}', [InspectionController::class, 'update'])->name('admin.inspections.update');
+        Route::delete('/admin/inspections/{inspection}', [InspectionController::class, 'destroy'])->name('admin.inspections.destroy');
+    });
+
+    // Harvests — read access is shared with data viewers; writes require the
+    // dedicated harvest permission.
+    Route::middleware(['permission:view-hive-data|manage-harvests'])->group(function () {
+        Route::get('/admin/harvests', [HarvestController::class, 'index'])->name('admin.harvests.index');
+        Route::get('/admin/harvests/create', [HarvestController::class, 'create'])
+            ->name('admin.harvests.create')
+            ->can('manage-harvests');
+        Route::get('/admin/harvests/{harvest}', [HarvestController::class, 'show'])->name('admin.harvests.show');
+    });
+    Route::middleware(['permission:manage-harvests'])->group(function () {
+        Route::get('/admin/harvests/{harvest}/edit', [HarvestController::class, 'edit'])->name('admin.harvests.edit');
+        Route::post('/admin/harvests', [HarvestController::class, 'store'])->name('admin.harvests.store');
+        Route::put('/admin/harvests/{harvest}', [HarvestController::class, 'update'])->name('admin.harvests.update');
+        Route::delete('/admin/harvests/{harvest}', [HarvestController::class, 'destroy'])->name('admin.harvests.destroy');
+    });
+
+    // Hives — write access (manage-hives only)
+    Route::middleware(['permission:manage-hives'])->group(function () {
+        Route::post('/admin/alert-thresholds', [AlertThresholdController::class, 'store'])->name('admin.alert-thresholds.store');
+        Route::put('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'update'])->name('admin.alert-thresholds.update');
+        Route::delete('/admin/alert-thresholds/{alertThreshold}', [AlertThresholdController::class, 'destroy'])->name('admin.alert-thresholds.destroy');
     });
 
     // Hives — write access (manage-hives only)
@@ -293,6 +336,65 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         Route::patch('/admin/hives/{hive}/status', [HiveController::class, 'updateStatus'])
             ->name('admin.hives.updateStatus');
         Route::delete('/admin/hives/{hive}', [HiveController::class, 'destroy'])->name('admin.hives.destroy');
+    });
+
+    // ============================================================
+    // IOT DEVICE REGISTRY, TEAM MANAGEMENT, AND INGESTION MODULE
+    // ============================================================
+    Route::middleware(['permission:manage-iot-devices'])->prefix('/admin/iot')->name('admin.')->group(function () {
+
+        // --- Hardware Teams (never hard/soft deleted — deactivate only) ---
+        Route::prefix('hardware-teams')->name('hardware-teams.')->group(function () {
+            Route::get('/', [IotHardwareTeamRegistryController::class, 'index'])->name('index');
+            Route::get('/create', [IotHardwareTeamRegistryController::class, 'create'])->name('create');
+            Route::post('/', [IotHardwareTeamRegistryController::class, 'store'])->name('store');
+            Route::get('/{hardwareTeam}', [IotHardwareTeamRegistryController::class, 'show'])->name('show');
+            Route::get('/{hardwareTeam}/edit', [IotHardwareTeamRegistryController::class, 'edit'])->name('edit');
+            Route::put('/{hardwareTeam}', [IotHardwareTeamRegistryController::class, 'update'])->name('update');
+            Route::patch('/{hardwareTeam}/deactivate', [IotHardwareTeamRegistryController::class, 'deactivate'])->name('deactivate');
+            Route::patch('/{hardwareTeam}/reactivate', [IotHardwareTeamRegistryController::class, 'reactivate'])->name('reactivate');
+
+            // --- Team Members (nested under a team) ---
+            Route::prefix('/{hardwareTeam}/members')->name('members.')->group(function () {
+                Route::get('/', [IotHardwareTeamMemberController::class, 'index'])->name('index');
+                Route::get('/create', [IotHardwareTeamMemberController::class, 'create'])->name('create');
+                Route::post('/', [IotHardwareTeamMemberController::class, 'store'])->name('store');
+                Route::get('/{member}/edit', [IotHardwareTeamMemberController::class, 'edit'])->name('edit');
+                Route::put('/{member}', [IotHardwareTeamMemberController::class, 'update'])->name('update');
+                Route::patch('/{member}/deactivate', [IotHardwareTeamMemberController::class, 'deactivate'])->name('deactivate');
+                Route::patch('/{member}/reactivate', [IotHardwareTeamMemberController::class, 'reactivate'])->name('reactivate');
+            });
+
+            // --- Devices scoped to a team (team device management) ---
+            Route::prefix('/{hardwareTeam}/devices')->name('devices.')->group(function () {
+                Route::get('/', [IotDeviceRegistryController::class, 'indexForTeam'])->name('index');
+                Route::get('/create', [IotDeviceRegistryController::class, 'createForTeam'])->name('create');
+                Route::post('/', [IotDeviceRegistryController::class, 'storeForTeam'])->name('store');
+            });
+        });
+
+        // --- Global IoT Device Registry ---
+        Route::prefix('iot-devices')->name('iot-devices.')->group(function () {
+            Route::get('/', [IotDeviceRegistryController::class, 'index'])->name('index');
+            Route::get('/create', [IotDeviceRegistryController::class, 'create'])->name('create');
+            Route::post('/', [IotDeviceRegistryController::class, 'store'])->name('store');
+            Route::get('/{iotDevice}', [IotDeviceRegistryController::class, 'show'])->name('show');
+            Route::get('/{iotDevice}/edit', [IotDeviceRegistryController::class, 'edit'])->name('edit');
+            Route::put('/{iotDevice}', [IotDeviceRegistryController::class, 'update'])->name('update');
+            Route::delete('/{iotDevice}', [IotDeviceRegistryController::class, 'destroy'])->name('destroy');
+
+            // Device status management
+            Route::patch('/{iotDevice}/revoke', [IotDeviceRegistryController::class, 'revoke'])->name('revoke');
+            Route::patch('/{iotDevice}/reactivate', [IotDeviceRegistryController::class, 'reactivate'])->name('reactivate');
+
+            // Device-to-hive assignment wizard
+            Route::prefix('/{iotDevice}/assign')->name('assign.')->group(function () {
+                Route::get('/', [IotDeviceRegistryController::class, 'assignForm'])->name('form');
+                Route::get('/hives', [IotDeviceRegistryController::class, 'assignHives'])->name('hives');
+                Route::post('/', [IotDeviceRegistryController::class, 'assign'])->name('store');
+            });
+            Route::patch('/{iotDevice}/unassign', [IotDeviceRegistryController::class, 'unassign'])->name('unassign');
+        });
     });
 
     // ============================================================
@@ -336,19 +438,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
                 return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
             })->name('admin.' . $name);
         }
-    });
-
-    // Farmer Management (non-CRUD placeholders)
-    Route::middleware(['permission:approve-farmer-registrations'])->group(function () {
-        Route::get('/admin/farmers/pending', function () {
-            return view('admin.placeholder', ['title' => 'Pending Farmers', 'subtitle' => 'Placeholder for farmers.pending']);
-        })->name('admin.farmers.pending');
-    });
-
-    Route::middleware(['permission:manage-farmer-messages'])->group(function () {
-        Route::get('/admin/farmers/messages', function () {
-            return view('admin.placeholder', ['title' => 'Farmer Messages', 'subtitle' => 'Placeholder for farmers.messages']);
-        })->name('admin.farmers.messages');
     });
 
     // Newsletter

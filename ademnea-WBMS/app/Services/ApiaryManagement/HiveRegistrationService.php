@@ -2,6 +2,7 @@
 
 namespace App\Services\ApiaryManagement;
 
+use App\Contracts\HiveRegistryServiceContract;
 use App\Events\ApiaryManagement\HiveRegistered;
 use App\Models\Apiary;
 use App\Models\Hive;
@@ -12,11 +13,11 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Str;
 use RuntimeException;
 
-class HiveRegistrationService
+class HiveRegistrationService implements HiveRegistryServiceContract
 {
     public function register(Apiary $apiary, array $data): Hive
     {
-        if (!$apiary->status === 'Active') {
+        if ($apiary->status !== 'Active') {
             throw new \Exception('Cannot register hive under an inactive apiary.');
         }
 
@@ -47,29 +48,7 @@ class HiveRegistrationService
 
     private function generateApiaryCode(string $name, string $country): string
     {
-        $words = preg_split('/\s+/', trim($name)) ?: [];
-        $words = array_filter($words, fn ($w) => $w !== '');
-
-        if (count($words) >= 2) {
-            $initials = collect($words)
-                ->map(fn ($w) => strtoupper(Str::substr($w, 0, 1)))
-                ->implode('');
-            $base = Str::substr($initials, 0, 4);
-        } else {
-            $base = strtoupper(Str::substr(preg_replace('/[^A-Za-z0-9]/', '', $name), 0, 4));
-        }
-
-        $base = $base !== '' ? $base : strtoupper(Str::substr($country, 0, 2)).'X';
-
-        $candidate = $base;
-        $suffix = 1;
-
-        while (Apiary::where('apiary_code', $candidate)->exists()) {
-            $candidate = $base.$suffix;
-            $suffix++;
-        }
-
-        return $candidate;
+        return ApiaryCodeGenerator::generate($name, $country);
     }
 
     public function generateHybridIdentifier(Apiary $apiary): string
@@ -152,9 +131,6 @@ class HiveRegistrationService
         return Hive::with([
             'apiary',
             'statusHistory',
-            // 'inspections',       // TODO: Uncomment when Inspection model is implemented
-            // 'harvestRecords',    // TODO: Uncomment when HarvestRecord model is implemented
-            // 'alertThresholds',   // TODO: Uncomment when AlertThreshold model is implemented
         ])->findOrFail($hiveId);
     }
 

@@ -3,146 +3,117 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Api\Farmer\RegisterRequest;
-use App\Http\Requests\Api\Farmer\LoginRequest;
-use App\Http\Requests\Api\Farmer\ForgotPasswordRequest;
-use App\Http\Requests\Api\Farmer\ResetPasswordRequest;
-use App\Http\Requests\Api\Farmer\UpdateProfileRequest;
-use App\Http\Requests\Api\Farmer\DeviceTokenRequest;
-use App\Services\Farmer\AuthService;
-use Illuminate\Http\Request;
+use App\Http\Requests\Farmer\Auth\{
+    RegisterRequest,
+    LoginRequest,
+    ForgotPasswordRequest,
+    ResetPasswordRequest
+};
+use App\Services\Farmer\FarmerAuthService;
+use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 
+/**
+ * UC-FAPI-01 to 04
+ * Routes: POST /api/v1/farmer/register
+ *         POST /api/v1/farmer/login
+ *         POST /api/v1/farmer/logout
+ *         POST /api/v1/farmer/password/forgot
+ *         POST /api/v1/farmer/password/reset
+ */
 class AuthController extends Controller
 {
-    protected AuthService $authService;
+    use ApiResponse;
 
-    public function __construct(AuthService $authService)
-    {
-        $this->authService = $authService;
-    }
+    public function __construct(
+        private readonly FarmerAuthService $authService
+    ) {}
 
-    /**
-     * Register a new farmer (pending approval)
-     */
+    /** REQ-F-FAPI-01 */
     public function register(RegisterRequest $request): JsonResponse
     {
-        $data = $request->validated();
+        $farmer = $this->authService->register($request->validated());
 
-        $result = $this->authService->register($data);
-
-        return response()->json([
-            'message' => 'Registration submitted. Awaiting admin approval.',
-            'data' => [
-                'user_id' => $result['user']->id,
-                'email' => $result['user']->email,
-                'status' => 'pending',
+        return $this->created([
+            'farmer' => [
+                'id'     => $farmer->id,
+                'name'   => $farmer->name,
+                'email'  => $farmer->email,
+                'status' => $farmer->status,
             ],
-        ], 201);
+        ], 'Registration successful. Your account is pending admin approval.');
     }
 
-    /**
-     * Login farmer
-     */
+    /** REQ-F-FAPI-02 */
     public function login(LoginRequest $request): JsonResponse
     {
-        $credentials = $request->validated();
+        $result = $this->authService->login($request->validated());
 
-        $result = $this->authService->login($credentials);
-
-        if (!$result) {
-            return response()->json([
-                'message' => 'Invalid credentials.',
-            ], 401);
+        if (!$result['success']) {
+            return $this->error($result['message'], 401);
         }
 
-        if (isset($result['error'])) {
-            return response()->json([
-                'message' => $result['message'],
-            ], 403);
-        }
-
-        return response()->json([
-            'token' => $result['token'],
-            'expires_at' => $result['expires_at'],
-            'farmer' => $result['farmer'],
-        ]);
+        return $this->success([
+            'token'  => $result['token'],
+            'farmer' => [
+                'id'        => $result['farmer']->id,
+                'name'      => $result['farmer']->name,
+                'email'     => $result['farmer']->email,
+                'telephone' => $result['farmer']->telephone,
+            ],
+        ], 'Login successful.');
     }
 
-    /**
-     * Logout farmer
-     */
+    /** REQ-F-FAPI-03 */
     public function logout(Request $request): JsonResponse
     {
         $this->authService->logout($request->user());
 
-        return response()->json([
-            'message' => 'Logged out successfully.',
-        ]);
+        return $this->success(null, 'Logged out successfully.');
     }
 
-    /**
-     * Send password reset link
-     */
+    /** REQ-F-FAPI-04 step 1 */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        $this->authService->sendResetLink($request->email);
+        $this->authService->sendPasswordResetLink($request->email);
 
-        return response()->json([
-            'message' => 'If this email is registered, you will receive a reset link shortly.',
-        ]);
+        return $this->success(null, 'If that email is registered, a reset link has been sent.');
     }
 
-    /**
-     * Reset password
-     */
+    /** REQ-F-FAPI-04 step 2 */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
-        $data = $request->validated();
+        $ok = $this->authService->resetPassword($request->validated());
 
-        $success = $this->authService->resetPassword($data);
-
-        if (!$success) {
-            return response()->json([
-                'message' => 'This password reset link is invalid or has expired. Please request a new one.',
-            ], 422);
+        if (!$ok) {
+            return $this->error('The reset token is invalid or has expired.', 422);
         }
 
-        return response()->json([
-            'message' => 'Password reset successfully. Please log in.',
-        ]);
+        return $this->success(null, 'Password reset successfully. Please log in.');
     }
 
-    /**
-     * Get profile
-     */
+    /** REQ-F-FAPI-05 */
     public function profile(Request $request): JsonResponse
     {
         $profile = $this->authService->getProfile($request->user());
 
-        return response()->json([
+        return $this->success([
             'data' => $profile,
         ]);
     }
 
-    /**
-     * Update profile
-     */
+    /** REQ-F-FAPI-05 */
     public function updateProfile(UpdateProfileRequest $request): JsonResponse
     {
-        $data = $request->validated();
+        $result = $this->authService->updateProfile($request->user(), $request->validated());
 
-        $result = $this->authService->updateProfile($request->user(), $data);
-
-        return response()->json([
-            'message' => 'Profile updated successfully.',
+        return $this->success([
             'data' => $this->authService->getProfile($result['user']),
-        ]);
+        ], 'Profile updated successfully.');
     }
 
-    /**
-     * Register FCM device token
-     */
+    /** REQ-F-FAPI-27 */
     public function registerDeviceToken(DeviceTokenRequest $request): JsonResponse
     {
         $this->authService->registerDeviceToken(
@@ -150,8 +121,6 @@ class AuthController extends Controller
             $request->device_token
         );
 
-        return response()->json([
-            'message' => 'Device token registered successfully.',
-        ]);
+        return $this->success(null, 'Device token registered successfully.');
     }
 }

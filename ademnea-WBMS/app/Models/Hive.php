@@ -6,40 +6,30 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasManyThrough;
+use Illuminate\Database\Eloquent\Factories\HasFactory;
 
 class Hive extends Model
 {
+    use HasFactory;
     use SoftDeletes;
 
     protected $fillable = [
         'apiary_id',
-
-        // Identifier columns – hybrid_identifier is the model-preferred name;
-        // hive_code is the original DB column (kept for backward compat).
         'hybrid_identifier',
         'hive_code',
-
         'display_name',
-        'name',         // Farmer-API column — kept in sync with display_name via booted()
+        'name',
         'hive_type',
         'construction_material',
         'installation_date',
         'colony_origin',
         'queen_status',
-
-        // Status – current_status is model-preferred (added by migration);
-        // status is the original DB column (kept for backward compat).
         'current_status',
         'status',
-
-        // GPS – latitude/longitude are model-preferred aliases (added by migration);
-        // gps_latitude/gps_longitude are the original DB columns.
         'latitude',
         'longitude',
-        'gps_latitude',
-        'gps_longitude',
-        'gps_accuracy_meters',
-
+        'accuracy_meters',
         'last_inspection_date',
         'notes',
     ];
@@ -49,24 +39,19 @@ class Hive extends Model
         'last_inspection_date'  => 'date',
         'latitude'              => 'decimal:8',
         'longitude'             => 'decimal:8',
-        'gps_latitude'          => 'decimal:8',
-        'gps_longitude'         => 'decimal:8',
+        'accuracy_meters'       => 'decimal:2',
         'deleted_at'            => 'datetime',
     ];
 
     protected static function booted(): void
     {
         static::creating(function (Hive $hive): void {
-            // hive_code is the original NOT NULL DB column.
-            // hybrid_identifier is the model-preferred name set by the service.
-            // Keep them in sync so neither violates its constraint.
             if (!empty($hive->hybrid_identifier) && empty($hive->hive_code)) {
                 $hive->hive_code = $hive->hybrid_identifier;
             } elseif (!empty($hive->hive_code) && empty($hive->hybrid_identifier)) {
                 $hive->hybrid_identifier = $hive->hive_code;
             }
 
-            // name (Farmer-API column) ↔ display_name (admin module column) sync.
             if (!empty($hive->display_name) && empty($hive->name)) {
                 $hive->name = $hive->display_name;
             } elseif (!empty($hive->name) && empty($hive->display_name)) {
@@ -100,53 +85,60 @@ class Hive extends Model
             ->orderBy('transitioned_at', 'desc');
     }
 
-    // TODO: Uncomment when Inspection model is implemented
-    // public function inspections(): HasMany
-    // {
-    //     return $this->hasMany(Inspection::class);
-    // }
-
-    // TODO: Uncomment when HarvestRecord model is implemented
-    // public function harvestRecords(): HasMany
-    // {
-    //     return $this->hasMany(HarvestRecord::class);
-    // }
-
-    // TODO: Uncomment when AlertThreshold model is implemented
-    // public function alertThresholds(): HasMany
-    // {
-    //     return $this->hasMany(AlertThreshold::class);
-    // }
-
-    // TODO: Uncomment when IotDevice model is implemented
-    // public function iotDevices(): HasMany
-    // {
-    //     return $this->hasMany(IotDevice::class);
-    // }
-
-
     public function inspections(): HasMany
     {
         return $this->hasMany(Inspection::class);
     }
 
-    // TODO: Uncomment when HarvestRecord model is implemented
-    // public function harvestRecords(): HasMany
-    // {
-    //     return $this->hasMany(HarvestRecord::class);
-    // }
+    public function harvestRecords(): HasMany
+    {
+        return $this->hasMany(HarvestRecord::class);
+    }
 
-    // TODO: Uncomment when AlertThreshold model is implemented
-    // public function alertThresholds(): HasMany
-    // {
-    //     return $this->hasMany(AlertThreshold::class);
-    // }
+    public function alertThresholds(): HasMany
+    {
+        return $this->hasMany(AlertThreshold::class);
+    }
 
-    // TODO: Uncomment when IotDevice model is implemented
-    // public function iotDevices(): HasMany
-    // {
-    //     return $this->hasMany(IotDevice::class);
-    // }
+    public function iotDevices(): HasMany
+    {
+        return $this->hasMany(IotDevice::class);
+    }
+
+    public function temperatures(): HasMany
+    {
+        return $this->hasMany(HiveTemperature::class);
+    }
+
+    public function humidities(): HasMany
+    {
+        return $this->hasMany(HiveHumidity::class);
+    }
+
+    public function carbondioxides(): HasMany
+    {
+        return $this->hasMany(HiveCarbondioxide::class);
+    }
+
+    public function weights(): HasMany
+    {
+        return $this->hasMany(HiveWeight::class);
+    }
+
+    public function photos(): HasMany
+    {
+        return $this->hasMany(HivePhoto::class);
+    }
+
+    public function audio(): HasMany
+    {
+        return $this->hasMany(HiveAudio::class);
+    }
+
+    public function videos(): HasMany
+    {
+        return $this->hasMany(HiveVideo::class);
+    }
 
     public function scopeActive($query)
     {
@@ -169,6 +161,12 @@ class Hive extends Model
             $q->whereNull('last_inspection_date')
               ->orWhere('last_inspection_date', '<', now()->subDays($daysSinceLastInspection));
         });
+    }
+
+    public function scopeWithinBounds($query, float $minLat, float $maxLat, float $minLng, float $maxLng)
+    {
+        return $query->whereBetween('latitude', [$minLat, $maxLat])
+                    ->whereBetween('longitude', [$minLng, $maxLng]);
     }
 
     public function getLatestStatusHistory()
@@ -197,5 +195,10 @@ class Hive extends Model
     public function isActive(): bool
     {
         return $this->current_status === 'Active';
+    }
+
+    public function getHybridCodeAttribute(): string
+    {
+        return $this->hybrid_identifier ?: $this->hive_code ?: '—';
     }
 }

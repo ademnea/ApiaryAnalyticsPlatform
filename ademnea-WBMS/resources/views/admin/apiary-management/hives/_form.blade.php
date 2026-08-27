@@ -6,6 +6,19 @@
 
 <div class="row g-3">
     <div class="col-md-6">
+        <label for="apiary_id" class="form-label">Parent apiary *</label>
+        <select name="apiary_id" id="apiary_id" class="form-select @error('apiary_id') is-invalid @enderror" required>
+            <option value="">— Select an apiary —</option>
+            @foreach(($apiaries ?? collect()) as $apiaryOption)
+                <option value="{{ $apiaryOption->id }}" @selected(old('apiary_id', $hive?->apiary_id) == $apiaryOption->id)>
+                    {{ $apiaryOption->name }} ({{ $apiaryOption->country }})
+                </option>
+            @endforeach
+        </select>
+        @error('apiary_id') <div class="invalid-feedback">{{ $message }}</div> @enderror
+    </div>
+
+    <div class="col-md-6">
         <label for="display_name" class="form-label">Display name *</label>
         <input type="text" name="display_name" id="display_name"
                class="form-control @error('display_name') is-invalid @enderror"

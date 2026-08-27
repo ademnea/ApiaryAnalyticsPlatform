@@ -9,11 +9,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 class Alert extends Model
 {
     use HasFactory;
-use Illuminate\Database\Eloquent\Model;
 
-class Alert extends Model
-{
-    public $timestamps = false; // only created_at, handled manually below
+    public $timestamps = false;
 
     protected $fillable = [
         'farmer_id',
@@ -21,25 +18,18 @@ class Alert extends Model
         'type',
         'message',
         'is_read',
-    ];
-
-    protected $casts = [
-        'farmer_id' => 'integer',
-        'hive_id' => 'integer',
-        'is_read' => 'boolean',
-    ];
-
-    public function farmer(): BelongsTo
         'read_at',
     ];
 
     protected $casts = [
-        'is_read'    => 'boolean',
-        'created_at' => 'datetime',
-        'read_at'    => 'datetime',
+        'farmer_id'   => 'integer',
+        'hive_id'     => 'integer',
+        'is_read'     => 'boolean',
+        'created_at'  => 'datetime',
+        'read_at'     => 'datetime',
     ];
 
-    public function farmer()
+    public function farmer(): BelongsTo
     {
         return $this->belongsTo(Farmer::class);
     }
@@ -48,17 +38,7 @@ class Alert extends Model
     {
         return $this->belongsTo(Hive::class);
     }
-}
-    public function hive()
-    {
-        // Hive model is owned by Developer B (Apiary Management).
-        // Confirm namespace once their model lands on `development`.
-        return $this->belongsTo(Hive::class);
-    }
 
-    /**
-     * REQ-F-FAPI-24: malfunction alerts are exempt from the 1hr cooldown.
-     */
     public function isCooldownExempt(): bool
     {
         return $this->type === 'malfunction';
