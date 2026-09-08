@@ -27,9 +27,15 @@ use App\Http\Controllers\Public\ScholarshipController as PublicScholarshipContro
 use App\Http\Controllers\Public\FeedbackController as PublicFeedbackController;
 use App\Http\Controllers\Admin\WorkPackageController as AdminWorkPackageController;
 use App\Http\Controllers\Admin\TeamProfileController as AdminTeamProfileController;
+use App\Http\Controllers\Admin\PublicationController;
+use App\Http\Controllers\Admin\NewsletterController;
 
 use App\Http\Controllers\Public\WorkPackageController as PublicWorkPackageController;
 use App\Http\Controllers\Public\TeamProfileController as PublicTeamProfileController;
+use App\Http\Controllers\Public\PublicationController as PublicPublicationController;
+use App\Http\Controllers\Public\NewsletterController as PublicNewsletterController;
+use App\Http\Controllers\Admin\EventController;
+use App\Http\Controllers\Public\EventController as PublicEventController;
 // ============================================================
 // PUBLIC ROUTES (no auth middleware)
 // ============================================================
@@ -63,6 +69,21 @@ Route::get('/work-packages/{workPackage}',[PublicWorkPackageController::class, '
 // Public Team Profiles
 Route::get('/team',[PublicTeamProfileController::class, 'index'])->name('public.team.index');
 Route::get('/team/{teamProfile}',[PublicTeamProfileController::class, 'show'])->name('public.team.show');
+
+// Public Publications
+Route::get('/publications', [PublicPublicationController::class, 'index'])->name('public.publications.index');
+Route::get('/publications/{publication:slug}', [PublicPublicationController::class, 'show'])->name('public.publications.show');
+Route::get('/publications/{publication}/download', [PublicPublicationController::class, 'download'])->name('publications.download');
+
+// Public Events
+Route::get('/events', [PublicEventController::class, 'index'])->name('public.events.index');
+Route::get('/events/upcoming', [PublicEventController::class, 'upcoming'])->name('public.events.upcoming');
+Route::get('/events/past', [PublicEventController::class, 'past'])->name('public.events.past');
+Route::get('/events/{event:slug}', [PublicEventController::class, 'show'])->name('public.events.show');
+
+// Public Newsletters
+Route::get('/newsletters', [PublicNewsletterController::class, 'index'])->name('public.newsletters.index');
+Route::get('/newsletters/{newsletter:slug}', [PublicNewsletterController::class, 'show'])->name('public.newsletters.show');
 
 // --- Auth: Login ---
 Route::get('/admin/login', [LoginController::class, 'showLoginForm'])->name('admin.login');
@@ -441,30 +462,54 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     });
 
     // Newsletter
-    Route::middleware(['permission:manage-newsletter'])->group(function () {
-        foreach (['newsletter.index', 'newsletter.create'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
+    Route::middleware(['permission:manage-newsletter'])->prefix('/admin/newsletter')->name('admin.newsletter.')->group(function () {
+        Route::get('/', [NewsletterController::class, 'index'])->name('index');
+        Route::get('/create', [NewsletterController::class, 'create'])->name('create');
+        Route::post('/', [NewsletterController::class, 'store'])->name('store');
+        Route::get('/{newsletter}/edit', [NewsletterController::class, 'edit'])->name('edit');
+        Route::get('/{newsletter}', [NewsletterController::class, 'show'])->name('show');
+        Route::put('/{newsletter}', [NewsletterController::class, 'update'])->name('update');
+        Route::delete('/{newsletter}', [NewsletterController::class, 'destroy'])->name('destroy');
+        Route::post('/{newsletter}/publish', [NewsletterController::class, 'publish'])->name('publish');
+        Route::post('/{newsletter}/unpublish', [NewsletterController::class, 'unpublish'])->name('unpublish');
+        Route::post('/{newsletter}/restore', [NewsletterController::class, 'restore'])->name('restore');
     });
 
-    // Publications
+    // ============================================================
+    // PUBLICATIONS MODULE
+    // ============================================================
     Route::middleware(['permission:manage-publications'])->group(function () {
-        foreach (['publications.index', 'publications.create'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
+        Route::prefix('/admin/publications')->name('admin.publications.')->group(function () {
+            Route::get('/', [PublicationController::class, 'index'])->name('index');
+            Route::get('/create', [PublicationController::class, 'create'])->name('create');
+            Route::post('/', [PublicationController::class, 'store'])->name('store');
+            Route::get('/search', [PublicationController::class, 'search'])->name('search');
+            Route::get('/{publication}', [PublicationController::class, 'show'])->name('show');
+            Route::get('/{publication}/edit', [PublicationController::class, 'edit'])->name('edit');
+            Route::put('/{publication}', [PublicationController::class, 'update'])->name('update');
+            Route::delete('/{publication}', [PublicationController::class, 'destroy'])->name('destroy');
+            Route::post('/{publication}/publish', [PublicationController::class, 'publish'])->name('publish');
+            Route::post('/{publication}/unpublish', [PublicationController::class, 'unpublish'])->name('unpublish');
+        });
     });
 
     // Events
     Route::middleware(['permission:manage-events'])->group(function () {
-        foreach (['events.index', 'events.create'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
+        Route::prefix('/admin/events')->name('admin.events.')->group(function () {
+            Route::get('/', [EventController::class, 'index'])->name('index');
+            Route::get('/create', [EventController::class, 'create'])->name('create');
+            Route::post('/', [EventController::class, 'store'])->name('store');
+            Route::get('/search', [EventController::class, 'search'])->name('search');
+            Route::get('/{event}', [EventController::class, 'show'])->name('show');
+            Route::get('/{event}/edit', [EventController::class, 'edit'])->name('edit');
+            Route::put('/{event}', [EventController::class, 'update'])->name('update');
+            Route::delete('/{event}', [EventController::class, 'destroy'])->name('destroy');
+            Route::post('/{event}/publish', [EventController::class, 'publish'])->name('publish');
+            Route::post('/{event}/unpublish', [EventController::class, 'unpublish'])->name('unpublish');
+            Route::post('/{event}/photos', [EventController::class, 'addPhotos'])->name('photos.add');
+            Route::delete('/photos/{photo}', [EventController::class, 'deletePhoto'])->name('photos.delete');
+            Route::post('/{event}/photos/reorder', [EventController::class, 'reorderPhotos'])->name('photos.reorder');
+        });
     });
 
     // Search — any authenticated non-farmer user
