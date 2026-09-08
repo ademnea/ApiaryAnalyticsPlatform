@@ -1,176 +1,640 @@
-@extends('layouts.public')
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>AdEMNEA – Beehive Monitoring & Analytics Platform</title>
 
-@section('title', 'Beehive Monitoring')
-@section('main-class', '')
+    {{-- Bootstrap 5 --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    {{-- Bootstrap Icons --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    {{-- Google Fonts --}}
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 
-@push('styles')
     <style>
-        .band { padding: 4.5rem 0; }
-        .band-title { margin-bottom: 0.5rem; font-size: 1.9rem; font-weight: 700; }
-        .band-lead { max-width: 40rem; margin-bottom: 2.5rem; font-size: 1.05rem; color: var(--clr-text-muted); }
+        :root {
+            --clr-forest:       #1B4332;
+            --clr-forest-mid:   #2D6A4F;
+            --clr-forest-light: #40916C;
+            --clr-forest-pale:  #D8F3DC;
+            --clr-honey:        #D4A017;
+            --clr-honey-light:  #F8C93A;
+            --clr-dark:         #0D1B12;
+            --clr-canvas:       #F8FAF7;
 
-        /* ---- Hero ---- */
+            --font-display: 'Space Grotesk', sans-serif;
+            --font-body:    'Inter', sans-serif;
+        }
+
+        *, *::before, *::after { box-sizing: border-box; }
+
+        body {
+            margin: 0;
+            font-family: var(--font-body);
+            background: var(--clr-dark);
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zm0 0l28 16v18L28 116 0 100V82l28-16z' fill='none' stroke='%231A3A24' stroke-width='1'/%3E%3C/svg%3E");
+            background-size: 56px 100px;
+            color: #1a2e1f;
+            overflow-x: hidden;
+        }
+
+        /* ========== NAVBAR ========== */
+        .navbar-landing {
+            background: rgba(13, 27, 18, 0.95);
+            backdrop-filter: blur(10px);
+            border-bottom: 1px solid rgba(255,255,255,0.08);
+            padding: 1rem 0;
+        }
+
+        .navbar-brand-landing {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            text-decoration: none;
+        }
+
+        .brand-hex {
+            width: 42px;
+            height: 42px;
+            background: var(--clr-honey);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.35rem;
+        }
+
+        .brand-text {
+            display: flex;
+            flex-direction: column;
+            line-height: 1.2;
+        }
+
+        .brand-name {
+            font-family: var(--font-display);
+            font-size: 1.25rem;
+            font-weight: 700;
+            color: #fff;
+            letter-spacing: 0.02em;
+        }
+
+        .brand-tagline {
+            font-size: 0.65rem;
+            color: var(--clr-honey-light);
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+        }
+
+        .nav-link-landing {
+            color: #c8e6d5 !important;
+            font-size: 0.9rem;
+            font-weight: 500;
+            padding: 0.5rem 1rem !important;
+            border-radius: 6px;
+            transition: background 0.2s, color 0.2s;
+        }
+
+        .nav-link-landing:hover {
+            color: #fff !important;
+            background: rgba(255,255,255,0.08);
+        }
+
+        .btn-login {
+            background: transparent;
+            border: 1.5px solid var(--clr-forest-light);
+            color: #c8e6d5;
+            font-size: 0.88rem;
+            font-weight: 600;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            transition: all 0.2s;
+        }
+
+        .btn-login:hover {
+            background: var(--clr-forest-mid);
+            border-color: var(--clr-forest-mid);
+            color: #fff;
+        }
+
+        .btn-register {
+            background: linear-gradient(135deg, var(--clr-forest-mid) 0%, var(--clr-forest-light) 100%);
+            border: none;
+            color: #fff;
+            font-size: 0.88rem;
+            font-weight: 600;
+            padding: 0.5rem 1.5rem;
+            border-radius: 8px;
+            transition: opacity 0.2s, transform 0.15s;
+        }
+
+        .btn-register:hover {
+            opacity: 0.92;
+            transform: translateY(-1px);
+            color: #fff;
+        }
+
+        /* ========== HERO SECTION ========== */
         .hero {
-            padding: 5rem 0;
-            color: var(--clr-on-dark);
-            background-color: var(--clr-dark);
-            background-image:
-                linear-gradient(180deg, rgba(13, 27, 18, 0.55) 0%, rgba(27, 67, 50, 0.92) 100%),
-                url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='56' height='100'%3E%3Cpath d='M28 66L0 50V18L28 2l28 16v32L28 66zm0 0l28 16v18L28 116 0 100V82l28-16z' fill='none' stroke='%23244A31' stroke-width='1'/%3E%3C/svg%3E");
-            background-size: auto, 56px 100px;
+            padding: 5rem 0 4rem;
+            background: linear-gradient(180deg, rgba(13,27,18,1) 0%, rgba(27,67,50,0.85) 100%);
+            position: relative;
         }
-        .hero-eyebrow { margin-bottom: 1rem; font-size: 0.85rem; font-weight: 600; letter-spacing: 0.08em; text-transform: uppercase; color: var(--clr-honey-light); }
-        .hero h1 { margin-bottom: 1.25rem; font-size: clamp(2.1rem, 4.5vw, 3.2rem); font-weight: 700; line-height: 1.12; color: #fff; }
-        .hero h1 span { color: var(--clr-honey-light); }
-        .hero-lead { max-width: 36rem; margin-bottom: 2rem; font-size: 1.15rem; color: var(--clr-on-dark); }
-        .hero-actions { display: flex; flex-wrap: wrap; gap: 0.85rem; }
-        .hero-actions .btn { display: inline-flex; align-items: center; gap: 0.5rem; min-height: 3rem; padding: 0.7rem 1.6rem; font-size: 1rem; }
-        .btn-hero { background: var(--clr-honey-light); border: 2px solid var(--clr-honey-light); color: var(--clr-dark); }
-        .btn-hero:hover { background: #FFD95A; border-color: #FFD95A; color: var(--clr-dark); }
-        .btn-hero-outline { background: transparent; border: 2px solid rgba(255, 255, 255, 0.7); color: #fff; }
-        .btn-hero-outline:hover { background: rgba(255, 255, 255, 0.12); border-color: #fff; color: #fff; }
 
-        /* What the sensors measure: an illustration, not live data. */
-        .hero-sensors { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; max-width: 24rem; margin-left: auto; }
-        .hero-sensor {
-            padding: 1.25rem; border-radius: 14px; border: 1px solid rgba(255, 255, 255, 0.16);
-            background: rgba(255, 255, 255, 0.07); color: #fff;
+        .hero::after {
+            content: '';
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
         }
-        .hero-sensor i { display: block; margin-bottom: 0.6rem; font-size: 1.75rem; color: var(--clr-honey-light); }
-        .hero-sensor strong { display: block; font-family: var(--font-display); font-size: 1.05rem; }
-        .hero-sensor span { font-size: 0.875rem; color: var(--clr-on-dark-muted); }
 
-        /* ---- What it does ---- */
-        .feature { height: 100%; padding: 1.5rem; border: 1px solid var(--clr-border); border-radius: 12px; background: var(--clr-card); }
+        .hero-title {
+            font-family: var(--font-display);
+            font-size: 3rem;
+            font-weight: 700;
+            color: #fff;
+            line-height: 1.15;
+            margin-bottom: 1.25rem;
+        }
+
+        .hero-subtitle {
+            font-size: 1.1rem;
+            color: #b7d5c4;
+            line-height: 1.7;
+            margin-bottom: 2rem;
+        }
+
+        .hero-highlight {
+            color: var(--clr-honey-light);
+            font-weight: 600;
+        }
+
+        .btn-hero-primary {
+            background: linear-gradient(135deg, var(--clr-forest-mid) 0%, var(--clr-forest-light) 100%);
+            border: none;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.85rem 2.5rem;
+            border-radius: 10px;
+            transition: opacity 0.2s, transform 0.15s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-hero-primary:hover {
+            opacity: 0.92;
+            transform: translateY(-2px);
+            color: #fff;
+        }
+
+        .btn-hero-secondary {
+            background: transparent;
+            border: 2px solid var(--clr-forest-light);
+            color: #c8e6d5;
+            font-size: 1rem;
+            font-weight: 600;
+            padding: 0.85rem 2.5rem;
+            border-radius: 10px;
+            transition: all 0.2s;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-hero-secondary:hover {
+            background: var(--clr-forest-mid);
+            border-color: var(--clr-forest-mid);
+            color: #fff;
+        }
+
+        /* ========== FEATURES SECTION ========== */
+        .features {
+            padding: 4rem 0;
+            background: var(--clr-canvas);
+        }
+
+        .section-title {
+            font-family: var(--font-display);
+            font-size: 2rem;
+            font-weight: 700;
+            color: var(--clr-dark);
+            text-align: center;
+            margin-bottom: 0.5rem;
+        }
+
+        .section-subtitle {
+            font-size: 1rem;
+            color: #6B7F74;
+            text-align: center;
+            margin-bottom: 3rem;
+        }
+
+        .feature-card {
+            background: #fff;
+            border: 1px solid #E0EDE5;
+            border-radius: 12px;
+            padding: 2rem 1.5rem;
+            text-align: center;
+            transition: box-shadow 0.3s, transform 0.3s;
+            height: 100%;
+        }
+
+        .feature-card:hover {
+            box-shadow: 0 8px 32px rgba(27,67,50,0.12);
+            transform: translateY(-4px);
+        }
+
         .feature-icon {
-            display: flex; align-items: center; justify-content: center; width: 3rem; height: 3rem; margin-bottom: 1rem;
-            border-radius: 10px; font-size: 1.4rem; background: var(--clr-forest-pale); color: var(--clr-forest);
+            width: 64px;
+            height: 64px;
+            margin: 0 auto 1.25rem;
+            background: var(--clr-forest-pale);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.75rem;
+            color: var(--clr-forest-mid);
         }
-        .feature h3 { margin-bottom: 0.4rem; font-size: 1.1rem; font-weight: 600; }
-        .feature p { margin: 0; color: var(--clr-text-muted); }
 
-        /* ---- Explore the project ---- */
-        .band-explore { background: #EEF4EF; }
-        .explore-card {
-            display: flex; align-items: flex-start; gap: 1rem; height: 100%; padding: 1.25rem 1.35rem;
-            border: 1px solid var(--clr-border); border-radius: 12px; background: var(--clr-card);
-            color: var(--clr-text); text-decoration: none; transition: border-color 0.15s, box-shadow 0.15s;
+        .feature-title {
+            font-family: var(--font-display);
+            font-size: 1.1rem;
+            font-weight: 600;
+            color: var(--clr-dark);
+            margin-bottom: 0.75rem;
         }
-        .explore-card:hover { border-color: var(--clr-forest-light); box-shadow: 0 6px 22px rgba(27, 67, 50, 0.12); color: var(--clr-text); }
-        .explore-card > i { font-size: 1.6rem; color: var(--clr-forest-mid); }
-        .explore-card strong { display: block; font-family: var(--font-display); font-size: 1.05rem; }
-        .explore-card span { color: var(--clr-text-muted); font-size: 0.95rem; }
-        .explore-card .bi-arrow-right { margin-left: auto; font-size: 1.1rem; align-self: center; }
 
-        /* ---- About ---- */
-        .about p { max-width: 44rem; font-size: 1.05rem; }
+        .feature-desc {
+            font-size: 0.9rem;
+            color: #6B7F74;
+            line-height: 1.6;
+        }
 
-        @media (max-width: 991.98px) {
-            .band { padding: 3.25rem 0; }
-            .hero { padding: 3.5rem 0; }
-            .hero-sensors { margin: 2.5rem 0 0; max-width: none; }
+        /* ========== FOOTER ========== */
+        .footer {
+            background: var(--clr-dark);
+            color: #8db8a0;
+            padding: 2rem 0 1.5rem;
+            border-top: 1px solid rgba(255,255,255,0.08);
+        }
+
+        .footer-logo {
+            display: flex;
+            align-items: center;
+            gap: 0.6rem;
+            margin-bottom: 1rem;
+        }
+
+        .footer-hex {
+            width: 32px;
+            height: 32px;
+            background: var(--clr-honey);
+            clip-path: polygon(50% 0%, 100% 25%, 100% 75%, 50% 100%, 0% 75%, 0% 25%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1rem;
+        }
+
+        .footer-brand-name {
+            font-family: var(--font-display);
+            font-size: 1rem;
+            font-weight: 700;
+            color: #fff;
+        }
+
+        .footer-text {
+            font-size: 0.82rem;
+            color: #8db8a0;
+            line-height: 1.6;
+        }
+
+        .footer-heading {
+            font-family: var(--font-display);
+            font-size: 0.9rem;
+            font-weight: 600;
+            color: #c8e6d5;
+            margin-bottom: 1rem;
+        }
+
+        .footer-link {
+            display: block;
+            font-size: 0.85rem;
+            color: #8db8a0;
+            text-decoration: none;
+            margin-bottom: 0.5rem;
+            transition: color 0.2s;
+        }
+
+        .footer-link:hover {
+            color: var(--clr-honey-light);
+        }
+
+        .footer-bottom {
+            border-top: 1px solid rgba(255,255,255,0.08);
+            padding-top: 1.5rem;
+            margin-top: 2rem;
+            font-size: 0.78rem;
+            color: #6B7F74;
+            text-align: center;
+        }
+
+        @media (max-width: 768px) {
+            .hero-title { font-size: 2rem; }
+            .hero-subtitle { font-size: 1rem; }
+            .section-title { font-size: 1.5rem; }
         }
     </style>
-@endpush
+</head>
+<body>
 
-@section('content')
-
-    <section class="hero" aria-labelledby="hero-title">
+    {{-- ========== NAVBAR ========== --}}
+    <nav class="navbar-landing">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-7">
-                    <p class="hero-eyebrow">AdEMNEA · NORHED II</p>
-                    <h1 id="hero-title">Know how every hive is doing, <span>without opening it</span></h1>
-                    <p class="hero-lead">
-                        Sensors in the hive report temperature, humidity, weight and CO₂ around the clock.
-                        The platform checks each reading, raises an alert when something looks wrong,
-                        and keeps the records researchers and beekeepers need.
+            <div class="d-flex justify-content-between align-items-center w-100">
+                {{-- Brand --}}
+                <a href="{{ url('/') }}" class="navbar-brand-landing">
+                    <div class="brand-hex">🐝</div>
+                    <div class="brand-text">
+                        <span class="brand-name">AdEMNEA</span>
+                        <span class="brand-tagline">Beehive Analytics</span>
+                    </div>
+                </a>
+
+                {{-- Nav Links --}}
+                <div class="d-none d-md-flex align-items-center gap-1">
+                    <a href="{{ route('public.work-packages.index') }}" class="nav-link-landing">Work Packages</a>
+                    <a href="{{ route('public.team.index') }}" class="nav-link-landing">Team</a>
+                    <a href="{{ route('public.gallery.index') }}" class="nav-link-landing">Gallery</a>
+                    <a href="{{ route('public.publications.index') }}" class="nav-link-landing">Publications</a>
+                    <a href="{{ route('public.events.index') }}" class="nav-link-landing">Events</a>
+                    <a href="{{ route('public.scholarships.index') }}" class="nav-link-landing">Scholarships</a>
+                    <a href="#features" class="nav-link-landing">Features</a>
+                    <a href="#about" class="nav-link-landing">About</a>
+                    <a href="#contact" class="nav-link-landing">Contact</a>
+                </div>
+
+                {{-- Auth Buttons --}}
+                <div class="d-flex align-items-center gap-2">
+                    <a href="{{ route('admin.login') }}" class="btn btn-login">
+                        <i class="bi bi-box-arrow-in-right me-1"></i> Login
+                    </a>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    {{-- ========== HERO SECTION ========== --}}
+    <section class="hero">
+        <div class="container">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-8">
+                    <h1 class="hero-title">
+                        Monitor, Analyze & Optimize Your <span class="hero-highlight">Beehive Operations</span>
+                    </h1>
+                    <p class="hero-subtitle mx-auto" style="max-width: 720px;">
+                        Real-time IoT monitoring, AI-powered anomaly detection, and comprehensive analytics 
+                        for modern apiculture. Maximize honey production, ensure colony health, and make 
+                        data-driven decisions with AdEMNEA's intelligent beehive management system.
                     </p>
-                    <div class="hero-actions">
-                        @auth
-                            <a href="{{ route('admin.dashboard') }}" class="btn btn-hero"><i class="bi bi-speedometer2" aria-hidden="true"></i>Open dashboard</a>
-                        @else
-                            <a href="{{ route('admin.login') }}" class="btn btn-hero"><i class="bi bi-box-arrow-in-right" aria-hidden="true"></i>Sign in</a>
-                        @endauth
-                        <a href="#features" class="btn btn-hero-outline">See what it does<i class="bi bi-arrow-down" aria-hidden="true"></i></a>
-                    </div>
-                </div>
-
-                <div class="col-lg-5">
-                    <ul class="hero-sensors list-unstyled mb-0" aria-label="What the sensors measure">
-                        <li class="hero-sensor"><i class="bi bi-thermometer-half" aria-hidden="true"></i><strong>Temperature</strong><span>Brood, honey super, outside</span></li>
-                        <li class="hero-sensor"><i class="bi bi-droplet-half" aria-hidden="true"></i><strong>Humidity</strong><span>Brood, honey super, outside</span></li>
-                        <li class="hero-sensor"><i class="bi bi-speedometer" aria-hidden="true"></i><strong>Weight</strong><span>The whole hive, in kilograms</span></li>
-                        <li class="hero-sensor"><i class="bi bi-wind" aria-hidden="true"></i><strong>CO₂</strong><span>Air inside the hive</span></li>
-                    </ul>
-                </div>
-            </div>
-        </div>
-    </section>
-
-    <section class="band" id="features" aria-labelledby="features-title">
-        <div class="container">
-            <h2 class="band-title" id="features-title">What the platform does</h2>
-            <p class="band-lead">From the sensor in the hive to the person who needs to act.</p>
-
-            <div class="row g-4">
-                @foreach([
-                    ['bi-activity', 'Live hive monitoring', 'Readings from every hive as they arrive, with charts over hours, days and weeks, plus photos, audio and video from the apiary.'],
-                    ['bi-shield-exclamation', 'Condition alerts', 'Each reading is checked on arrival. Impossible values, stuck sensors and unusual changes open an incident and notify the right people.'],
-                    ['bi-cpu', 'Device health', 'Battery, signal, storage and connectivity for every unit in the field, so a failing device is found before its data is missed.'],
-                    ['bi-geo-alt', 'Apiary and hive records', 'Apiaries, hives, inspections and harvests in one register, with a map of where each hive stands.'],
-                    ['bi-file-earmark-bar-graph', 'Reports', 'Colony health, honey production and sensor trends, ready for research and for planning the season.'],
-                    ['bi-phone', 'For farmers, on their phone', 'Farmers see their own hives and receive alerts in the mobile app, by push, with email and SMS for the support team.'],
-                ] as [$icon, $title, $text])
-                    <div class="col-md-6 col-lg-4">
-                        <div class="feature">
-                            <div class="feature-icon"><i class="bi {{ $icon }}" aria-hidden="true"></i></div>
-                            <h3>{{ $title }}</h3>
-                            <p>{{ $text }}</p>
-                        </div>
-                    </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
-
-    <section class="band band-explore" id="explore" aria-labelledby="explore-title">
-        <div class="container">
-            <h2 class="band-title" id="explore-title">Explore the project</h2>
-            <p class="band-lead">The work, the people behind it, and how to take part.</p>
-
-            <div class="row g-3">
-                @foreach([
-                    ['bi-diagram-3', 'Work packages', 'What the project is doing, and how the work is organised.', route('public.work-packages.index')],
-                    ['bi-people', 'Team', 'The researchers, engineers and students behind AdEMNEA.', route('public.team.index')],
-                    ['bi-images', 'Gallery', 'Photos from the apiaries, the lab and the field.', route('public.gallery.index')],
-                    ['bi-mortarboard', 'Scholarships', 'Study opportunities offered through the project.', route('public.scholarships.index')],
-                ] as [$icon, $title, $text, $url])
-                    <div class="col-md-6">
-                        <a href="{{ $url }}" class="explore-card">
-                            <i class="bi {{ $icon }}" aria-hidden="true"></i>
-                            <span><strong>{{ $title }}</strong><span>{{ $text }}</span></span>
-                            <i class="bi bi-arrow-right" aria-hidden="true"></i>
+                    <div class="d-flex flex-wrap justify-content-center gap-3">
+                        <a href="{{ route('admin.login') }}" class="btn btn-hero-primary">
+                            <i class="bi bi-box-arrow-in-right"></i> Get Started
+                        </a>
+                        <a href="#features" class="btn btn-hero-secondary">
+                            <i class="bi bi-info-circle"></i> Learn More
                         </a>
                     </div>
-                @endforeach
+                </div>
             </div>
         </div>
     </section>
 
-    <section class="band about" id="about" aria-labelledby="about-title">
+    {{-- ========== FEATURES SECTION ========== --}}
+    <section id="features" class="features">
         <div class="container">
-            <h2 class="band-title" id="about-title">About AdEMNEA</h2>
-            <p>
-                AdEMNEA is a research project funded by Norad under the NORHED II programme and hosted at Makerere University.
-                This platform is its beehive monitoring system: it collects data from instrumented hives and turns it into
-                something a beekeeper, an extension officer or a researcher can act on.
+            <h2 class="section-title">Platform Features</h2>
+            <p class="section-subtitle">
+                Everything you need to manage, monitor, and optimize your beehive operations
             </p>
-            <p class="mb-0">
-                Questions or ideas? <a href="{{ route('public.feedback.create') }}">Send us feedback</a>
-                or write to <a href="mailto:info@ademnea.ac.ug">info@ademnea.ac.ug</a>.
-            </p>
+
+            <div class="row g-4">
+                {{-- Feature 1 --}}
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-activity"></i>
+                        </div>
+                        <h3 class="feature-title">Real-Time Monitoring</h3>
+                        <p class="feature-desc">
+                            Track temperature, humidity, hive weight, CO₂ levels, and audio/video feeds 
+                            in real-time from IoT-enabled sensors deployed across your apiaries.
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Feature 2 --}}
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-graph-up-arrow"></i>
+                        </div>
+                        <h3 class="feature-title">Anomaly Detection</h3>
+                        <p class="feature-desc">
+                            AI-powered algorithms automatically detect unusual patterns and alert you 
+                            to potential threats before they impact colony health or production.
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Feature 3 --}}
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-geo-alt-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Apiary Management</h3>
+                        <p class="feature-desc">
+                            Register and manage multiple apiaries, hives, and devices with geospatial 
+                            mapping, inspection logs, and harvest tracking all in one place.
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Feature 4 --}}
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-file-earmark-bar-graph"></i>
+                        </div>
+                        <h3 class="feature-title">Advanced Reporting</h3>
+                        <p class="feature-desc">
+                            Generate comprehensive reports on colony health, honey production trends, 
+                            sensor analytics, and operational KPIs for data-driven insights.
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Feature 5 --}}
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-people-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Multi-Role Access</h3>
+                        <p class="feature-desc">
+                            Role-based permissions for admins, farmers, field officers, and researchers 
+                            ensure secure, granular access control across your organization.
+                        </p>
+                    </div>
+                </div>
+
+                {{-- Feature 6 --}}
+                <div class="col-md-6 col-lg-4">
+                    <div class="feature-card">
+                        <div class="feature-icon">
+                            <i class="bi bi-bell-fill"></i>
+                        </div>
+                        <h3 class="feature-title">Smart Alerts</h3>
+                        <p class="feature-desc">
+                            Configure custom threshold-based alerts for critical events. Receive 
+                            notifications via email, SMS, or push notifications on mobile devices.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
     </section>
 
-@endsection
+    {{-- ========== PUBLIC EXPLORER ========== --}}
+    <section class="py-5" style="background: linear-gradient(180deg, #f8faf7 0%, #edf5f0 100%);">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="section-title">Explore AdEMNEA</h2>
+                <p class="section-subtitle">
+                    Discover the latest work, research, events, and community updates from the platform.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.publications.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-journal-richtext"></i></div>
+                            <h3 class="feature-title">Publications</h3>
+                            <p class="feature-desc">Read research outputs, reports, and technical documents from the AdEMNEA network.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.events.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-calendar-event"></i></div>
+                            <h3 class="feature-title">Events</h3>
+                            <p class="feature-desc">Stay updated on workshops, milestones, community gatherings, and project events.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.gallery.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-images"></i></div>
+                            <h3 class="feature-title">Gallery</h3>
+                            <p class="feature-desc">Browse project photos, fieldwork moments, and visual stories from the beehive ecosystem.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.work-packages.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-box-seam"></i></div>
+                            <h3 class="feature-title">Work Packages</h3>
+                            <p class="feature-desc">Explore the research and technical workstreams driving the AdEMNEA project forward.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.scholarships.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-mortarboard"></i></div>
+                            <h3 class="feature-title">Scholarships</h3>
+                            <p class="feature-desc">Learn about academic opportunities and support for learners in the beekeeping community.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.team.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-people-fill"></i></div>
+                            <h3 class="feature-title">Team</h3>
+                            <p class="feature-desc">Meet the people, specialists, and partners behind the project and its mission.</p>
+                        </div>
+                    </a>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ========== FOOTER ========== --}}
+    <footer class="footer">
+        <div class="container">
+            <div class="row">
+                {{-- Brand Column --}}
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <div class="footer-logo">
+                        <div class="footer-hex">🐝</div>
+                        <span class="footer-brand-name">AdEMNEA</span>
+                    </div>
+                    <p class="footer-text">
+                        Advanced beehive monitoring and analytics platform powered by IoT, 
+                        AI, and modern web technologies. Built for sustainable apiculture 
+                        and honey production optimization.
+                    </p>
+                </div>
+
+                {{-- Quick Links --}}
+                <div class="col-md-4 mb-4 mb-md-0">
+                    <h4 class="footer-heading">Quick Links</h4>
+                    <a href="{{ route('public.work-packages.index') }}" class="footer-link">Work Packages</a>
+                    <a href="{{ route('public.team.index') }}" class="footer-link">Our Team</a>
+                    <a href="{{ route('public.gallery.index') }}" class="footer-link">Gallery</a>
+                    <a href="{{ route('public.scholarships.index') }}" class="footer-link">Scholarships</a>
+                    <a href="{{ route('admin.login') }}" class="footer-link">Login</a>
+                </div>
+
+                {{-- Contact --}}
+                <div class="col-md-4">
+                    <h4 class="footer-heading">Contact</h4>
+                    <p class="footer-text mb-2">
+                        <i class="bi bi-envelope me-2"></i> info@ademnea.ac.ug
+                    </p>
+                    <p class="footer-text mb-2">
+                        <i class="bi bi-telephone me-2"></i> +256 XXX XXXXXX
+                    </p>
+                    <p class="footer-text">
+                        <i class="bi bi-geo-alt me-2"></i> Kampala, Uganda
+                    </p>
+                </div>
+            </div>
+
+            <div class="footer-bottom">
+                AdEMNEA &copy; {{ date('Y') }} &nbsp;|&nbsp; Funded by Norad · NORHED II Programme
+            </div>
+        </div>
+    </footer>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>
