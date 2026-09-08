@@ -149,7 +149,7 @@ class IotDeviceRegistryController extends Controller
             ? $this->apiaryDirectory->listHivesAvailableForDeviceType($apiaryId, $iotDevice->device_type)
             : collect();
 
-        return view('admin.iot-devices.partials.assign-hives', [
+        return view('admin.iot-devices.assign-hives', [
             'iotDevice' => $iotDevice,
             'apiary' => $apiary,
             'apiaryId' => $apiaryId,
