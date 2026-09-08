@@ -373,6 +373,8 @@
                     <a href="{{ route('public.work-packages.index') }}" class="nav-link-landing">Work Packages</a>
                     <a href="{{ route('public.team.index') }}" class="nav-link-landing">Team</a>
                     <a href="{{ route('public.gallery.index') }}" class="nav-link-landing">Gallery</a>
+                    <a href="{{ route('public.publications.index') }}" class="nav-link-landing">Publications</a>
+                    <a href="{{ route('public.events.index') }}" class="nav-link-landing">Events</a>
                     <a href="{{ route('public.scholarships.index') }}" class="nav-link-landing">Scholarships</a>
                     <a href="#features" class="nav-link-landing">Features</a>
                     <a href="#about" class="nav-link-landing">About</a>
@@ -392,17 +394,17 @@
     {{-- ========== HERO SECTION ========== --}}
     <section class="hero">
         <div class="container">
-            <div class="row align-items-center">
-                <div class="col-lg-7">
+            <div class="row justify-content-center text-center">
+                <div class="col-lg-8">
                     <h1 class="hero-title">
                         Monitor, Analyze & Optimize Your <span class="hero-highlight">Beehive Operations</span>
                     </h1>
-                    <p class="hero-subtitle">
+                    <p class="hero-subtitle mx-auto" style="max-width: 720px;">
                         Real-time IoT monitoring, AI-powered anomaly detection, and comprehensive analytics 
                         for modern apiculture. Maximize honey production, ensure colony health, and make 
                         data-driven decisions with AdEMNEA's intelligent beehive management system.
                     </p>
-                    <div class="d-flex flex-wrap gap-3">
+                    <div class="d-flex flex-wrap justify-content-center gap-3">
                         <a href="{{ route('admin.login') }}" class="btn btn-hero-primary">
                             <i class="bi bi-box-arrow-in-right"></i> Get Started
                         </a>
@@ -506,6 +508,80 @@
                             notifications via email, SMS, or push notifications on mobile devices.
                         </p>
                     </div>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    {{-- ========== PUBLIC EXPLORER ========== --}}
+    <section class="py-5" style="background: linear-gradient(180deg, #f8faf7 0%, #edf5f0 100%);">
+        <div class="container">
+            <div class="text-center mb-5">
+                <h2 class="section-title">Explore AdEMNEA</h2>
+                <p class="section-subtitle">
+                    Discover the latest work, research, events, and community updates from the platform.
+                </p>
+            </div>
+
+            <div class="row g-4">
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.publications.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-journal-richtext"></i></div>
+                            <h3 class="feature-title">Publications</h3>
+                            <p class="feature-desc">Read research outputs, reports, and technical documents from the AdEMNEA network.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.events.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-calendar-event"></i></div>
+                            <h3 class="feature-title">Events</h3>
+                            <p class="feature-desc">Stay updated on workshops, milestones, community gatherings, and project events.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.gallery.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-images"></i></div>
+                            <h3 class="feature-title">Gallery</h3>
+                            <p class="feature-desc">Browse project photos, fieldwork moments, and visual stories from the beehive ecosystem.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.work-packages.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-box-seam"></i></div>
+                            <h3 class="feature-title">Work Packages</h3>
+                            <p class="feature-desc">Explore the research and technical workstreams driving the AdEMNEA project forward.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.scholarships.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-mortarboard"></i></div>
+                            <h3 class="feature-title">Scholarships</h3>
+                            <p class="feature-desc">Learn about academic opportunities and support for learners in the beekeeping community.</p>
+                        </div>
+                    </a>
+                </div>
+
+                <div class="col-md-6 col-lg-4">
+                    <a href="{{ route('public.team.index') }}" class="text-decoration-none d-block h-100">
+                        <div class="feature-card h-100">
+                            <div class="feature-icon"><i class="bi bi-people-fill"></i></div>
+                            <h3 class="feature-title">Team</h3>
+                            <p class="feature-desc">Meet the people, specialists, and partners behind the project and its mission.</p>
+                        </div>
+                    </a>
                 </div>
             </div>
         </div>
