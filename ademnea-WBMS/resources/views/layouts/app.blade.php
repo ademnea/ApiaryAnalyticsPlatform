@@ -665,6 +665,35 @@
         </div>
     </div>
 
+    {{-- ---- SECTION: FARMERS ---- --}}
+    <div class="sidebar-section">Farmers</div>
+
+    <div x-data="{ open: {{ request()->routeIs('admin.farmers.*') ? 'true' : 'false' }} }">
+        <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
+            <i class="bi bi-people nav-icon"></i>
+            <span class="nav-dropdown-label">Farmer Management</span>
+            <i class="bi bi-chevron-right nav-chevron"></i>
+        </div>
+        <div class="nav-dropdown-children" x-show="open" x-collapse>
+            <a href="{{ route('admin.farmers.index') }}"
+               class="{{ request()->routeIs('admin.farmers.index') ? 'active' : '' }}">
+                <i class="bi bi-list-ul"></i> All Farmers
+            </a>
+            <a href="{{ route('admin.farmers.create') }}"
+               class="{{ request()->routeIs('admin.farmers.create') ? 'active' : '' }}">
+                <i class="bi bi-person-plus"></i> Register Farmer
+            </a>
+            <a href="{{ route('admin.farmers.pending') }}"
+               class="{{ request()->routeIs('admin.farmers.pending') ? 'active' : '' }}">
+                <i class="bi bi-clock-history"></i> Pending Approvals
+            </a>
+            <a href="{{ route('admin.farmers.messages') }}"
+               class="{{ request()->routeIs('admin.farmers.messages.*') ? 'active' : '' }}">
+                <i class="bi bi-envelope"></i> Farmer Messages
+            </a>
+        </div>
+    </div>
+
     {{-- ---- SECTION: IOT & MONITORING ---- --}}
     <div class="sidebar-section">IoT & Monitoring</div>
 
@@ -809,35 +838,6 @@
             </span>
         @endif
     </a>
-
-    {{-- ---- SECTION: FARMERS ---- --}}
-    <div class="sidebar-section">Farmers</div>
-
-    <div x-data="{ open: {{ request()->routeIs('admin.farmers.*') ? 'true' : 'false' }} }">
-        <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
-            <i class="bi bi-people nav-icon"></i>
-            <span class="nav-dropdown-label">Farmer Management</span>
-            <i class="bi bi-chevron-right nav-chevron"></i>
-        </div>
-        <div class="nav-dropdown-children" x-show="open" x-collapse>
-            <a href="{{ route('admin.farmers.index') }}"
-               class="{{ request()->routeIs('admin.farmers.index') ? 'active' : '' }}">
-                <i class="bi bi-list-ul"></i> All Farmers
-            </a>
-            <a href="{{ route('admin.farmers.create') }}"
-               class="{{ request()->routeIs('admin.farmers.create') ? 'active' : '' }}">
-                <i class="bi bi-person-plus"></i> Register Farmer
-            </a>
-            <a href="{{ route('admin.farmers.pending') }}"
-               class="{{ request()->routeIs('admin.farmers.pending') ? 'active' : '' }}">
-                <i class="bi bi-clock-history"></i> Pending Approvals
-            </a>
-            <a href="{{ route('admin.farmers.messages') }}"
-               class="{{ request()->routeIs('admin.farmers.messages.*') ? 'active' : '' }}">
-                <i class="bi bi-envelope"></i> Farmer Messages
-            </a>
-        </div>
-    </div>
 
     {{-- ---- SECTION: WEBSITE CONTENT ---- --}}
     <div class="sidebar-section">Website Content</div>
@@ -1080,6 +1080,7 @@
 
 {{-- Scripts --}}
 <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.0/dist/cdn.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.3/dist/htmx.min.js"></script>
 {{-- Chart.js for monitoring pages --}}

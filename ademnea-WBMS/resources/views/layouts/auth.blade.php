@@ -8,8 +8,8 @@
 
     {{-- Bootstrap 5 (local) --}}
     <link rel="stylesheet" href="{{ asset('bootstrap.min.css') }}" />
-    {{-- Bootstrap Icons (local) --}}
-    <link rel="stylesheet" href="{{ asset('bootstrap-icons.min.css') }}" />
+    {{-- Bootstrap Icons --}}
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" />
     {{-- Google Fonts --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
