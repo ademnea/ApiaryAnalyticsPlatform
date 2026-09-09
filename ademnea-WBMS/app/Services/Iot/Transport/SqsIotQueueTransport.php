@@ -20,7 +20,9 @@ class SqsIotQueueTransport implements IotQueueTransportContract
 
     public function __construct(private readonly string $queueUrl, string $region)
     {
-        $this->client = new SqsClient(['region' => $region, 'version' => 'latest']);
+        $this->client = new SqsClient(['region' => $region, 'version' => 'latest','http'    => [
+        'verify' => false,
+    ],]);
     }
 
     public function pop(int $waitSeconds): ?IotQueueMessage

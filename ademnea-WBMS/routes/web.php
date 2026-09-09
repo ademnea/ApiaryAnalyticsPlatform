@@ -246,6 +246,68 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             ->name('admin.apiaries.create')
             ->can('manage-apiaries');
 
+   //=================================================================
+   //IOT device registray,teammanagement and ingetion module
+   //================================================================= 
+    // Hardware teams (never hard/soft deleted — deactivate only)
+     Route::prefix('admin')->name('admin.')->group(function () {
+    Route::resource('hardware-teams', IotHardwareTeamRegistryController::class)->except(['destroy']);
+    Route::patch('hardware-teams/{hardwareTeam}/deactivate', [IotHardwareTeamRegistryController::class, 'deactivate'])
+        ->name('hardware-teams.deactivate');
+    Route::patch('hardware-teams/{hardwareTeam}/reactivate', [IotHardwareTeamRegistryController::class, 'reactivate'])
+        ->name('hardware-teams.reactivate');
+     
+
+    // Team members (nested under a team)
+    Route::prefix('hardware-teams/{hardwareTeam}/members')->name('hardware-teams.members.')->group(function () {
+        Route::get('create', [IotHardwareTeamMemberController::class, 'create'])->name('create');
+        Route::post('/', [IotHardwareTeamMemberController::class, 'store'])->name('store');
+        Route::get('{member}/edit', [IotHardwareTeamMemberController::class, 'edit'])->name('edit');
+        Route::put('{member}', [IotHardwareTeamMemberController::class, 'update'])->name('update');
+        Route::patch('{member}/deactivate', [IotHardwareTeamMemberController::class, 'deactivate'])->name('deactivate');
+        Route::patch('{member}/reactivate', [IotHardwareTeamMemberController::class, 'reactivate'])->name('reactivate');
+    });
+
+    // Devices scoped to a team (the "Add Device" flow from a team page)
+    Route::prefix('hardware-teams/{hardwareTeam}/devices')->name('hardware-teams.devices.')->group(function () {
+        Route::get('/', [IotDeviceRegistryController::class, 'indexForTeam'])->name('index');
+        Route::get('create', [IotDeviceRegistryController::class, 'createForTeam'])->name('create');
+        Route::post('/', [IotDeviceRegistryController::class, 'storeForTeam'])->name('store');
+    });
+
+    // Global IoT device registry
+    Route::resource('iot-devices', IotDeviceRegistryController::class);
+    Route::patch('iot-devices/{iotDevice}/revoke', [IotDeviceRegistryController::class, 'revoke'])
+        ->name('iot-devices.revoke');
+    Route::patch('iot-devices/{iotDevice}/reactivate', [IotDeviceRegistryController::class, 'reactivate'])
+        ->name('iot-devices.reactivate');
+
+    // Device-to-hive assignment wizard
+    Route::get('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assignForm'])
+        ->name('iot-devices.assign.form');
+    Route::get('iot-devices/{iotDevice}/assign/hives', [IotDeviceRegistryController::class, 'assignHives'])
+        ->name('iot-devices.assign.hives');
+    Route::post('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assign'])
+        ->name('iot-devices.assign.store');
+    Route::patch('iot-devices/{iotDevice}/unassign', [IotDeviceRegistryController::class, 'unassign'])
+        ->name('iot-devices.unassign');
+});
+
+});
+//===========================
+ // ENDS HERE
+//============================================================
+
+
+
+
+
+
+
+
+
+Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () {
+
         Route::get('/admin/apiaries/{apiary}', [ApiaryController::class, 'show'])->name('admin.apiaries.show');
     });
 
