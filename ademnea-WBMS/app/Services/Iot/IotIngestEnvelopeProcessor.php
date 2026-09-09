@@ -47,7 +47,8 @@ class IotIngestEnvelopeProcessor
             // At-least-once delivery duplicate — success, not failure.
             Log::info('Duplicate IoT message discarded (already processed).', [
                 'device_id' => $device->id,
-                'message_type' => $messageType,
+                'message_type'
+                 => $messageType,
             ]);
         }
     }

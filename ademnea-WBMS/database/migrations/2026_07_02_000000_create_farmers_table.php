@@ -7,6 +7,11 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
+    /**
+     * Table: farmers
+     * Purpose: Master registry of all farmers and beekeeping operators.
+     * Soft delete: Yes (Rule 5 - required for farmers).
+     */
     public function up(): void
     {
         Schema::create('farmers', function (Blueprint $table) {

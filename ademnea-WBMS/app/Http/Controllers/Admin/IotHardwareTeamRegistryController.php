@@ -22,7 +22,7 @@ class IotHardwareTeamRegistryController extends Controller
     {
         $teams = $this->service->list();
 
-        // View not yet implemented — interface task follows this one.
+       
         return view('admin.hardware-teams.index', compact('teams'));
     }
 
