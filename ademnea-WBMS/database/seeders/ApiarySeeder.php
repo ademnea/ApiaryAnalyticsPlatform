@@ -22,12 +22,14 @@ class ApiarySeeder extends Seeder
 
         Apiary::updateOrCreate(
             ['name' => 'Jinja Riverside Apiary', 'country' => 'UG'],
+
             [
                 'managing_entity' => 'Makerere University',
                 'region' => 'Eastern Region',
                 'status' => 'Active',
-                'apiary_code' => ApiaryCodeGenerator::generate('Jinja Riverside Apiary', 'UG'),
-        Apiary::firstOrCreate(
+                'apiary_code' => ApiaryCodeGenerator::generate('Jinja Riverside Apiary', 'UG'),]);
+        
+                Apiary::firstOrCreate(
             [
                 'name'    => 'Mukono Central Apiary',
                 'country' => 'UG',
