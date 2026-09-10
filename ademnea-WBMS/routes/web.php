@@ -8,6 +8,9 @@ use App\Http\Controllers\Admin\DashboardController;
 use App\Http\Controllers\Admin\IotDeviceRegistryController;
 use App\Http\Controllers\Admin\IotHardwareTeamRegistryController;
 use App\Http\Controllers\Admin\IotHardwareTeamMemberController;
+use App\Http\Controllers\Admin\AnomalyDashboardController;
+use App\Http\Controllers\Admin\AnomalyAnalyticsController;
+use App\Http\Controllers\Admin\AnomalyDeviceDetailController;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveController;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveMapController;
@@ -486,11 +489,15 @@ Route::prefix('admin')->name('admin.')->middleware(['auth'])->group(function () 
 
     // Anomaly Detection
     Route::middleware(['permission:view-anomaly-analytics'])->group(function () {
-        foreach (['anomaly.dashboard', 'anomaly.analytics', 'anomaly.models'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
+        Route::get('/admin/anomaly/dashboard', [AnomalyDashboardController::class, 'index'])->name('admin.anomaly.dashboard');
+        Route::get('/admin/anomaly/analytics', [AnomalyAnalyticsController::class, 'index'])->name('admin.anomaly.analytics');
+        Route::get('/admin/anomaly/devices/{device}', [AnomalyDeviceDetailController::class, 'show'])->name('admin.anomaly.devices.show');
+
+        // Part 2 (ML model management) — stays a placeholder until
+        // ml_model_versions/AnomalyModelsController exist.
+        Route::get('/admin/anomaly/models', function () {
+            return view('admin.placeholder', ['title' => 'Anomaly Models', 'subtitle' => 'Placeholder for anomaly.models']);
+        })->name('admin.anomaly.models');
     });
 
     // Reports
