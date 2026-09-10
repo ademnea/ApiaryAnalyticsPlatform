@@ -37,6 +37,6 @@ class IotHeartbeatProcessingService
             'created_at' => now(),
         ]);
 
-       // event(new \App\Events\DeviceTelemetryReceived($device));
+       event(new \App\Events\DeviceTelemetryReceived($device));
     }
 }

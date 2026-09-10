@@ -54,6 +54,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(HiveRegistryServiceContract::class, \App\Services\ApiaryManagement\HiveRegistrationService::class);
         $this->app->bind(HiveStatusChangeServiceContract::class, \App\Services\ApiaryManagement\HiveStatusChangeService::class);
         $this->app->bind(FarmerRegistryServiceContract::class, \App\Services\ApiaryManagement\FarmerRegistrationService::class);
+
+        $this->app->bind(
+            \App\Contracts\AnomalyStatusContract::class,
+            \App\Services\Anomaly\AnomalyStatusService::class
+        );
     }
 
     /**

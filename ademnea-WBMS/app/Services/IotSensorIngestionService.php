@@ -92,7 +92,7 @@ class IotSensorIngestionService
 
         // Event dispatch to IoT Condition Monitoring stays exactly as
         // already designed in §4.5.8 — decoupled, not called directly.
-        //event(new \App\Events\SensorRecordReceived($device, $sensorType, $recordedAtUtc));
+        event(new \App\Events\SensorRecordReceived($device, $hive, $sensorType, $recordedAtUtc));
     }
 
     private function logRejected(IotDevice $device, array $payload, string $reason): void
