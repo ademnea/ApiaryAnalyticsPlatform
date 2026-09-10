@@ -11,6 +11,7 @@ class Kernel extends ConsoleKernel
     {
         $schedule->job(new \App\Jobs\CheckFeedAlerts())->hourly();
         $schedule->job(new \App\Jobs\CheckDeviceHealth())->everyFiveMinutes();
+        $schedule->job(new \App\Jobs\PruneTelemetryHistory())->daily();
         $schedule->command('sanctum:prune-expired --hours=24')->daily();
     }
 }
