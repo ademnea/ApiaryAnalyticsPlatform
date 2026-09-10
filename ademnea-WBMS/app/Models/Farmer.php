@@ -75,11 +75,6 @@ class Farmer extends Model
         return $this->hasMany(Apiary::class, 'farmer_id');
     }
 
-    public function farms(): HasMany
-    {
-        return $this->hasMany(Farm::class);
-    }
-
     public function getCountryNameAttribute(): string
     {
         return config("countries.{$this->country}", $this->country);

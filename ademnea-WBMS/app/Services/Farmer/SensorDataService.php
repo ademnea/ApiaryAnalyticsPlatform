@@ -211,7 +211,7 @@ class SensorDataService
     private function verifyHiveOwnership(Farmer $farmer, int $hiveId): void
     {
         Hive::where('id', $hiveId)
-            ->whereHas('farm', function ($query) use ($farmer) {
+            ->whereHas('apiary', function ($query) use ($farmer) {
                 $query->where('farmer_id', $farmer->id);
             })
             ->firstOrFail();

@@ -8,12 +8,13 @@ return new class extends Migration
 {
     /**
      * Table: hives
-     * Purpose: Individual hive registry linked to apiaries and/or farms.
+     * Purpose: Individual hive registry linked to apiaries.
      * Soft delete: Yes (Rule 5).
      *
-     * Merged schema combining the Farmer-API module (farm_id, legacy
-     * columns) and the Admin/ApiaryManagement module (apiary_id,
-     * admin-specific columns) into a single table.
+     * Admin/ApiaryManagement module schema (apiary_id, admin-specific
+     * columns). The earlier Farmer-API module's parallel farm_id column
+     * (Farm → Hive hierarchy) has been retired in favour of Apiary as the
+     * single physical-site model.
      */
     public function up(): void
     {
@@ -24,15 +25,10 @@ return new class extends Migration
         Schema::create('hives', function (Blueprint $table) {
             $table->id();
 
-            // Relationships — both apiary (admin) and farm (farmer API) are nullable.
+            // Relationship — apiary is the single physical-site model.
             $table->unsignedBigInteger('apiary_id')->nullable();
             $table->foreign('apiary_id', 'fk_hives_apiary_id')
                 ->references('id')->on('apiaries')
-                ->onDelete('cascade');
-
-            $table->unsignedBigInteger('farm_id')->nullable();
-            $table->foreign('farm_id', 'fk_hives_farm_id')
-                ->references('id')->on('farms')
                 ->onDelete('cascade');
 
             // Identification
@@ -85,7 +81,6 @@ return new class extends Migration
 
             // Indexes
             $table->index('apiary_id', 'idx_hives_apiary_id');
-            $table->index('farm_id', 'idx_hives_farm_id');
             $table->index('current_status', 'idx_hives_current_status');
             $table->index(['latitude', 'longitude'], 'idx_hives_coords');
             $table->index('hybrid_identifier', 'idx_hives_hybrid_identifier');

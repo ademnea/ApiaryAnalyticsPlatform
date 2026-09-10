@@ -7,13 +7,8 @@ use App\Models\AlertThreshold;
 use App\Models\Farmer;
 use App\Models\Hive;
 use App\Models\HiveWeight;
-use App\Models\NotificationLog;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
-use Illuminate\Support\Facades\Mail;
 
 class AlertService
 {
@@ -62,12 +57,12 @@ class AlertService
 
     public function evaluateThresholds(): void
     {
-        $hives = Hive::whereHas('farm.farmer', function ($q) {
+        $hives = Hive::whereHas('apiary.farmer', function ($q) {
             $q->where('status', 'active');
-        })->with('farm.farmer')->get();
+        })->with('apiary.farmer')->get();
 
         foreach ($hives as $hive) {
-            $farmer = $hive->farm->farmer ?? null;
+            $farmer = $hive->apiary->farmer ?? null;
             if (!$farmer) {
                 continue;
             }
@@ -126,179 +121,5 @@ class AlertService
                 "Hive '{$hive->name}' weight is {$latest->weight_kg} kg — below the {$threshold} kg threshold. Feeding required."
             );
         }
-    }
-
-    public function sendPushNotification(Farmer $farmer, string $title, string $body, array $data = []): bool
-    {
-        if (!$farmer->fcm_token) {
-            Log::warning('No FCM token for farmer', ['farmer_id' => $farmer->id]);
-            return false;
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'Authorization' => 'Bearer ' . $this->getFcmAccessToken(),
-                'Content-Type'  => 'application/json',
-            ])->post('https://fcm.googleapis.com/v1/projects/' . config('services.fcm.project_id') . '/messages:send', [
-                'message' => [
-                    'token' => $farmer->fcm_token,
-                    'notification' => [
-                        'title' => $title,
-                        'body'  => $body,
-                    ],
-                    'data' => $data,
-                ],
-            ]);
-
-        $alert->update([
-            'is_read' => true,
-            'read_at' => now(),
-        ]);
-
-            NotificationLog::create([
-                'farmer_id'     => $farmer->id,
-                'type'          => 'push',
-                'channel'       => 'alert',
-                'content'       => $body,
-                'status'        => $success ? 'sent' : 'failed',
-                'error_message' => $success ? null : $response->body(),
-            ]);
-
-            return $success;
-        } catch (\Exception $e) {
-            NotificationLog::create([
-                'farmer_id'     => $farmer->id,
-                'type'          => 'push',
-                'channel'       => 'alert',
-                'content'       => $body,
-                'status'        => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-
-            Log::error('Push notification failed', [
-                'farmer_id' => $farmer->id,
-                'error'     => $e->getMessage(),
-            ]);
-
-
-    /**
-     * Create alert.
-     */
-    public function createAlert(
-        array $data
-    ): Alert {
-
-        $alert = Alert::create($data);
-
-
-        if ($this->notifications) {
-            $this->notifications->dispatch($alert);
-        }
-
-
-        return $alert;
-    }
-
-    public function sendEmailNotification(Farmer $farmer, string $subject, string $content): bool
-    {
-
-        $weightThreshold =
-            (float) AlertThreshold::get(
-                'feed_required_weight_kg',
-                15
-            );
-
-            NotificationLog::create([
-                'farmer_id' => $farmer->id,
-                'type'      => 'email',
-                'channel'   => 'alert',
-                'content'   => $content,
-                'status'    => 'sent',
-            ]);
-
-            return true;
-        } catch (\Exception $e) {
-            NotificationLog::create([
-                'farmer_id'     => $farmer->id,
-                'type'          => 'email',
-                'channel'       => 'alert',
-                'content'       => $content,
-                'status'        => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-
-            Log::error('Email notification failed', [
-                'farmer_id' => $farmer->id,
-                'error'     => $e->getMessage(),
-            ]);
-
-        foreach ($hives as $hive) {
-
-            $farmer =
-                $hive->farm->farmer ?? null;
-
-
-            if (!$farmer) {
-                continue;
-            }
-
-
-            $this->checkFeedRequired(
-                $hive,
-                $farmer->id,
-                $weightThreshold
-            );
-        }
-    }
-
-    public function sendSmsNotification(Farmer $farmer, string $message): bool
-    {
-        if (!$farmer->telephone) {
-            Log::warning('No telephone number for SMS', ['farmer_id' => $farmer->id]);
-            return false;
-        }
-
-        try {
-            $response = Http::withHeaders([
-                'apiKey'       => config('services.africastalking.api_key'),
-                'Content-Type' => 'application/x-www-form-urlencoded',
-            ])->post('https://api.africastalking.com/version1/messaging', [
-                'username' => config('services.africastalking.username'),
-                'to'       => $farmer->telephone,
-                'message'  => $message,
-            ]);
-
-
-            NotificationLog::create([
-                'farmer_id'     => $farmer->id,
-                'type'          => 'sms',
-                'channel'       => 'alert',
-                'content'       => $message,
-                'status'        => $success ? 'sent' : 'failed',
-                'error_message' => $success ? null : $response->body(),
-            ]);
-
-            return $success;
-        } catch (\Exception $e) {
-            NotificationLog::create([
-                'farmer_id'     => $farmer->id,
-                'type'          => 'sms',
-                'channel'       => 'alert',
-                'content'       => $message,
-                'status'        => 'failed',
-                'error_message' => $e->getMessage(),
-            ]);
-
-            Log::error('SMS notification failed', [
-                'farmer_id' => $farmer->id,
-                'error'     => $e->getMessage(),
-            ]);
-        }
-
-    }
-
-    private function getFcmAccessToken(): string
-    {
-        return config('services.fcm.access_token');
     }
 }

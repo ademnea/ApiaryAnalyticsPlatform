@@ -27,10 +27,10 @@ class IotSensorIngestionService
             return;
         }
 
-        ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
+        ['hive' => $hive] = $this->identification->resolveHiveAndApiary($device);
 
          try {
-           ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
+           ['hive' => $hive] = $this->identification->resolveHiveAndApiary($device);
              } catch (\App\Exceptions\IotDeviceNotAssignedException $e) {
            $this->logRejected($device, $payload, $e->getMessage());
         return;
