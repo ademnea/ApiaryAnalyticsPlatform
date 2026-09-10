@@ -436,6 +436,7 @@
         .badge-pending  { background: #FFF3CD; color: #664D03; }
         .badge-offline  { background: #FFE0E0; color: #7F1D1D; }
         .badge-warning  { background: #FFF3CD; color: #664D03; }
+        .badge-info     { background: #D0E4FF; color: #0057b8; }
 
         /* ---- BUTTONS -------------------------------------------------- */
         .btn-primary {
