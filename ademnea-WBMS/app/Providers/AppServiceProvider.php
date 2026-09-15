@@ -2,8 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Alert;
 use App\Models\Farmer;
 use App\Models\Hive;
+use App\Models\SensorAnomaly;
 use App\Services\DashboardService;
 use App\Contracts\ApiaryRegistryServiceContract;
 use App\Contracts\HiveRegistryServiceContract;
@@ -79,9 +81,13 @@ class AppServiceProvider extends ServiceProvider
                 // Farmers awaiting approval
                 $count += Farmer::where('profile_status', 'pending')->count();
 
-                // TODO: add IotDevice offline count once model exists
+                // Devices currently offline (open device_offline incidents)
+                $count += SensorAnomaly::open()->where('anomaly_type', 'device_offline')->distinct()->count('device_id');
 
                 $view->with('unreadAlerts', $count);
+
+                // Sidebar "System Alerts" badge: alerts dispatched to farmers in the last 24h.
+                $view->with('activeAlertsCount', Alert::where('created_at', '>=', now()->subDay())->count());
             }
         });
     }
