@@ -85,21 +85,14 @@
 
     {{-- IoT Devices --}}
     <div class="col-6 col-sm-4 col-xl-2">
-        <a href="{{ route('admin.devices.index') }}" class="text-decoration-none">
+        <a href="{{ route('admin.iot-devices.index') }}" class="text-decoration-none">
             <div class="stat-card h-100">
                 <div class="stat-icon blue">
                     <i class="bi bi-cpu-fill"></i>
                 </div>
                 <div>
-                    @if($summary['total_iot_devices'] !== null)
-                        <div class="stat-value">{{ number_format($summary['total_iot_devices']) }}</div>
-                        <div class="stat-label">IoT Devices</div>
-                    @else
-                        <div class="stat-value text-muted" style="font-size:1rem;">—</div>
-                        <div class="stat-label">IoT Devices</div>
-                        {{-- TODO: remove placeholder once IotDevice model is available --}}
-                        <span style="font-size:0.65rem;color:var(--clr-muted);">module pending</span>
-                    @endif
+                    <div class="stat-value">{{ number_format($summary['total_iot_devices']) }}</div>
+                    <div class="stat-label">IoT Devices</div>
                 </div>
             </div>
         </a>

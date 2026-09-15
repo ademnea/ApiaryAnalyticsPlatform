@@ -9,7 +9,7 @@
 <div class="card mb-4">
     <div class="card-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-activity me-2 text-success"></i>Hive Monitoring Summary</span>
-        <a href="{{ route('admin.monitoring.temperature') }}"
+        <a href="{{ route('admin.anomaly.dashboard') }}"
            class="btn btn-sm btn-outline-forest">
             View Sensors <i class="bi bi-arrow-right ms-1"></i>
         </a>
@@ -33,7 +33,6 @@
                             </div>
                         @else
                             <div class="stat-value text-muted" style="font-size:1rem;">—</div>
-                            {{-- TODO: populate from HiveTemperature model --}}
                         @endif
                         <div class="stat-label">Avg Temp</div>
                     </div>
@@ -54,7 +53,6 @@
                             </div>
                         @else
                             <div class="stat-value text-muted" style="font-size:1rem;">—</div>
-                            {{-- TODO: populate from HiveHumidity model --}}
                         @endif
                         <div class="stat-label">Avg Humidity</div>
                     </div>
@@ -75,7 +73,6 @@
                             </div>
                         @else
                             <div class="stat-value text-muted" style="font-size:1rem;">—</div>
-                            {{-- TODO: populate from HiveCo2 model --}}
                         @endif
                         <div class="stat-label">Avg CO₂</div>
                     </div>
@@ -96,7 +93,6 @@
                             </div>
                         @else
                             <div class="stat-value text-muted" style="font-size:1rem;">—</div>
-                            {{-- TODO: populate from HiveWeight model --}}
                         @endif
                         <div class="stat-label">Avg Weight</div>
                     </div>
@@ -116,16 +112,15 @@
                             <i class="bi bi-cpu me-1"></i>Device Status
                         </span>
                         <a href="{{ route('admin.devices.fleet') }}"
-                           style="font-size:0.72rem;color:var(--clr-forest-mid);">Fleet Health →</a>
+                           style="font-size:0.72rem;color:var(--clr-forest-mid);">Device Fleet →</a>
                     </div>
-                    {{-- TODO: replace zeroes with IotDevice counts once model exists --}}
                     @php
-                        $active  = $monitoring['active_devices']  ?? 0;
-                        $offline = $monitoring['offline_devices'] ?? 0;
+                        $active  = $monitoring['active_devices'];
+                        $offline = $monitoring['offline_devices'];
                         $total   = $active + $offline;
                         $pct     = $total > 0 ? round(($active / $total) * 100) : 0;
                     @endphp
-                    @if($monitoring['active_devices'] !== null)
+                    @if($total > 0)
                         <div class="d-flex gap-3 mb-2">
                             <span class="badge badge-active py-1 px-2">
                                 <i class="bi bi-circle-fill me-1" style="font-size:0.5rem;"></i>
@@ -145,7 +140,7 @@
                     @else
                         <div style="font-size:0.8rem;color:var(--clr-muted);">
                             <i class="bi bi-info-circle me-1"></i>
-                            IoT module not yet integrated
+                            No devices registered yet
                         </div>
                     @endif
                 </div>
@@ -159,27 +154,20 @@
                             <i class="bi bi-battery-half me-1"></i>Battery Status
                         </span>
                     </div>
-                    @if($monitoring['low_battery_count'] !== null)
-                        @if($monitoring['low_battery_count'] > 0)
-                            <div class="d-flex align-items-center gap-2">
-                                <span class="badge badge-warning py-1 px-2">
-                                    {{ $monitoring['low_battery_count'] }} Low Battery
-                                </span>
-                            </div>
-                            <div style="font-size:0.72rem;color:#856404;margin-top:6px;">
-                                <i class="bi bi-exclamation-triangle me-1"></i>
-                                Devices need attention
-                            </div>
-                        @else
-                            <span class="badge badge-active py-1 px-2">All Good</span>
-                            <div style="font-size:0.72rem;color:var(--clr-muted);margin-top:6px;">
-                                No low-battery alerts
-                            </div>
-                        @endif
+                    @if($monitoring['low_battery_count'] > 0)
+                        <div class="d-flex align-items-center gap-2">
+                            <span class="badge badge-warning py-1 px-2">
+                                {{ $monitoring['low_battery_count'] }} Low Battery
+                            </span>
+                        </div>
+                        <div style="font-size:0.72rem;color:#856404;margin-top:6px;">
+                            <i class="bi bi-exclamation-triangle me-1"></i>
+                            Devices need attention
+                        </div>
                     @else
-                        <div style="font-size:0.8rem;color:var(--clr-muted);">
-                            <i class="bi bi-info-circle me-1"></i>
-                            IoT module not yet integrated
+                        <span class="badge badge-active py-1 px-2">All Good</span>
+                        <div style="font-size:0.72rem;color:var(--clr-muted);margin-top:6px;">
+                            No low-battery alerts
                         </div>
                     @endif
                 </div>
@@ -193,17 +181,18 @@
                     </div>
                     @forelse($monitoring['hive_status_breakdown'] as $row)
                         @php
-                            $statusColor = match($row->status) {
-                                'active'           => 'badge-active',
-                                'queenless'        => 'badge-offline',
-                                'absconded'        => 'badge-offline',
-                                'under_inspection' => 'badge-warning',
+                            $statusColor = match($row->current_status) {
+                                'Active'           => 'badge-active',
+                                'Queenless'        => 'badge-offline',
+                                'Absconded'        => 'badge-offline',
+                                'Decommissioned'   => 'badge-offline',
+                                'Under Inspection' => 'badge-warning',
                                 default            => 'badge-pending',
                             };
                         @endphp
                         <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="badge {{ $statusColor }}" style="text-transform:capitalize;font-size:0.7rem;">
-                                {{ str_replace('_', ' ', $row->status) }}
+                            <span class="badge {{ $statusColor }}" style="font-size:0.7rem;">
+                                {{ $row->current_status }}
                             </span>
                             <span style="font-size:0.78rem;font-weight:600;">{{ $row->total }}</span>
                         </div>

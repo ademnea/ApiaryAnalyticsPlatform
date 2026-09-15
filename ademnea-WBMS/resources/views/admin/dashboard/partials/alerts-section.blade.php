@@ -120,12 +120,19 @@
                 <div class="alert alert-danger d-flex align-items-start gap-2 mb-3" role="alert"
                      style="font-size:0.82rem;">
                     <i class="bi bi-wifi-off flex-shrink-0 mt-1"></i>
-                    <div>
+                    <div class="w-100">
                         <strong>Offline IoT Devices</strong>
-                        {{-- TODO: render IotDevice records once model exists --}}
                         <ul class="mb-0 mt-1 ps-3">
                             @foreach($alerts['offline_devices'] as $device)
-                                <li>{{ $device->name ?? 'Device #'.$device->id }}</li>
+                                <li>
+                                    <a href="{{ route('admin.iot-devices.show', $device) }}"
+                                       class="text-decoration-none" style="color:#7f1d1d;">
+                                        {{ $device->device_code }}
+                                    </a>
+                                    @if($device->hive)
+                                        <span class="text-muted">— {{ $device->hive->display_name ?? $device->hive->hive_code }}</span>
+                                    @endif
+                                </li>
                             @endforeach
                         </ul>
                     </div>
@@ -139,7 +146,8 @@
                     <i class="bi bi-thermometer-high flex-shrink-0 mt-1"></i>
                     <div>
                         <strong>High Temperature Alerts</strong>
-                        {{-- TODO: render HiveTemperature records once model exists --}}
+                        {{-- Deliberately empty until a beekeeping-domain-confirmed threshold
+                             exists — see DashboardService::getAlerts(). --}}
                         <ul class="mb-0 mt-1 ps-3">
                             @foreach($alerts['high_temperature_alerts'] as $reading)
                                 <li>Hive #{{ $reading->hive_id ?? '—' }} &mdash; {{ $reading->value ?? '—' }}&deg;C</li>
@@ -156,7 +164,8 @@
                     <i class="bi bi-droplet-slash flex-shrink-0 mt-1"></i>
                     <div>
                         <strong>Low Humidity Alerts</strong>
-                        {{-- TODO: render HiveHumidity records once model exists --}}
+                        {{-- Deliberately empty until a beekeeping-domain-confirmed threshold
+                             exists — see DashboardService::getAlerts(). --}}
                         <ul class="mb-0 mt-1 ps-3">
                             @foreach($alerts['low_humidity_alerts'] as $reading)
                                 <li>Hive #{{ $reading->hive_id ?? '—' }} &mdash; {{ $reading->value ?? '—' }}%</li>

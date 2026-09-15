@@ -89,6 +89,54 @@
             </div>
         </div>
 
+        <div class="card mb-3">
+            <div class="card-header d-flex justify-content-between align-items-center">
+                <span><i class="bi bi-shield-exclamation me-1"></i>Anomalies</span>
+                <span style="font-size:0.72rem;font-weight:400;">
+                    @if($hasUnresolvedAnomalies)
+                        <span class="badge badge-offline me-2">Unresolved</span>
+                    @else
+                        <span class="badge badge-active me-2">All clear</span>
+                    @endif
+                    @can('view-anomaly-analytics')
+                        <a href="{{ route('admin.anomaly.anomalies.index', ['category' => 'all', 'hive_id' => $hive->id]) }}">View all</a>
+                    @endcan
+                </span>
+            </div>
+            @if($latestAnomalies->isEmpty())
+                <div class="card-body text-center text-muted py-3" style="font-size:0.82rem;">
+                    No anomalies recorded for this hive.
+                </div>
+            @else
+                <div class="card-body p-0">
+                    <table class="table mb-0" style="font-size:0.82rem;">
+                        <thead>
+                            <tr><th>Anomaly</th><th>Since</th><th class="text-center">Count</th><th>Status</th></tr>
+                        </thead>
+                        <tbody>
+                            @foreach ($latestAnomalies as $anomaly)
+                                <tr>
+                                    <td>
+                                        @can('view-anomaly-analytics')
+                                            <a href="{{ route('admin.anomaly.anomalies.show', $anomaly) }}" class="badge {{ $anomaly->badgeClass() }} text-decoration-none">
+                                                <i class="bi {{ $anomaly->icon() }} me-1"></i>{{ $anomaly->label() }}
+                                            </a>
+                                        @else
+                                            <span class="badge {{ $anomaly->badgeClass() }}"><i class="bi {{ $anomaly->icon() }} me-1"></i>{{ $anomaly->label() }}</span>
+                                        @endcan
+                                        <div class="text-muted text-capitalize" style="font-size:0.7rem;">{{ $anomaly->isDeviceIssue() ? 'Device issue' : $anomaly->sensor_type }}</div>
+                                    </td>
+                                    <td class="text-muted" title="{{ $anomaly->detected_at->format('Y-m-d H:i:s') }}">{{ $anomaly->detected_at->diffForHumans() }}</td>
+                                    <td class="text-center">{{ $anomaly->occurrences }}</td>
+                                    <td><span class="badge {{ $anomaly->statusBadgeClass() }} text-capitalize">{{ $anomaly->status() }}</span></td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+        </div>
+
         <div class="card">
             <div class="card-header"><i class="bi bi-clock-history me-1"></i>Status History</div>
             <div class="card-body p-0">

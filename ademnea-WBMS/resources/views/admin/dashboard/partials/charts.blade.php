@@ -26,7 +26,7 @@
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span><i class="bi bi-thermometer-half me-2" style="color:#dc3545;"></i>Temperature Trend</span>
-                <a href="{{ route('admin.monitoring.temperature') }}"
+                <a href="{{ route('admin.anomaly.dashboard') }}"
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">
@@ -50,7 +50,7 @@
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span><i class="bi bi-droplet-half me-2" style="color:#0d6efd;"></i>Humidity Trend</span>
-                <a href="{{ route('admin.monitoring.humidity') }}"
+                <a href="{{ route('admin.anomaly.dashboard') }}"
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">
@@ -74,7 +74,7 @@
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span><i class="bi bi-wind me-2" style="color:#D4A017;"></i>CO₂ Trend</span>
-                <a href="{{ route('admin.monitoring.co2') }}"
+                <a href="{{ route('admin.anomaly.dashboard') }}"
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">
@@ -98,7 +98,7 @@
         <div class="card h-100">
             <div class="card-header d-flex align-items-center justify-content-between">
                 <span><i class="bi bi-speedometer me-2 text-success"></i>Hive Weight Trend</span>
-                <a href="{{ route('admin.monitoring.weight') }}"
+                <a href="{{ route('admin.anomaly.dashboard') }}"
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">

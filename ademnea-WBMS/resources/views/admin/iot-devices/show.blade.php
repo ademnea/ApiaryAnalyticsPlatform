@@ -40,8 +40,9 @@
 
                     <dt class="col-sm-4 text-muted">Assigned Hive</dt>
                     <dd class="col-sm-8">
-                        @if($iotDevice->hive_id)
-                            {{-- Placeholder — Apiary module supplies the real display field --}}
+                        @if($iotDevice->hive)
+                            <a href="{{ route('admin.hives.show', $iotDevice->hive) }}">{{ $iotDevice->hive->display_name ?? $iotDevice->hive->hive_code }}</a>
+                        @elseif($iotDevice->hive_id)
                             Hive #{{ $iotDevice->hive_id }}
                         @else
                             <span class="text-muted">Not yet assigned</span>
@@ -69,13 +70,7 @@
             </div>
         </div>
 
-        <div class="card">
-            <div class="card-header"><i class="bi bi-activity me-1"></i>Latest Telemetry</div>
-            <div class="card-body text-muted text-center py-4" style="font-size:0.82rem;">
-                <i class="bi bi-hourglass-split d-block mb-2" style="font-size:1.5rem;"></i>
-                Telemetry display is provided by the IoT Condition Monitoring module.
-            </div>
-        </div>
+        @include('admin.iot-devices._health')
     </div>
 
     <div class="col-lg-4">
