@@ -83,35 +83,32 @@ class IotDeviceRegistrationTest extends TestCase
     #[Test]
     public function guest_cannot_register_a_device(): void
     {
-        // $team = IotHardwareTeam::factory()->create();
+        $team = IotHardwareTeam::factory()->create();
 
-        // $response = $this->post(route('admin.iot-devices.store'), [
-        //     'device_code' => 'AEU-UG-017',
-        //     'device_type' => 'numeric_sensor',
-        //     'hardware_team_id' => $team->id,
-        // ]);
+        $response = $this->post(route('admin.iot-devices.store'), [
+            'device_code' => 'AEU-UG-017',
+            'device_type' => 'numeric_sensor',
+            'hardware_team_id' => $team->id,
+        ]);
 
-        // $response->assertRedirect(route('login'));
-        // $this->assertDatabaseMissing('iot_devices', ['device_code' => 'AEU-UG-017']);
-         $this->markTestSkipped('Auth/RBAC not yet implemented — module pending.');
+        $response->assertRedirect(route('admin.login'));
+        $this->assertDatabaseMissing('iot_devices', ['device_code' => 'AEU-UG-017']);
     }
 
     #[Test]
     public function admin_without_permission_cannot_register_a_device(): void
     {
-        // $admin = User::factory()->create();
-        // $this->actingAs($admin);
-        // $team = IotHardwareTeam::factory()->create();
+        $admin = User::factory()->create();
+        $this->actingAs($admin);
+        $team = IotHardwareTeam::factory()->create();
 
-        // $response = $this->post(route('admin.iot-devices.store'), [
-        //     'device_code' => 'AEU-UG-018',
-        //     'device_type' => 'numeric_sensor',
-        //     'hardware_team_id' => $team->id,
-        // ]);
+        $response = $this->post(route('admin.iot-devices.store'), [
+            'device_code' => 'AEU-UG-018',
+            'device_type' => 'numeric_sensor',
+            'hardware_team_id' => $team->id,
+        ]);
 
-        // $response->assertForbidden();
-
-        $this->markTestSkipped('Auth/RBAC not yet implemented — module pending.');
+        $response->assertForbidden();
     }
 
     #[Test]

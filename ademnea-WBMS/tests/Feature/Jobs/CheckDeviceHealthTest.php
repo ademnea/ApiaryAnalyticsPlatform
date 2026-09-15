@@ -97,6 +97,67 @@ class CheckDeviceHealthTest extends TestCase
     }
 
     #[Test]
+    public function a_device_silent_beyond_its_expected_interval_but_not_yet_offline_is_flagged_late(): void
+    {
+        [, $device] = $this->makeDevice();
+        $device->update(['expected_interval_minutes' => 10]);
+        IotDeviceTelemetry::create([
+            'device_id' => $device->id,
+            'last_heartbeat_at' => now()->subMinutes(45), // > 3 × 10, < 120
+        ]);
+
+        $this->runJob();
+        $this->runJob();
+
+        $this->assertDatabaseCount('sensor_anomalies', 1);
+        $this->assertDatabaseHas('sensor_anomalies', [
+            'device_id' => $device->id,
+            'anomaly_type' => 'submission_delay',
+            'resolved' => false,
+            'occurrences' => 2,
+        ]);
+        $this->assertDatabaseCount('alerts', 1);
+    }
+
+    #[Test]
+    public function going_offline_closes_the_late_incident_and_recovery_closes_offline(): void
+    {
+        [, $device] = $this->makeDevice();
+        $device->update(['expected_interval_minutes' => 10]);
+        $telemetry = IotDeviceTelemetry::create([
+            'device_id' => $device->id,
+            'last_heartbeat_at' => now()->subMinutes(45),
+        ]);
+
+        $this->runJob();
+        $telemetry->update(['last_heartbeat_at' => now()->subMinutes(200)]);
+        $this->runJob();
+
+        $this->assertDatabaseHas('sensor_anomalies', ['anomaly_type' => 'submission_delay', 'resolved' => true, 'auto_resolved' => true]);
+        $this->assertDatabaseHas('sensor_anomalies', ['anomaly_type' => 'device_offline', 'resolved' => false]);
+
+        $telemetry->update(['last_heartbeat_at' => now()]);
+        $this->runJob();
+
+        $this->assertSame(0, \App\Models\SensorAnomaly::open()->count());
+    }
+
+    #[Test]
+    public function the_observed_interval_between_heartbeats_is_stored_as_a_positive_number(): void
+    {
+        [, $device] = $this->makeDevice();
+        IotDeviceTelemetry::create(['device_id' => $device->id, 'last_heartbeat_at' => now()]);
+
+        foreach ([now()->subMinutes(15), now()->subMinutes(5)] as $recordedAt) {
+            \App\Models\IotDeviceTelemetryHistory::create(['device_id' => $device->id, 'recorded_at' => $recordedAt]);
+        }
+
+        $this->runJob();
+
+        $this->assertEquals(10.0, IotDeviceTelemetry::where('device_id', $device->id)->value('submission_interval_actual'));
+    }
+
+    #[Test]
     public function a_healthy_device_is_left_untouched(): void
     {
         [, $device] = $this->makeDevice();

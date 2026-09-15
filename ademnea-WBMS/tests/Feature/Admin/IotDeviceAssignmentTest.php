@@ -119,15 +119,13 @@ class IotDeviceAssignmentTest extends TestCase
     #[Test]
     public function guest_cannot_assign_a_device_to_a_hive(): void
     {
-        // $device = IotDevice::factory()->create(['hive_id' => null]);
+        $device = IotDevice::factory()->create(['hive_id' => null]);
 
-        // $response = $this->post(route('admin.iot-devices.assign.store', $device), [
-        //     'hive_id' => $this->createTestHiveId()
-        // ]);
+        $response = $this->post(route('admin.iot-devices.assign.store', $device), [
+            'hive_id' => $this->createTestHiveId()
+        ]);
 
-        // $response->assertRedirect(route('login'));
-        // $this->assertDatabaseHas('iot_devices', ['id' => $device->id, 'hive_id' => null]);
-
-        $this->markTestSkipped('Auth/RBAC not yet implemented — module pending.');
+        $response->assertRedirect(route('admin.login'));
+        $this->assertDatabaseHas('iot_devices', ['id' => $device->id, 'hive_id' => null]);
     }
 }
