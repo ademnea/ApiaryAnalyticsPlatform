@@ -9,14 +9,12 @@ trait InteractsWithIotAdminAuth
 {
     protected function actingAsAdminWithPermission(): User
     {
-        // Permission::findOrCreate('manage-iot-devices', 'web');
+        Permission::findOrCreate('manage-iot-devices', 'web');
 
-        // $admin = User::factory()->create();
-        // $admin->givePermissionTo('manage-iot-devices');
-        // $this->actingAs($admin);
+        $admin = User::factory()->create();
+        $admin->givePermissionTo('manage-iot-devices');
+        $this->actingAs($admin);
 
-        //return $admin;
-
-         return User::factory()->create();
+        return $admin;
     }
 }

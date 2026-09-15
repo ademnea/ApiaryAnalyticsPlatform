@@ -23,6 +23,9 @@
         <env name="BCRYPT_ROUNDS" value="4"/>
         <env name="BROADCAST_CONNECTION" value="null"/>
         <env name="CACHE_STORE" value="array"/>
+        <!-- Tests use the database from .env. RefreshDatabase runs
+             migrate:fresh, so running the suite WIPES that database —
+             re-seed afterwards (php artisan db:seed). -->
         <!-- <env name="DB_CONNECTION" value="sqlite"/>
         <env name="DB_DATABASE" value=":memory:"/> -->
         <env name="DB_URL" value=""/>
@@ -32,6 +35,5 @@
         <env name="PULSE_ENABLED" value="false"/>
         <env name="TELESCOPE_ENABLED" value="false"/>
         <env name="NIGHTWATCH_ENABLED" value="false"/>
-        <env name="VIEW_COMPILED_PATH" value="C:\Users\Donatah\AppData\Local\Temp\kilo\views"/>
     </php>
 </phpunit>

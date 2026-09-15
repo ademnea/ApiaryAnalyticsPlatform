@@ -39,6 +39,7 @@ class AlertThresholdSeeder extends Seeder
             'stuck_sensor_reading_count' => ['10', 'Consecutive identical readings before a sensor is flagged as frozen/stuck.'],
             'zscore_stddev_threshold' => ['3', 'Standard deviations from the rolling mean before a reading is flagged as a statistical anomaly.'],
             'device_offline_silence_minutes' => ['120', 'Minutes of silence before a device is flagged offline.'],
+            'submission_delay_multiplier' => ['3', 'A device is flagged late (submission_delay) once silent for this many times its expected reporting interval.'],
             'low_battery_pct' => ['20', 'Battery level (%) at or below which a low_battery anomaly fires.'],
             'critical_battery_pct' => ['5', 'Battery level (%) at or below which a critical_battery anomaly fires.'],
             'weak_signal_rssi_dbm' => ['-85', 'Signal strength (dBm) at or below which a weak_signal anomaly fires.'],
