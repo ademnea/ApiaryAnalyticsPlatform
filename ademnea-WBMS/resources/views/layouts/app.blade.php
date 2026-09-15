@@ -6,10 +6,10 @@
     <meta name="csrf-token" content="{{ csrf_token() }}">
     <title>@yield('title', 'Dashboard') — AdEMNEA Beehive Monitoring</title>
 
-    {{-- Bootstrap 5 --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css">
+    {{-- Bootstrap 5 (served locally from public/) --}}
+    <link rel="stylesheet" href="{{ asset('bootstrap.min.css') }}">
     {{-- Bootstrap Icons --}}
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="{{ asset('bootstrap-icons.min.css') }}">
     {{-- Google Fonts: Inter (body) + Space Grotesk (headings) --}}
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
@@ -321,6 +321,22 @@
             text-align: center;
             opacity: 0.7;
         }
+        /* Not-yet-implemented nav child — same layout as a link, but inert */
+        .nav-dropdown-children-soon {
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.38rem 0.9rem 0.38rem 0.75rem;
+            color: #5c7a6a;
+            font-size: 0.79rem;
+            cursor: default;
+        }
+        .nav-dropdown-children-soon i {
+            font-size: 0.8rem;
+            width: 14px;
+            text-align: center;
+            opacity: 0.5;
+        }
 
         /* ---- MAIN CONTENT --------------------------------------------- */
         .main-wrapper {
@@ -547,12 +563,12 @@
     <div class="topbar-right">
 
         {{-- Alerts bell --}}
-        <button class="topbar-icon-btn" title="System alerts">
+        <a href="{{ Route::has('admin.alerts.index') ? route('admin.alerts.index') : '#' }}" class="topbar-icon-btn text-decoration-none" title="System alerts">
             <i class="bi bi-bell"></i>
             @if(isset($unreadAlerts) && $unreadAlerts > 0)
                 <span class="topbar-badge"></span>
             @endif
-        </button>
+        </a>
 
         {{-- Feedback badge --}}
         <button class="topbar-icon-btn" title="Pending feedback">
@@ -670,6 +686,24 @@
     <div class="sidebar-section">IoT & Monitoring</div>
 
     {{-- IoT Devices --}}
+<div x-data="{ open: {{ request()->routeIs('admin.iot-devices.*') ? 'true' : 'false' }} }">
+    <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
+        <i class="bi bi-cpu nav-icon"></i>
+        <span class="nav-dropdown-label">IoT Devices</span>
+        <i class="bi bi-chevron-right nav-chevron"></i>
+    </div>
+    <div class="nav-dropdown-children" x-show="open" x-collapse>
+        <a href="{{ route('admin.iot-devices.index') }}"
+           class="{{ request()->routeIs('admin.iot-devices.index') ? 'active' : '' }}">
+            <i class="bi bi-list-ul"></i> Device Registry
+        </a>
+        <a href="{{ route('admin.iot-devices.create') }}"
+           class="{{ request()->routeIs('admin.iot-devices.create') ? 'active' : '' }}">
+            <i class="bi bi-plus-circle"></i> Register Device
+        </a>
+    </div>
+</div>
+
     {{-- Hardware Teams --}}
 <div x-data="{ open: {{ request()->routeIs('admin.hardware-teams.*') ? 'true' : 'false' }} }">
     <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
@@ -689,78 +723,18 @@
     </div>
 </div>
 
-{{-- IoT Devices --}}
-<div x-data="{ open: {{ request()->routeIs('admin.iot-devices.*') ? 'true' : 'false' }} }">
-    <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
-        <i class="bi bi-cpu nav-icon"></i>
-        <span class="nav-dropdown-label">IoT Devices</span>
-        <i class="bi bi-chevron-right nav-chevron"></i>
-    </div>
-    <div class="nav-dropdown-children" x-show="open" x-collapse>
-        <a href="{{ route('admin.iot-devices.index') }}"
-           class="{{ request()->routeIs('admin.iot-devices.index') ? 'active' : '' }}">
-            <i class="bi bi-list-ul"></i> Device Registry
-        </a>
-        <a href="{{ route('admin.iot-devices.create') }}"
-           class="{{ request()->routeIs('admin.iot-devices.create') ? 'active' : '' }}">
-            <i class="bi bi-plus-circle"></i> Register Device
-        </a>
-        {{-- Fleet Health belongs to the IoT Condition Monitoring module (§4.4/4.6),
-             not this one. Guarded so the sidebar doesn't break before that
-             route exists; appears automatically once Developer E defines it. --}}
-        @if(Route::has('admin.devices.fleet'))
-            <a href="{{ route('admin.devices.fleet') }}"
-               class="{{ request()->routeIs('admin.devices.fleet') ? 'active' : '' }}">
-                <i class="bi bi-grid-3x3-gap"></i> Fleet Health
-            </a>
-        @endif
-    </div>
-</div>
+    {{-- Device Fleet --}}
+    <a href="{{ route('admin.devices.fleet') }}"
+       class="nav-item-link {{ request()->routeIs('admin.devices.fleet') ? 'active' : '' }}">
+        <i class="bi bi-grid-3x3-gap"></i>
+        Device Fleet
+    </a>
 
-    {{-- Sensor Monitoring --}}
-    <div x-data="{ open: {{ request()->routeIs('admin.monitoring.*') ? 'true' : 'false' }} }">
-        <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
-            <i class="bi bi-activity nav-icon"></i>
-            <span class="nav-dropdown-label">Sensor Monitoring</span>
-            <i class="bi bi-chevron-right nav-chevron"></i>
-        </div>
-        <div class="nav-dropdown-children" x-show="open" x-collapse>
-            <a href="{{ route('admin.monitoring.temperature') }}"
-               class="{{ request()->routeIs('admin.monitoring.temperature') ? 'active' : '' }}">
-                <i class="bi bi-thermometer-half"></i> Temperature
-            </a>
-            <a href="{{ route('admin.monitoring.humidity') }}"
-               class="{{ request()->routeIs('admin.monitoring.humidity') ? 'active' : '' }}">
-                <i class="bi bi-droplet-half"></i> Humidity
-            </a>
-            <a href="{{ route('admin.monitoring.weight') }}"
-               class="{{ request()->routeIs('admin.monitoring.weight') ? 'active' : '' }}">
-                <i class="bi bi-speedometer"></i> Hive Weight
-            </a>
-            <a href="{{ route('admin.monitoring.co2') }}"
-               class="{{ request()->routeIs('admin.monitoring.co2') ? 'active' : '' }}">
-                <i class="bi bi-wind"></i> CO₂ Levels
-            </a>
-            <a href="{{ route('admin.monitoring.audio') }}"
-               class="{{ request()->routeIs('admin.monitoring.audio') ? 'active' : '' }}">
-                <i class="bi bi-mic"></i> Audio
-            </a>
-            <a href="{{ route('admin.monitoring.video') }}"
-               class="{{ request()->routeIs('admin.monitoring.video') ? 'active' : '' }}">
-                <i class="bi bi-camera-video"></i> Video
-            </a>
-            <a href="{{ route('admin.monitoring.photos') }}"
-               class="{{ request()->routeIs('admin.monitoring.photos') ? 'active' : '' }}">
-                <i class="bi bi-images"></i> Photos
-            </a>
-        </div>
-    </div>
-
-    {{-- Anomaly Detection --}}
+    {{-- Condition Monitoring (hive anomaly detection) --}}
     <div x-data="{ open: {{ request()->routeIs('admin.anomaly.*') ? 'true' : 'false' }} }">
         <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
             <i class="bi bi-graph-up-arrow nav-icon"></i>
-            <span class="nav-dropdown-label">Anomaly Detection</span>
+            <span class="nav-dropdown-label">Condition Monitoring</span>
             <i class="bi bi-chevron-right nav-chevron"></i>
         </div>
         <div class="nav-dropdown-children" x-show="open" x-collapse>
@@ -768,14 +742,18 @@
                class="{{ request()->routeIs('admin.anomaly.dashboard') ? 'active' : '' }}">
                 <i class="bi bi-shield-exclamation"></i> Anomaly Dashboard
             </a>
+            <a href="{{ route('admin.anomaly.anomalies.index') }}"
+               class="{{ request()->routeIs('admin.anomaly.anomalies.*') ? 'active' : '' }}">
+                <i class="bi bi-list-ul"></i> All Anomalies
+            </a>
             <a href="{{ route('admin.anomaly.analytics') }}"
                class="{{ request()->routeIs('admin.anomaly.analytics') ? 'active' : '' }}">
                 <i class="bi bi-bar-chart-line"></i> Analytics
             </a>
-            <a href="{{ route('admin.anomaly.models') }}"
-               class="{{ request()->routeIs('admin.anomaly.models') ? 'active' : '' }}">
+            <span class="nav-dropdown-children-soon" title="Coming soon">
                 <i class="bi bi-robot"></i> ML Models
-            </a>
+                <span class="badge badge-pending ms-auto" style="font-size:0.6rem;">Soon</span>
+            </span>
         </div>
     </div>
 
@@ -1080,7 +1058,7 @@
 <div id="search-results"></div>
 
 {{-- Scripts --}}
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
+<script src="{{ asset('bootstrap.bundle.min.js') }}"></script>
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.3/dist/htmx.min.js"></script>
 {{-- Chart.js for monitoring pages --}}
