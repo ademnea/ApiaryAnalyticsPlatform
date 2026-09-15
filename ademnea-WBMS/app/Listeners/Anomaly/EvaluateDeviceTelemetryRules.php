@@ -37,10 +37,12 @@ class EvaluateDeviceTelemetryRules
             'created_at' => now(),
         ]);
 
-        $anomaly = $this->telemetryRule->evaluate($telemetry, $event->device);
-
-        if ($anomaly) {
-            $this->dispatchService->dispatch($anomaly);
+        // Alert only when an incident is first opened — repeats of an
+        // already-open incident just bump its occurrence count.
+        foreach ($this->telemetryRule->evaluateAll($telemetry, $event->device) as $anomaly) {
+            if ($anomaly->wasRecentlyCreated) {
+                $this->dispatchService->dispatch($anomaly);
+            }
         }
     }
 }

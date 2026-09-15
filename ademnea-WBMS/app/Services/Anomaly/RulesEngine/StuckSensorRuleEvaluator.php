@@ -36,7 +36,7 @@ class StuckSensorRuleEvaluator
             }
 
             if ($values->unique()->count() === 1) {
-                return SensorAnomaly::create([
+                return SensorAnomaly::recordOrTouch([
                     'device_id' => $reading->device_id,
                     'hive_id' => $reading->hive_id,
                     'sensor_type' => $sensorType,

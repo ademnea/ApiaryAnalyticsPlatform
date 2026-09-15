@@ -27,7 +27,7 @@ class ThresholdRuleEvaluator
             [$min, $max] = $this->bounds((int) $reading->hive_id, $sensorType);
 
             if ($value < $min || $value > $max) {
-                return SensorAnomaly::create([
+                return SensorAnomaly::recordOrTouch([
                     'device_id' => $reading->device_id,
                     'hive_id' => $reading->hive_id,
                     'sensor_type' => $sensorType,

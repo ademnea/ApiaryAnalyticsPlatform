@@ -24,6 +24,8 @@
 
 @section('content')
 
+    @include('admin.anomaly._subnav')
+
     <div class="card mb-3">
         <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
             <span><i class="bi bi-grid-3x3-gap me-1"></i>Anomaly Heatmap — Last {{ $days }} Days</span>
@@ -111,13 +113,9 @@
                                     </span>
                                 </td>
                                 <td>{{ $anomaly->hive?->display_name ?? $anomaly->hive?->hive_code ?? '—' }}</td>
-                                <td><a href="{{ route('admin.anomaly.devices.show', $anomaly->device_id) }}">{{ $anomaly->device->device_code ?? '#' . $anomaly->device_id }}</a></td>
+                                <td><a href="{{ route('admin.iot-devices.show', $anomaly->device_id) }}">{{ $anomaly->device->device_code ?? '#' . $anomaly->device_id }}</a></td>
                                 <td>
-                                    @if($anomaly->resolved)
-                                        <span class="badge badge-active">Resolved</span>
-                                    @else
-                                        <span class="badge badge-warning">Open</span>
-                                    @endif
+                                    <a href="{{ route('admin.anomaly.anomalies.show', $anomaly) }}" class="badge {{ $anomaly->statusBadgeClass() }} text-capitalize text-decoration-none">{{ $anomaly->status() }}</a>
                                 </td>
                             </tr>
                         @endforeach
