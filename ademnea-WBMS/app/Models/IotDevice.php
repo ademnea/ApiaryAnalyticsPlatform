@@ -56,6 +56,11 @@ class IotDevice extends Model
         return $this->hasMany(IotAuthLog::class, 'device_id');
     }
 
+    public function anomalies(): HasMany
+    {
+        return $this->hasMany(SensorAnomaly::class, 'device_id');
+    }
+
     // public function ingestionLogs(): HasMany
     // {
     //     return $this->hasMany(IotIngestionLog::class, 'device_id');

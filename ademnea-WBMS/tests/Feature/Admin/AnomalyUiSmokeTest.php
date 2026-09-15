@@ -26,10 +26,20 @@ class AnomalyUiSmokeTest extends TestCase
     use RefreshDatabase;
     use InteractsWithApiaryAdminAuth;
 
-    #[Test]
-    public function all_three_anomaly_views_render_with_realistic_data(): void
+    private function actingAsMonitoringAdmin(): void
     {
-        $this->actingAsAdminWithPermission('view-anomaly-analytics');
+        $admin = $this->actingAsAdminWithPermission('view-anomaly-analytics');
+
+        foreach (['view-device-fleet', 'manage-iot-devices', 'view-hive-data'] as $permission) {
+            \Spatie\Permission\Models\Permission::findOrCreate($permission, 'web');
+            $admin->givePermissionTo($permission);
+        }
+    }
+
+    #[Test]
+    public function all_anomaly_and_fleet_views_render_with_realistic_data(): void
+    {
+        $this->actingAsMonitoringAdmin();
 
         $farmer = Farmer::factory()->create();
         $apiary = Apiary::factory()->create(['farmer_id' => $farmer->id]);
@@ -53,7 +63,7 @@ class AnomalyUiSmokeTest extends TestCase
                 SensorAnomaly::create([
                     'device_id' => $device->id,
                     'hive_id' => $hives[$i]->id,
-                    'sensor_type' => 'temperature',
+                    'sensor_type' => in_array($type, ['static_threshold_breach', 'frozen_sensor', 'statistical_deviation'], true) ? 'temperature' : 'telemetry',
                     'anomaly_type' => $type,
                     'anomaly_score' => 1.0,
                     'record_value' => ['value' => 42],
@@ -61,6 +71,10 @@ class AnomalyUiSmokeTest extends TestCase
                     'detected_at' => now()->subDays($j % 7)->subHours($i),
                     'resolved' => $j % 3 === 0,
                     'resolved_at' => $j % 3 === 0 ? now() : null,
+                    'auto_resolved' => $j % 2 === 0,
+                    'acknowledged_at' => $j % 4 === 1 ? now() : null,
+                    'occurrences' => $j + 1,
+                    'last_record_value' => $j % 2 === 0 ? ['value' => 43.5] : null,
                 ]);
             }
         }
@@ -101,19 +115,34 @@ class AnomalyUiSmokeTest extends TestCase
         $this->get(route('admin.anomaly.dashboard'))->assertOk();
         $this->get(route('admin.anomaly.analytics', ['days' => 7]))->assertOk();
         $this->get(route('admin.anomaly.analytics', ['days' => 30]))->assertOk();
-        $this->get(route('admin.anomaly.devices.show', $device))->assertOk();
-        $this->get(route('admin.anomaly.devices.show', $bareDevice))->assertOk();
-        $this->get(route('admin.anomaly.devices.show', $unassignedDevice))->assertOk();
+        $this->get(route('admin.devices.fleet'))->assertOk();
+        $this->get(route('admin.devices.fleet', ['health' => 'offline', 'has_issues' => 1]))->assertOk();
+
+        foreach (['hive', 'device', 'all'] as $category) {
+            $this->get(route('admin.anomaly.anomalies.index', ['category' => $category]))->assertOk();
+        }
+        $this->get(route('admin.anomaly.anomalies.index', ['status' => 'unresolved', 'severity' => 'critical', 'from' => today()->subWeek()->toDateString()]))->assertOk();
+
+        foreach (SensorAnomaly::all() as $anomaly) {
+            $this->get(route('admin.anomaly.anomalies.show', $anomaly))->assertOk();
+        }
+
+        $this->get(route('admin.iot-devices.show', $device))->assertOk();
+        $this->get(route('admin.iot-devices.show', $bareDevice))->assertOk();
+        $this->get(route('admin.iot-devices.show', $unassignedDevice))->assertOk();
+        $this->get(route('admin.hives.show', $hives->first()))->assertOk();
     }
 
     #[Test]
-    public function all_three_views_render_with_zero_data(): void
+    public function all_views_render_with_zero_data(): void
     {
-        $this->actingAsAdminWithPermission('view-anomaly-analytics');
+        $this->actingAsMonitoringAdmin();
         $device = IotDevice::factory()->create(['hardware_team_id' => IotHardwareTeam::factory()]);
 
         $this->get(route('admin.anomaly.dashboard'))->assertOk();
         $this->get(route('admin.anomaly.analytics'))->assertOk();
-        $this->get(route('admin.anomaly.devices.show', $device))->assertOk();
+        $this->get(route('admin.anomaly.anomalies.index'))->assertOk();
+        $this->get(route('admin.devices.fleet'))->assertOk();
+        $this->get(route('admin.iot-devices.show', $device))->assertOk();
     }
 }

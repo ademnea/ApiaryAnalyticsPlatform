@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Admin\ApiaryManagement;
 
+use App\Contracts\AnomalyStatusContract;
 use App\Contracts\HiveRegistryServiceContract;
 use App\Contracts\HiveStatusChangeServiceContract;
 use App\Exceptions\ApiaryManagement\InvalidHiveStatusTransitionException;
@@ -59,11 +60,14 @@ class HiveController extends Controller
             ->with('success', "Hive \"{$hive->hybrid_identifier}\" registered.");
     }
 
-    public function show(Hive $hive): View
+    public function show(Hive $hive, AnomalyStatusContract $anomalyStatus): View
     {
         $hive = $this->registrationService->getHiveWithAllData($hive->id);
 
-        return view('admin.apiary-management.hives.show', compact('hive'));
+        $hasUnresolvedAnomalies = $anomalyStatus->hasUnresolvedAnomalies($hive->id);
+        $latestAnomalies = $anomalyStatus->latestAnomalies($hive->id, 5);
+
+        return view('admin.apiary-management.hives.show', compact('hive', 'hasUnresolvedAnomalies', 'latestAnomalies'));
     }
 
     public function edit(Hive $hive): View

@@ -90,4 +90,54 @@ class DeviceTelemetryRuleEvaluatorTest extends TestCase
         $this->assertNotNull($anomaly);
         $this->assertEquals('storage_full', $anomaly->anomaly_type);
     }
+
+    #[Test]
+    public function a_recovered_battery_auto_resolves_the_open_incident(): void
+    {
+        $device = $this->makeDevice();
+        $telemetry = IotDeviceTelemetry::create(['device_id' => $device->id, 'battery_level' => 15]);
+        $evaluator = new DeviceTelemetryRuleEvaluator();
+
+        $low = $evaluator->evaluate($telemetry, $device);
+        $this->assertEquals('low_battery', $low->anomaly_type);
+
+        $telemetry->update(['battery_level' => 85]);
+        $this->assertNull($evaluator->evaluate($telemetry, $device));
+
+        $fresh = $low->fresh();
+        $this->assertTrue($fresh->resolved);
+        $this->assertTrue($fresh->auto_resolved);
+    }
+
+    #[Test]
+    public function repeated_violations_touch_one_incident_and_separate_problems_get_their_own(): void
+    {
+        $device = $this->makeDevice();
+        $telemetry = IotDeviceTelemetry::create(['device_id' => $device->id, 'battery_level' => 15, 'signal_strength' => -90]);
+        $evaluator = new DeviceTelemetryRuleEvaluator();
+
+        $evaluator->evaluateAll($telemetry, $device);
+        $second = $evaluator->evaluateAll($telemetry, $device);
+
+        $this->assertCount(2, $second);
+        $this->assertFalse($second[0]->wasRecentlyCreated);
+        $this->assertDatabaseCount('sensor_anomalies', 2);
+        $this->assertDatabaseHas('sensor_anomalies', ['anomaly_type' => 'low_battery', 'occurrences' => 2]);
+        $this->assertDatabaseHas('sensor_anomalies', ['anomaly_type' => 'weak_signal', 'occurrences' => 2]);
+    }
+
+    #[Test]
+    public function an_unassigned_device_is_evaluated_against_global_thresholds(): void
+    {
+        $device = IotDevice::factory()->create([
+            'hive_id' => null,
+            'hardware_team_id' => IotHardwareTeam::factory(),
+        ]);
+        $telemetry = IotDeviceTelemetry::create(['device_id' => $device->id, 'battery_level' => 3]);
+
+        $anomaly = (new DeviceTelemetryRuleEvaluator())->evaluate($telemetry, $device);
+
+        $this->assertEquals('critical_battery', $anomaly->anomaly_type);
+        $this->assertNull($anomaly->hive_id);
+    }
 }

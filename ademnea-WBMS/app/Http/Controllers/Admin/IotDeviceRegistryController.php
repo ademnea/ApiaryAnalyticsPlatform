@@ -8,6 +8,8 @@ use App\Http\Requests\Admin\StoreIotDeviceRequest;
 use App\Http\Requests\Admin\UpdateIotDeviceRequest;
 use App\Models\IotDevice;
 use App\Models\IotHardwareTeam;
+use App\Services\Anomaly\DeviceHealthReportService;
+use App\Services\IotDeviceHealthEvaluator;
 use App\Services\IotDeviceRegistryService;
 use App\Services\IotHardwareTeamRegistryService;
 use Illuminate\Http\RedirectResponse;
@@ -20,6 +22,8 @@ class IotDeviceRegistryController extends Controller
         private readonly IotDeviceRegistryService $service,
         private readonly IotHardwareTeamRegistryService $teamService,
         private readonly ApiaryDirectoryServiceContract $apiaryDirectory,
+        private readonly IotDeviceHealthEvaluator $healthEvaluator,
+        private readonly DeviceHealthReportService $healthReport,
     ) {
         // $this->middleware('auth');
         // $this->middleware('permission:manage-iot-devices');
@@ -30,9 +34,16 @@ class IotDeviceRegistryController extends Controller
     public function index(Request $request): View
     {
         $devices = $this->service->list($request->only(['hardware_team_id', 'status', 'active_flag']));
+
+        // Health is computed per-device (not stored) so the registry always
+        // reflects live telemetry — same thresholds as the Device Fleet page,
+        // via the shared evaluator.
+        $health = $devices->getCollection()
+            ->mapWithKeys(fn (IotDevice $device) => [$device->id => $this->healthEvaluator->evaluate($device)]);
+
         $hardwareTeams = $this->teamService->list();
 
-        return view('admin.iot-devices.index', compact('devices', 'hardwareTeams'));
+        return view('admin.iot-devices.index', compact('devices', 'health', 'hardwareTeams'));
     }
 
     public function create(): View
@@ -54,9 +65,13 @@ class IotDeviceRegistryController extends Controller
 
     public function show(IotDevice $iotDevice): View
     {
-        $iotDevice->load('hardwareTeam');
+        $iotDevice->load('hardwareTeam', 'telemetry', 'hive');
 
-        return view('admin.iot-devices.show', compact('iotDevice'));
+        // Health, trends and anomalies come from the IoT Condition Monitoring module.
+        return view('admin.iot-devices.show', [
+            'iotDevice' => $iotDevice,
+            ...$this->healthReport->forDevice($iotDevice),
+        ]);
     }
 
     public function edit(IotDevice $iotDevice): View

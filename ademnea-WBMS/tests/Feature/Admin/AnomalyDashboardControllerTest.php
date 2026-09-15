@@ -46,8 +46,8 @@ class AnomalyDashboardControllerTest extends TestCase
         $response = $this->get(route('admin.anomaly.dashboard'));
 
         $response->assertOk();
-        $response->assertViewHas('unresolvedCount', 1);
-        $response->assertViewHas('recentAnomalies');
+        $response->assertViewHas('openCount', 1);
+        $response->assertViewHas('latestOpen');
     }
 
     #[Test]
@@ -73,25 +73,38 @@ class AnomalyDashboardControllerTest extends TestCase
     }
 
     #[Test]
-    public function admin_with_permission_can_view_the_device_detail_page(): void
+    public function device_issues_are_kept_off_the_hive_anomaly_dashboard(): void
     {
         $this->actingAsAdminWithPermission('view-anomaly-analytics');
         $anomaly = $this->makeAnomaly();
+        SensorAnomaly::create([
+            'device_id' => $anomaly->device_id,
+            'hive_id' => $anomaly->hive_id,
+            'sensor_type' => 'telemetry',
+            'anomaly_type' => 'low_battery',
+            'anomaly_score' => 1.0,
+            'record_value' => ['battery_level' => 10],
+            'detection_layer' => 'rules',
+            'detected_at' => now(),
+        ]);
 
-        $response = $this->get(route('admin.anomaly.devices.show', $anomaly->device_id));
+        $response = $this->get(route('admin.anomaly.dashboard'));
 
         $response->assertOk();
-        $response->assertViewHas('anomalies');
+        $response->assertViewHas('openCount', 1);
+        $response->assertViewHas('openDeviceIssuesCount', 1);
     }
 
     #[Test]
-    public function user_without_permission_cannot_view_the_device_detail_page(): void
+    public function the_device_page_shows_its_health_and_anomalies(): void
     {
-        $this->actingAsAdminWithPermission('manage-hives');
+        $this->actingAsAdminWithPermission('manage-iot-devices');
         $anomaly = $this->makeAnomaly();
 
-        $response = $this->get(route('admin.anomaly.devices.show', $anomaly->device_id));
+        $response = $this->get(route('admin.iot-devices.show', $anomaly->device_id));
 
-        $response->assertForbidden();
+        $response->assertOk();
+        $response->assertViewHas('health');
+        $response->assertViewHas('anomalies', fn ($anomalies) => $anomalies->contains('id', $anomaly->id));
     }
 }
