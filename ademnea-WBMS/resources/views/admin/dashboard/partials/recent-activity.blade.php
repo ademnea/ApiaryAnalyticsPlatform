@@ -246,7 +246,7 @@
                         <i class="bi bi-broadcast display-6 d-block mb-2 opacity-25"></i>
                         No sensor readings received yet.
                         <br>
-                        <a href="{{ route('admin.anomaly.dashboard') }}" class="btn btn-sm btn-outline-forest mt-2">
+                        <a href="{{ route('admin.monitoring.index') }}" class="btn btn-sm btn-outline-forest mt-2">
                             View Monitoring
                         </a>
                     </div>
@@ -281,7 +281,7 @@
                         </table>
                     </div>
                     <div class="px-3 py-2 border-top" style="background:#fafcfa;">
-                        <a href="{{ route('admin.anomaly.dashboard') }}"
+                        <a href="{{ route('admin.monitoring.index') }}"
                            style="font-size:0.78rem;color:var(--clr-forest-mid);">
                             View all monitoring →
                         </a>

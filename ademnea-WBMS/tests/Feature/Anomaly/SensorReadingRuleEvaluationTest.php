@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Anomaly;
 
+use App\Events\SensorRecordReceived;
 use App\Models\Apiary;
 use App\Models\Farmer;
 use App\Models\Hive;
@@ -11,6 +12,7 @@ use App\Models\IotIngestionLog;
 use App\Models\SensorAnomaly;
 use App\Services\IotSensorIngestionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Event;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
 
@@ -97,5 +99,47 @@ class SensorReadingRuleEvaluationTest extends TestCase
             'channel' => 'brood_section',
             'sample_count' => 3,
         ]);
+    }
+
+    #[Test]
+    public function a_reading_from_an_unassigned_device_is_logged_as_rejected_instead_of_throwing(): void
+    {
+        Event::fake([SensorRecordReceived::class]);
+
+        $device = IotDevice::factory()->create([
+            'hive_id' => null,
+            'hardware_team_id' => IotHardwareTeam::factory(),
+        ]);
+
+        // Must return normally: an exception here makes the queue worker
+        // retry a message that can never succeed.
+        app(IotSensorIngestionService::class)->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->toIso8601String(),
+            'reading' => ['brood_section' => 35.0],
+        ]);
+
+        $this->assertDatabaseCount('hive_temperatures', 0);
+        $this->assertDatabaseHas('iot_ingestion_logs', ['device_id' => $device->id, 'outcome' => 'rejected_validation']);
+        $this->assertDatabaseMissing('iot_ingestion_logs', ['device_id' => $device->id, 'outcome' => 'accepted']);
+        Event::assertNotDispatched(SensorRecordReceived::class);
+    }
+
+    #[Test]
+    public function an_unknown_sensor_type_is_only_rejected_never_also_accepted(): void
+    {
+        Event::fake([SensorRecordReceived::class]);
+
+        [, $device] = $this->makeDevice();
+
+        app(IotSensorIngestionService::class)->store($device, [
+            'sensor_type' => 'pressure',
+            'recorded_at' => now()->toIso8601String(),
+            'reading' => ['pressure_hpa' => 1013],
+        ]);
+
+        $this->assertDatabaseHas('iot_ingestion_logs', ['device_id' => $device->id, 'outcome' => 'rejected_validation']);
+        $this->assertDatabaseMissing('iot_ingestion_logs', ['device_id' => $device->id, 'outcome' => 'accepted']);
+        Event::assertNotDispatched(SensorRecordReceived::class);
     }
 }

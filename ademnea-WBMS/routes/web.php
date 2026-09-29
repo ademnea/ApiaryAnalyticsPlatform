@@ -13,6 +13,9 @@ use App\Http\Controllers\Admin\AnomalyAnalyticsController;
 use App\Http\Controllers\Admin\AnomalyController;
 use App\Http\Controllers\Admin\DeviceFleetController;
 use App\Http\Controllers\Admin\SystemAlertController;
+use App\Http\Controllers\Admin\MonitoringController;
+use App\Enums\MediaKind;
+use App\Enums\SensorMetric;
 use Illuminate\Http\Request;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveController;
 use App\Http\Controllers\Admin\ApiaryManagement\HiveMapController;
@@ -460,13 +463,30 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // ============================================================
 
     // Sensor Monitoring
-    Route::middleware(['permission:view-monitoring-dashboard|view-hive-data'])->group(function () {
-        foreach (['monitoring.temperature', 'monitoring.humidity', 'monitoring.weight', 'monitoring.co2', 'monitoring.audio', 'monitoring.video', 'monitoring.photos'] as $name) {
-            Route::get('/admin/' . str_replace('.', '/', $name), function () use ($name) {
-                return view('admin.placeholder', ['title' => ucwords(str_replace(['.', '-'], ' ', $name)), 'subtitle' => 'Placeholder for ' . $name]);
-            })->name('admin.' . $name);
-        }
+    Route::middleware(['permission:view-monitoring-dashboard|view-hive-data'])
+        ->prefix('/admin/monitoring')
+        ->name('admin.monitoring.')
+        ->controller(MonitoringController::class)
+        ->group(function () {
+            Route::get('/', 'index')->name('index');
+            Route::get('insights', 'insights')->name('insights');
 
+            // One named route per stream (admin.monitoring.temperature, …) —
+            // the main dashboard links to these names directly.
+            foreach (SensorMetric::cases() as $metric) {
+                Route::get($metric->value, 'sensor')->defaults('metric', $metric->value)->name($metric->value);
+            }
+
+            foreach (MediaKind::cases() as $kind) {
+                Route::get($kind->value, 'media')->defaults('kind', $kind->value)->name($kind->value);
+            }
+
+            Route::get('{metric}/export', 'export')
+                ->whereIn('metric', array_column(SensorMetric::cases(), 'value'))
+                ->name('export');
+        });
+
+    Route::middleware(['permission:view-monitoring-dashboard|view-hive-data'])->group(function () {
         // System Alerts — every alert dispatched to farmers (REQ-F-IOT-17)
         Route::get('/admin/alerts', [SystemAlertController::class, 'index'])->name('admin.alerts.index');
     });

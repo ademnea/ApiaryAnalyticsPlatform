@@ -54,5 +54,21 @@ class AlertThresholdSeeder extends Seeder
                 ['value' => $value, 'description' => $description]
             );
         }
+
+        // Sensor Monitoring target bands shaded on the brood chamber charts.
+        // firstOrCreate, so re-seeding keeps values an admin has tuned.
+        $broodTargetDefaults = [
+            'brood_temp_ideal_min_c' => ['32', 'Lower edge of the healthy brood chamber temperature band (°C).'],
+            'brood_temp_ideal_max_c' => ['36', 'Upper edge of the healthy brood chamber temperature band (°C).'],
+            'brood_humidity_ideal_min_pct' => ['50', 'Lower edge of the healthy brood chamber humidity band (%).'],
+            'brood_humidity_ideal_max_pct' => ['70', 'Upper edge of the healthy brood chamber humidity band (%).'],
+        ];
+
+        foreach ($broodTargetDefaults as $key => [$value, $description]) {
+            AlertThreshold::firstOrCreate(
+                ['key' => $key, 'hive_id' => null],
+                ['value' => $value, 'description' => $description]
+            );
+        }
     }
 }

@@ -452,7 +452,26 @@
         .badge-pending  { background: #FFF3CD; color: #664D03; }
         .badge-offline  { background: #FFE0E0; color: #7F1D1D; }
         .badge-warning  { background: #FFF3CD; color: #664D03; }
-        .badge-info     { background: #D0E4FF; color: #0057b8; }
+
+        /* ---- PAGINATION ----------------------------------------------- */
+        .pagination {
+            --bs-pagination-padding-x: 0.6rem;
+            --bs-pagination-padding-y: 0.25rem;
+            --bs-pagination-font-size: 0.8rem;
+            --bs-pagination-color: var(--clr-forest-mid);
+            --bs-pagination-border-color: var(--clr-border);
+            --bs-pagination-hover-color: var(--clr-forest);
+            --bs-pagination-hover-bg: var(--clr-forest-pale);
+            --bs-pagination-hover-border-color: var(--clr-border);
+            --bs-pagination-focus-color: var(--clr-forest);
+            --bs-pagination-focus-bg: var(--clr-forest-pale);
+            --bs-pagination-focus-box-shadow: 0 0 0 0.2rem rgba(212, 160, 23, 0.35);
+            --bs-pagination-active-bg: var(--clr-forest-mid);
+            --bs-pagination-active-border-color: var(--clr-forest-mid);
+            --bs-pagination-disabled-color: var(--clr-muted);
+            --bs-pagination-disabled-border-color: var(--clr-border);
+            margin-bottom: 0;
+        }
 
         /* ---- BUTTONS -------------------------------------------------- */
         .btn-primary {
@@ -689,7 +708,7 @@
 <div x-data="{ open: {{ request()->routeIs('admin.iot-devices.*') ? 'true' : 'false' }} }">
     <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
         <i class="bi bi-cpu nav-icon"></i>
-        <span class="nav-dropdown-label">IoT Devices</span>
+        <span class="nav-dropdown-label">Device Registry</span>
         <i class="bi bi-chevron-right nav-chevron"></i>
     </div>
     <div class="nav-dropdown-children" x-show="open" x-collapse>
@@ -729,6 +748,23 @@
         <i class="bi bi-grid-3x3-gap"></i>
         Device Fleet
     </a>
+
+    {{-- Sensor Monitoring --}}
+    <div x-data="{ open: {{ request()->routeIs('admin.monitoring.*') ? 'true' : 'false' }} }">
+        <div class="nav-dropdown-trigger" :class="open ? 'open' : ''" @click="open = !open">
+            <i class="bi bi-activity nav-icon"></i>
+            <span class="nav-dropdown-label">Sensor Monitoring</span>
+            <i class="bi bi-chevron-right nav-chevron"></i>
+        </div>
+        <div class="nav-dropdown-children" x-show="open" x-collapse>
+            {{-- Individual streams are reached through the tabs on every
+                 monitoring page, so Overview stays highlighted throughout. --}}
+            <a href="{{ route('admin.monitoring.index') }}"
+               class="{{ request()->routeIs('admin.monitoring.*') ? 'active' : '' }}">
+                <i class="bi bi-grid-1x2"></i> Overview
+            </a>
+        </div>
+    </div>
 
     {{-- Condition Monitoring (hive anomaly detection) --}}
     <div x-data="{ open: {{ request()->routeIs('admin.anomaly.*') ? 'true' : 'false' }} }">
@@ -1062,7 +1098,7 @@
 <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
 <script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.3/dist/htmx.min.js"></script>
 {{-- Chart.js for monitoring pages --}}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+<script src="{{ asset('chart.umd.js') }}"></script>
 
 {{-- CSRF header for htmx --}}
 <script>

@@ -11,6 +11,7 @@ use App\Contracts\ApiaryRegistryServiceContract;
 use App\Contracts\HiveRegistryServiceContract;
 use App\Contracts\HiveStatusChangeServiceContract;
 use App\Contracts\FarmerRegistryServiceContract;
+use Illuminate\Pagination\Paginator;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -68,6 +69,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The admin UI is Bootstrap; Laravel's default pagination markup is
+        // Tailwind, which renders as oversized unstyled arrows here.
+        Paginator::useBootstrapFive();
+
         // Share $unreadAlerts with every view that uses the admin layout.
         // This drives the topbar bell badge without requiring each controller
         // to pass the count individually.

@@ -51,7 +51,7 @@ class IotQueueWorkerCommand extends Command
 
         try {
             $this->line('Calling processor...');
-            $processor->process($messageType, $payload, $apiKey);
+            $processor->process($messageType, $payload, $apiKey, $message->envelope['requestTime'] ?? null);
             $this->info('Processor finished.');
             $transport->acknowledge($message);
         } catch (Throwable $e) {

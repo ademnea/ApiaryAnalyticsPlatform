@@ -9,7 +9,7 @@
 <div class="card mb-4">
     <div class="card-header d-flex align-items-center justify-content-between">
         <span><i class="bi bi-activity me-2 text-success"></i>Hive Monitoring Summary</span>
-        <a href="{{ route('admin.anomaly.dashboard') }}"
+        <a href="{{ route('admin.monitoring.index') }}"
            class="btn btn-sm btn-outline-forest">
             View Sensors <i class="bi bi-arrow-right ms-1"></i>
         </a>

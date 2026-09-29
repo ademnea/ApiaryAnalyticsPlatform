@@ -41,7 +41,7 @@
                     ],
                     [
                         'label'  => 'Monitoring',
-                        'route'  => 'admin.anomaly.dashboard',
+                        'route'  => 'admin.monitoring.index',
                         'icon'   => 'bi-activity',
                         'color'  => 'red',
                     ],

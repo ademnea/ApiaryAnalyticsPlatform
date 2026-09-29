@@ -24,7 +24,10 @@ class IotIngestEnvelopeProcessor
      * Returns normally on success OR on a permanent condition (bad auth,
      * duplicate delivery) — both of those are "acknowledge and move on."
      */
-    public function process(string $messageType, array $payload, ?string $apiKey): void
+    /**
+     * @param  string|null  $receivedAt  the envelope's requestTime (when the gateway received it)
+     */
+    public function process(string $messageType, array $payload, ?string $apiKey, ?string $receivedAt = null): void
     {
         $device = $this->auth->resolveDevice($apiKey ?? '');
 
@@ -39,7 +42,7 @@ class IotIngestEnvelopeProcessor
         try {
             match ($messageType) {
                 'sensor_reading' => $this->sensorService->store($device, $payload),
-                'heartbeat' => $this->heartbeatService->store($device, $payload),
+                'heartbeat' => $this->heartbeatService->store($device, $payload, $receivedAt),
                 'media_confirmation' => $this->mediaService->confirm($device, $payload),
                 default => throw new \InvalidArgumentException("Unknown message_type: {$messageType}"),
             };

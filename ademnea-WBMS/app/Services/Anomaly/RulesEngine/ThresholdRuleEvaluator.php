@@ -43,20 +43,23 @@ class ThresholdRuleEvaluator
         return null;
     }
 
-    /** @return array{0: float, 1: float} */
-    private function bounds(int $hiveId, string $sensorType): array
+    /**
+     * Public so the Sensor Monitoring charts draw exactly the range enforced
+     * here. A null hive resolves the fleet-wide defaults.
+     *
+     * @return array{0: float, 1: float}
+     */
+    public static function bounds(?int $hiveId, string $sensorType): array
     {
+        $threshold = fn (string $key, float $default): float => (float) ($hiveId === null
+            ? AlertThreshold::get($key, $default)
+            : AlertThreshold::getForHive($hiveId, $key, $default));
+
         return match ($sensorType) {
-            'temperature' => [
-                (float) AlertThreshold::getForHive($hiveId, 'temp_min_c', -10),
-                (float) AlertThreshold::getForHive($hiveId, 'temp_max_c', 60),
-            ],
+            'temperature' => [$threshold('temp_min_c', -10), $threshold('temp_max_c', 60)],
             'humidity' => [0.0, 100.0],
-            'co2' => [0.0, (float) AlertThreshold::getForHive($hiveId, 'co2_max_ppm', 5000)],
-            'weight' => [
-                (float) AlertThreshold::getForHive($hiveId, 'weight_min_kg', 5),
-                (float) AlertThreshold::getForHive($hiveId, 'weight_max_kg', 120),
-            ],
+            'co2' => [0.0, $threshold('co2_max_ppm', 5000)],
+            'weight' => [$threshold('weight_min_kg', 5), $threshold('weight_max_kg', 120)],
         };
     }
 }
