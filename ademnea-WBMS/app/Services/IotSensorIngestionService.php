@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Exceptions\IotDeviceNotAssignedException;
 use App\Models\IotDevice;
+use App\Models\IotDeviceTelemetry;
 use App\Models\IotIngestionLog;
 use App\Models\HiveTemperature;
 use App\Models\HiveHumidity;
@@ -99,6 +100,15 @@ class IotSensorIngestionService
             'outcome' => 'accepted',
             'created_at' => now(),
         ]);
+
+        // Receive time, not recorded_at: a device uploading a backlog of old
+        // readings is still in contact. CheckDeviceHealth counts this as
+        // contact, so a device that sends data but no heartbeats isn't
+        // reported offline.
+        IotDeviceTelemetry::updateOrCreate(
+            ['device_id' => $device->id],
+            ['last_data_received_at' => now()],
+        );
 
         // Event dispatch to IoT Condition Monitoring stays exactly as
         // already designed in §4.5.8 — decoupled, not called directly.

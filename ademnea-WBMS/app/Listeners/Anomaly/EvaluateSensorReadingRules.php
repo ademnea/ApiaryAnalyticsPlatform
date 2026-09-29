@@ -18,6 +18,13 @@ use App\Services\Anomaly\RulesEngine\ZScoreRuleEvaluator;
  */
 class EvaluateSensorReadingRules
 {
+    /**
+     * Anomaly types that mean the reading itself can't be trusted, so it is
+     * marked suspect and left out of averages. statistical_deviation is not
+     * here: an unusual value can be a real colony event, not bad data.
+     */
+    private const SUSPECT_TYPES = ['static_threshold_breach', 'frozen_sensor'];
+
     public function __construct(
         private readonly ThresholdRuleEvaluator $thresholdRule,
         private readonly StuckSensorRuleEvaluator $stuckSensorRule,
@@ -60,6 +67,10 @@ class EvaluateSensorReadingRules
             }
 
             $cleanTypes[] = $type;
+        }
+
+        if ($anomaly && in_array($anomaly->anomaly_type, self::SUSPECT_TYPES, true)) {
+            $reading->update(['suspect' => true]);
         }
 
         SensorAnomaly::autoResolve(

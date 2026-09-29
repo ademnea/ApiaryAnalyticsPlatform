@@ -10,6 +10,7 @@ use App\Models\IotDevice;
 use App\Models\IotDeviceTelemetry;
 use App\Models\IotHardwareTeam;
 use App\Services\Anomaly\AnomalyAlertDispatchService;
+use App\Services\IotSensorIngestionService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\TestCase;
@@ -170,5 +171,22 @@ class CheckDeviceHealthTest extends TestCase
         $this->runJob();
 
         $this->assertDatabaseCount('sensor_anomalies', 0);
+    }
+
+    #[Test]
+    public function a_device_that_sends_readings_but_no_heartbeats_is_not_reported_offline(): void
+    {
+        [, $device] = $this->makeDevice();
+
+        app(IotSensorIngestionService::class)->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->toIso8601String(),
+            'reading' => ['brood_section' => 35.0],
+        ]);
+
+        $this->runJob();
+
+        $this->assertDatabaseMissing('sensor_anomalies', ['device_id' => $device->id, 'anomaly_type' => 'device_offline']);
+        $this->assertDatabaseMissing('sensor_anomalies', ['device_id' => $device->id, 'anomaly_type' => 'submission_delay']);
     }
 }

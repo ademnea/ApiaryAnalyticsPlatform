@@ -6,7 +6,9 @@ use App\Events\SensorRecordReceived;
 use App\Models\Apiary;
 use App\Models\Farmer;
 use App\Models\Hive;
+use App\Models\HiveWeight;
 use App\Models\IotDevice;
+use App\Models\IotDeviceTelemetry;
 use App\Models\IotHardwareTeam;
 use App\Models\IotIngestionLog;
 use App\Models\SensorAnomaly;
@@ -141,5 +143,90 @@ class SensorReadingRuleEvaluationTest extends TestCase
         $this->assertDatabaseHas('iot_ingestion_logs', ['device_id' => $device->id, 'outcome' => 'rejected_validation']);
         $this->assertDatabaseMissing('iot_ingestion_logs', ['device_id' => $device->id, 'outcome' => 'accepted']);
         Event::assertNotDispatched(SensorRecordReceived::class);
+    }
+
+    #[Test]
+    public function an_out_of_range_reading_is_marked_suspect_and_an_in_range_one_is_not(): void
+    {
+        [, $device] = $this->makeDevice();
+        $service = app(IotSensorIngestionService::class);
+
+        $service->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->subMinute()->toIso8601String(),
+            'reading' => ['brood_section' => 35.0],
+        ]);
+        $service->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->toIso8601String(),
+            'reading' => ['brood_section' => 75.0],
+        ]);
+
+        $this->assertDatabaseHas('hive_temperatures', ['brood_section' => 35.0, 'suspect' => false]);
+        $this->assertDatabaseHas('hive_temperatures', ['brood_section' => 75.0, 'suspect' => true]);
+    }
+
+    #[Test]
+    public function the_reading_that_reveals_a_frozen_sensor_is_marked_suspect(): void
+    {
+        [, $device] = $this->makeDevice();
+        $service = app(IotSensorIngestionService::class);
+
+        foreach (range(1, 10) as $i) {
+            $service->store($device, [
+                'sensor_type' => 'weight',
+                'recorded_at' => now()->subMinutes(10 - $i)->toIso8601String(),
+                'reading' => ['weight_kg' => 42.5],
+            ]);
+        }
+
+        $this->assertDatabaseHas('sensor_anomalies', ['device_id' => $device->id, 'anomaly_type' => 'frozen_sensor']);
+        $this->assertSame(1, HiveWeight::where('suspect', true)->count());
+        $this->assertTrue(HiveWeight::latest('recorded_at')->first()->suspect);
+    }
+
+    #[Test]
+    public function a_statistical_outlier_opens_an_incident_but_is_not_marked_suspect(): void
+    {
+        [, $device] = $this->makeDevice();
+        $service = app(IotSensorIngestionService::class);
+
+        // A varied baseline past the z-score warm-up of 10 samples.
+        foreach (range(1, 12) as $i) {
+            $service->store($device, [
+                'sensor_type' => 'weight',
+                'recorded_at' => now()->subMinutes(20 - $i)->toIso8601String(),
+                'reading' => ['weight_kg' => [40.0, 41.0, 42.0][$i % 3]],
+            ]);
+        }
+
+        // Far from the ~41 kg mean, but inside the plausible 5-120 kg range.
+        $service->store($device, [
+            'sensor_type' => 'weight',
+            'recorded_at' => now()->toIso8601String(),
+            'reading' => ['weight_kg' => 60.0],
+        ]);
+
+        $this->assertDatabaseHas('sensor_anomalies', ['device_id' => $device->id, 'anomaly_type' => 'statistical_deviation']);
+        $this->assertDatabaseHas('hive_weights', ['weight_kg' => 60.0, 'suspect' => false]);
+    }
+
+    #[Test]
+    public function an_accepted_reading_records_when_the_device_last_sent_data(): void
+    {
+        [, $device] = $this->makeDevice();
+
+        // An old recorded_at, as in a backlog upload: contact is still now.
+        app(IotSensorIngestionService::class)->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->subDays(3)->toIso8601String(),
+            'reading' => ['brood_section' => 35.0],
+        ]);
+
+        $telemetry = IotDeviceTelemetry::where('device_id', $device->id)->first();
+
+        $this->assertNotNull($telemetry);
+        $this->assertTrue($telemetry->last_data_received_at->gte(now()->subMinute()));
+        $this->assertNull($telemetry->last_heartbeat_at);
     }
 }
