@@ -2,78 +2,85 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Contracts\MediaUploadStorageContract;
+use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
-use App\Models\Farmer;
 use App\Services\Farmer\MediaService;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * UC-FAPI-10 to 12: hive photos, audio and video.
+ *
+ * `url` is resolved through MediaUploadStorageContract::publicUrl(), which is
+ * what knows how to turn a stored object key into something fetchable — a
+ * 6-hour presigned S3 URL in production, a local disk URL against the mock.
+ * It was previously built as asset('storage/' . $media->path); there is no
+ * `path` attribute on these models, so every url came back as "/storage/".
+ */
 class MediaController extends Controller
 {
-    protected MediaService $mediaService;
+    use ResolvesFarmer;
 
-    public function __construct(MediaService $mediaService)
-    {
-        $this->mediaService = $mediaService;
-    }
+    public function __construct(
+        private readonly MediaService $mediaService,
+        private readonly MediaUploadStorageContract $storage,
+    ) {}
 
     public function photos(Request $request, int $hiveId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
-
-        $perPage = $request->input('per_page', 8);
-        $photos = $this->mediaService->getPhotos($farmer, $hiveId, $perPage);
-
-        $items = $photos->items();
-        foreach ($items as $photo) {
-            $photo->url = asset('storage/' . $photo->path);
-        }
-
-        return response()->json([
-            'data' => $items,
-            'meta' => [
-                'current_page' => $photos->currentPage(),
-                'last_page'    => $photos->lastPage(),
-                'per_page'     => $photos->perPage(),
-                'total'        => $photos->total(),
-            ],
-        ]);
+        return $this->paginated(
+            $this->mediaService->getPhotos(
+                $this->farmer($request),
+                $hiveId,
+                (int) $request->input('per_page', 8)
+            )
+        );
     }
 
     public function audio(Request $request, int $hiveId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
-
-        $audio = $this->mediaService->getAudio($farmer, $hiveId);
-
-        foreach ($audio as &$item) {
-            $item['url'] = asset('storage/' . $item['path']);
-        }
-
-        return response()->json([
-            'data' => $audio,
-        ]);
+        return $this->paginated(
+            $this->mediaService->getAudio(
+                $this->farmer($request),
+                $hiveId,
+                (int) $request->input('per_page', 8)
+            )
+        );
     }
 
     public function videos(Request $request, int $hiveId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
+        return $this->paginated(
+            $this->mediaService->getVideos(
+                $this->farmer($request),
+                $hiveId,
+                (int) $request->input('per_page', 8)
+            )
+        );
+    }
 
-        $perPage = $request->input('per_page', 8);
-        $videos = $this->mediaService->getVideos($farmer, $hiveId, $perPage);
-
-        $items = $videos->items();
-        foreach ($items as $video) {
-            $video->url = asset('storage/' . $video->path);
-        }
+    /**
+     * One shape for all three media types. Audio previously returned a bare
+     * list of at most 20 items with no meta and ignored per_page, forcing the
+     * client to special-case it.
+     */
+    private function paginated(LengthAwarePaginator $page): JsonResponse
+    {
+        $items = collect($page->items())->each(function ($media) {
+            $media->url = $media->file_path
+                ? $this->storage->publicUrl($media->file_path)
+                : null;
+        });
 
         return response()->json([
-            'data' => $items,
+            'data' => $items->values(),
             'meta' => [
-                'current_page' => $videos->currentPage(),
-                'last_page'    => $videos->lastPage(),
-                'per_page'     => $videos->perPage(),
-                'total'        => $videos->total(),
+                'current_page' => $page->currentPage(),
+                'last_page'    => $page->lastPage(),
+                'per_page'     => $page->perPage(),
+                'total'        => $page->total(),
             ],
         ]);
     }

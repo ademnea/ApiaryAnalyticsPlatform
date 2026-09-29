@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
@@ -13,6 +14,9 @@ class Farmer extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        // The login account this profile belongs to. Nullable: an admin can
+        // create a registry-only farmer that has no way to sign in yet.
+        'user_id',
         'first_name',
         'last_name',
         'email',
@@ -70,9 +74,27 @@ class Farmer extends Model
         return $code;
     }
 
+    /**
+     * The login account for this farmer, if one exists.
+     *
+     * The mobile API authenticates a User and resolves this profile from it;
+     * a farmer created through the admin registry has no User until one is
+     * linked, and cannot sign in until then.
+     */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
+    }
+
     public function apiaries(): HasMany
     {
         return $this->hasMany(Apiary::class, 'farmer_id');
+    }
+
+    /** Farmers awaiting an administrator's approval decision. */
+    public function scopePending($query)
+    {
+        return $query->where('profile_status', 'pending');
     }
 
     public function getCountryNameAttribute(): string

@@ -5,7 +5,6 @@ use App\Http\Controllers\Api\Farmer\{
     AuthController,
     ProfileController,
     ApiaryController,
-    HiveController,
     SensorDataController,
     MediaController,
     InspectionController,
@@ -32,24 +31,43 @@ Route::prefix('v1/farmer')->group(function () {
     // Public — no authentication required
     // -------------------------------------------------------------------------
     Route::post('register',         [AuthController::class, 'register']);
-    Route::post('login',            [AuthController::class, 'login']);
-    Route::post('password/forgot',  [AuthController::class, 'forgotPassword']);
+
+    // UC-FAPI-02 alt-flow D: 10 attempts per IP per minute.
+    Route::post('login',            [AuthController::class, 'login'])
+        ->middleware('throttle:farmer-login');
+
+    // The password broker's own throttle is per-user, so it does nothing
+    // against an attacker spraying many addresses — limit by IP as well.
+    Route::post('password/forgot',  [AuthController::class, 'forgotPassword'])
+        ->middleware('throttle:farmer-password-forgot');
+
     Route::post('password/reset',   [AuthController::class, 'resetPassword']);
 
     // -------------------------------------------------------------------------
-    // Protected — must be authenticated farmer with active account
+    // Authenticated, but not role-gated
     // -------------------------------------------------------------------------
-    Route::middleware(['auth:sanctum', 'role:farmer'])->group(function () {
-
-        // Auth
+    // UC-FAPI-03. Revoking your own token is token self-management, not a
+    // farmer-scoped data operation. Gating it on the role would strand a
+    // session whose role was changed or removed, with no way to sign out.
+    Route::middleware('auth:sanctum')->group(function () {
         Route::post('logout', [AuthController::class, 'logout']);
+    });
+
+    // -------------------------------------------------------------------------
+    // Protected — must be an authenticated farmer with an active account
+    // -------------------------------------------------------------------------
+    // farmer-write is the extended role (UC-FAPI-01): it is granted in addition
+    // to farmer, but accepted here too so an elevated account can never be
+    // locked out by a role sync that drops the base role.
+    Route::middleware(['auth:sanctum', 'role:farmer|farmer-write'])->group(function () {
 
         // Profile — REQ-F-FAPI-05
         Route::get ('profile', [ProfileController::class, 'show']);
         Route::put ('profile', [ProfileController::class, 'update']);
 
-        // FCM device token — REQ-F-FAPI-27
-        Route::post('device-token', [AlertController::class, 'storeDeviceToken']);
+        // FCM device token — UC-FAPI-14. Belongs with the profile, not with
+        // alerts: it writes to the farmer's own record, not to an alert.
+        Route::post('device-token', [ProfileController::class, 'storeDeviceToken']);
 
         // Apiaries and their hives — apiary is the single physical-site model.
         Route::get('apiaries', [ApiaryController::class, 'index']);

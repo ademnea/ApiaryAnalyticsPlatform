@@ -11,7 +11,10 @@ use App\Contracts\ApiaryRegistryServiceContract;
 use App\Contracts\HiveRegistryServiceContract;
 use App\Contracts\HiveStatusChangeServiceContract;
 use App\Contracts\FarmerRegistryServiceContract;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
 use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -73,6 +76,8 @@ class AppServiceProvider extends ServiceProvider
         // Tailwind, which renders as oversized unstyled arrows here.
         Paginator::useBootstrapFive();
 
+        $this->configureRateLimiting();
+
         // Share $unreadAlerts with every view that uses the admin layout.
         // This drives the topbar bell badge without requiring each controller
         // to pass the count individually.
@@ -94,6 +99,39 @@ class AppServiceProvider extends ServiceProvider
                 // Sidebar "System Alerts" badge: alerts dispatched to farmers in the last 24h.
                 $view->with('activeAlertsCount', Alert::where('created_at', '>=', now()->subDay())->count());
             }
+        });
+    }
+
+    /**
+     * Named limiters for the farmer mobile API.
+     *
+     * Applied per route rather than through Middleware::throttleApi(), which
+     * would also throttle the IoT ingestion endpoints — those are machine
+     * traffic with very different volume characteristics.
+     */
+    private function configureRateLimiting(): void
+    {
+        // UC-FAPI-02 alternative flow D.
+        //
+        // Note for review: this is per-IP, as the SRS specifies. A co-op or
+        // village sharing one NAT address could hit it legitimately; revisit
+        // if that shows up in the field.
+        RateLimiter::for('farmer-login', function (Request $request) {
+            return Limit::perMinute(10)
+                ->by($request->ip())
+                ->response(fn () => response()->json([
+                    'message' => 'Too many login attempts. Please try again later.',
+                ], 429));
+        });
+
+        // The password broker throttles per-user; this covers an attacker
+        // spraying many different addresses from one source.
+        RateLimiter::for('farmer-password-forgot', function (Request $request) {
+            return Limit::perMinute(5)
+                ->by($request->ip())
+                ->response(fn () => response()->json([
+                    'message' => 'Too many requests. Please try again later.',
+                ], 429));
         });
     }
 }

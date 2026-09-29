@@ -4,17 +4,34 @@ namespace App\Services\Farmer;
 
 use App\Models\Alert;
 use App\Models\AlertThreshold;
-use App\Models\Farmer;
 use App\Models\Hive;
 use App\Models\HiveWeight;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 
+/**
+ * UC-FAPI-15, 16: alert creation and retrieval.
+ *
+ * Delivery lives in NotificationDispatchService. Keeping the FCM and SMS
+ * calls here as well made the two classes mutually dependent.
+ *
+ * This file was previously unparseable — a bad merge had left a duplicate
+ * `use Log` import, two `createAlert()` declarations, a `markRead()` body
+ * spliced into the middle of sendPushNotification(), and try blocks with no
+ * opening statement. It has been reconstructed.
+ *
+ * Alerts are addressed by farmers.id. Callers must pass a farmer id, never
+ * the id of the User that authenticated the request.
+ */
 class AlertService
 {
     public function __construct(
         private readonly NotificationDispatchService $notifications
     ) {}
+
+    // -------------------------------------------------------------------------
+    // Retrieval (UC-FAPI-16)
+    // -------------------------------------------------------------------------
 
     public function fetchForFarmer(int $farmerId, int $perPage = 15): LengthAwarePaginator
     {
@@ -23,18 +40,13 @@ class AlertService
             ->paginate($perPage);
     }
 
-    public function getAlerts(Farmer $farmer, int $perPage = 25): LengthAwarePaginator
-    {
-        return $this->fetchForFarmer($farmer->id, $perPage);
-    }
-
     public function markRead(Alert $alert, int $farmerId): bool
     {
         if ($alert->farmer_id !== $farmerId) {
             return false;
         }
 
-        if (!$alert->is_read) {
+        if (! $alert->is_read) {
             $alert->update([
                 'is_read' => true,
                 'read_at' => now(),
@@ -44,49 +56,26 @@ class AlertService
         return true;
     }
 
-    public function markAsRead(Farmer $farmer, int $alertId): Alert
-    {
-        $alert = Alert::where('id', $alertId)
-            ->where('farmer_id', $farmer->id)
-            ->firstOrFail();
-
-        $this->markRead($alert, $farmer->id);
-
-        return $alert->fresh();
-    }
-
-    public function evaluateThresholds(): void
-    {
-        $hives = Hive::whereHas('apiary.farmer', function ($q) {
-            $q->where('status', 'active');
-        })->with('apiary.farmer')->get();
-
-        foreach ($hives as $hive) {
-            $farmer = $hive->apiary->farmer ?? null;
-            if (!$farmer) {
-                continue;
-            }
-
-            $this->checkFeedRequired($hive, $farmer->id);
-        }
-    }
+    // -------------------------------------------------------------------------
+    // Creation (UC-FAPI-15)
+    // -------------------------------------------------------------------------
 
     public function createAlert(int $farmerId, int $hiveId, string $type, string $message): ?Alert
     {
+        // Malfunction alerts are exempt from the cooldown: a hardware fault
+        // must not be suppressed because a similar alert fired recently.
         if ($type !== 'malfunction' && $this->isWithinCooldown($hiveId, $type)) {
             return null;
         }
 
-        $alert = DB::transaction(function () use ($farmerId, $hiveId, $type, $message) {
-            return Alert::create([
-                'farmer_id'  => $farmerId,
-                'hive_id'    => $hiveId,
-                'type'       => $type,
-                'message'    => $message,
-                'is_read'    => false,
-                'created_at' => now(),
-            ]);
-        });
+        $alert = DB::transaction(fn () => Alert::create([
+            'farmer_id'  => $farmerId,
+            'hive_id'    => $hiveId,
+            'type'       => $type,
+            'message'    => $message,
+            'is_read'    => false,
+            'created_at' => now(),
+        ]));
 
         $this->notifications->dispatch($alert);
 
@@ -101,15 +90,38 @@ class AlertService
             ->exists();
     }
 
+    /**
+     * Hourly sweep driven by App\Jobs\CheckFeedAlerts.
+     */
+    public function evaluateThresholds(): void
+    {
+        // Ownership runs hive -> apiary -> farmer, the same path the
+        // farmer-facing API scopes by. farmers.status is an enum of
+        // Active/Inactive/Suspended — capitalised.
+        $hives = Hive::whereHas('apiary.farmer', fn ($q) => $q->where('status', 'Active'))
+            ->with('apiary.farmer')
+            ->get();
+
+        foreach ($hives as $hive) {
+            $farmer = $hive->apiary->farmer ?? null;
+
+            if (! $farmer) {
+                continue;
+            }
+
+            $this->checkFeedRequired($hive, $farmer->id);
+        }
+    }
+
     private function checkFeedRequired(Hive $hive, int $farmerId): void
     {
         $threshold = (float) AlertThreshold::getForHive($hive->id, 'feed_required_weight_kg', 15);
 
         $latest = HiveWeight::where('hive_id', $hive->id)
-            ->orderBy('created_at', 'desc')
+            ->orderByDesc('created_at')
             ->first();
 
-        if (!$latest) {
+        if (! $latest) {
             return;
         }
 

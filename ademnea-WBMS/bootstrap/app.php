@@ -37,4 +37,13 @@ return Application::configure(basePath: dirname(__DIR__))
         $exceptions->shouldRenderJsonWhen(
             fn (Request $request) => $request->is('api/*'),
         );
+
+        // device_token is a push credential for a specific handset — keep it
+        // out of flashed input and exception reports alongside passwords.
+        $exceptions->dontFlash([
+            'current_password',
+            'password',
+            'password_confirmation',
+            'device_token',
+        ]);
     })->create();

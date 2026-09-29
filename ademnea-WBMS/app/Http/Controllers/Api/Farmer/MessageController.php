@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Farmer\Message\SubmitMessageRequest;
-use App\Models\Farmer;
+use App\Http\Requests\Api\Farmer\SubmitMessageRequest;
 use App\Services\Farmer\FarmerMessageService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -14,10 +14,14 @@ use Illuminate\Http\Request;
  * Routes:
  *   POST /api/v1/farmer/messages     REQ-F-FAPI-31
  *   GET  /api/v1/farmer/messages     REQ-F-FAPI-32
+ *
+ * farmer_messages.farmer_id is a foreign key to farmers.id. Passing the
+ * users.id here did not just mis-filter the listing, it stamped new messages
+ * with the wrong owner, so the admin inbox attributed them to another farmer.
  */
 class MessageController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, ResolvesFarmer;
 
     public function __construct(
         private readonly FarmerMessageService $messageService
@@ -27,7 +31,7 @@ class MessageController extends Controller
     public function store(SubmitMessageRequest $request): JsonResponse
     {
         $message = $this->messageService->submit(
-            $request->user()->id,
+            $this->farmerId($request),
             $request->validated()
         );
 
@@ -43,7 +47,7 @@ class MessageController extends Controller
     public function index(Request $request): JsonResponse
     {
         $messages = $this->messageService->listForFarmer(
-            $request->user()->id,
+            $this->farmerId($request),
             (int) $request->input('per_page', 15)
         );
 

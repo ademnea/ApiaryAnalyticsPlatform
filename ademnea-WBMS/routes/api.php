@@ -16,11 +16,18 @@ Route::put('iot/media-mock/{key}', [IotLocalMediaMockController::class, 'receive
 |--------------------------------------------------------------------------
 | API Routes - Version 1 (Farmer API)
 |--------------------------------------------------------------------------
-| The actual v1/farmer route group lives in farmer_api.php (Apiary-based,
-| current). A duplicate legacy v1/farmer group used to be defined directly
-| in this file (Farm-based, pre-Apiary-redesign) and, because it was
-| registered before this require, silently shadowed every route below —
-| removed as part of retiring the Farm model in favour of Apiary.
+| The v1/farmer route group lives entirely in farmer_api.php (Apiary-based).
+|
+| A duplicate legacy v1/farmer group used to be defined directly in this file
+| (Farm-based, pre-Apiary-redesign). Because routes are matched in registration
+| order and that group was registered BEFORE this require, it silently shadowed
+| nearly every route in farmer_api.php — including sending /profile and
+| /device-token to the wrong controller, dropping the role:farmer middleware,
+| and routing PATCH /alerts/{id}/read at AlertController@markAsRead, a method
+| that does not exist. It has been removed along with the Farm-based
+| controllers and services it pointed at.
+|
+| Farmers' physical sites are modelled as Apiary; see /api/v1/farmer/apiaries.
 |--------------------------------------------------------------------------
 */
 

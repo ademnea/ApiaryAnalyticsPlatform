@@ -3,124 +3,103 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Farmer\Auth\{
+use App\Http\Requests\Api\Farmer\{
     RegisterRequest,
     LoginRequest,
     ForgotPasswordRequest,
     ResetPasswordRequest
 };
-use App\Services\Farmer\FarmerAuthService;
-use App\Traits\ApiResponse;
+use App\Services\Farmer\AuthService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
 /**
- * UC-FAPI-01 to 04
+ * UC-FAPI-01 to 04.
+ *
  * Routes: POST /api/v1/farmer/register
  *         POST /api/v1/farmer/login
  *         POST /api/v1/farmer/logout
  *         POST /api/v1/farmer/password/forgot
  *         POST /api/v1/farmer/password/reset
+ *
+ * These five endpoints deliberately do NOT use the App\Traits\ApiResponse
+ * envelope. The SRS pins their bodies at the top level — the mobile client
+ * reads `token` and `expires_at` directly, not `data.token` — so wrapping
+ * them would break the published contract. REQ-F-FAPI-34's envelope still
+ * governs every data endpoint in this namespace.
  */
 class AuthController extends Controller
 {
-    use ApiResponse;
-
     public function __construct(
-        private readonly FarmerAuthService $authService
+        private readonly AuthService $authService
     ) {}
 
-    /** REQ-F-FAPI-01 */
+    /** UC-FAPI-01 */
     public function register(RegisterRequest $request): JsonResponse
     {
-        $farmer = $this->authService->register($request->validated());
+        $this->authService->register($request->validated());
 
-        return $this->created([
-            'farmer' => [
-                'id'     => $farmer->id,
-                'name'   => $farmer->name,
-                'email'  => $farmer->email,
-                'status' => $farmer->status,
-            ],
-        ], 'Registration successful. Your account is pending admin approval.');
+        return response()->json([
+            'message' => 'Registration submitted. Awaiting admin approval.',
+        ], 201);
     }
 
-    /** REQ-F-FAPI-02 */
+    /** UC-FAPI-02 */
     public function login(LoginRequest $request): JsonResponse
     {
         $result = $this->authService->login($request->validated());
 
-        if (!$result['success']) {
-            return $this->error($result['message'], 401);
+        // Null covers a wrong password, an unknown address and a non-farmer
+        // account alike — the client cannot tell them apart.
+        if ($result === null) {
+            return response()->json(['message' => 'Invalid credentials.'], 401);
         }
 
-        return $this->success([
-            'token'  => $result['token'],
-            'farmer' => [
-                'id'        => $result['farmer']->id,
-                'name'      => $result['farmer']->name,
-                'email'     => $result['farmer']->email,
-                'telephone' => $result['farmer']->telephone,
-            ],
-        ], 'Login successful.');
+        if (isset($result['error'])) {
+            return response()->json(['message' => $result['message']], 403);
+        }
+
+        return response()->json($result, 200);
     }
 
-    /** REQ-F-FAPI-03 */
+    /** UC-FAPI-03 */
     public function logout(Request $request): JsonResponse
     {
         $this->authService->logout($request->user());
 
-        return $this->success(null, 'Logged out successfully.');
+        return response()->json(['message' => 'Logged out successfully.'], 200);
     }
 
-    /** REQ-F-FAPI-04 step 1 */
+    /** UC-FAPI-04 step 1 */
     public function forgotPassword(ForgotPasswordRequest $request): JsonResponse
     {
-        $this->authService->sendPasswordResetLink($request->email);
+        try {
+            $this->authService->sendResetLink($request->validated()['email']);
+        } catch (\Throwable) {
+            // Swallowed on purpose. The response below must be identical
+            // whether the address exists, does not exist, or the mail
+            // transport failed — any difference is an enumeration oracle.
+            // AuthService already logs the failure.
+        }
 
-        return $this->success(null, 'If that email is registered, a reset link has been sent.');
+        return response()->json([
+            'message' => 'If this email is registered, you will receive a reset link shortly.',
+        ], 200);
     }
 
-    /** REQ-F-FAPI-04 step 2 */
+    /** UC-FAPI-04 step 2 */
     public function resetPassword(ResetPasswordRequest $request): JsonResponse
     {
         $ok = $this->authService->resetPassword($request->validated());
 
-        if (!$ok) {
-            return $this->error('The reset token is invalid or has expired.', 422);
+        if (! $ok) {
+            return response()->json([
+                'message' => 'This password reset link is invalid or has expired. Please request a new one.',
+            ], 422);
         }
 
-        return $this->success(null, 'Password reset successfully. Please log in.');
-    }
-
-    /** REQ-F-FAPI-05 */
-    public function profile(Request $request): JsonResponse
-    {
-        $profile = $this->authService->getProfile($request->user());
-
-        return $this->success([
-            'data' => $profile,
-        ]);
-    }
-
-    /** REQ-F-FAPI-05 */
-    public function updateProfile(UpdateProfileRequest $request): JsonResponse
-    {
-        $result = $this->authService->updateProfile($request->user(), $request->validated());
-
-        return $this->success([
-            'data' => $this->authService->getProfile($result['user']),
-        ], 'Profile updated successfully.');
-    }
-
-    /** REQ-F-FAPI-27 */
-    public function registerDeviceToken(DeviceTokenRequest $request): JsonResponse
-    {
-        $this->authService->registerDeviceToken(
-            $request->user(),
-            $request->device_token
-        );
-
-        return $this->success(null, 'Device token registered successfully.');
+        return response()->json([
+            'message' => 'Password reset successfully. Please log in.',
+        ], 200);
     }
 }
