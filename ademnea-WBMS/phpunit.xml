@@ -30,6 +30,13 @@
         <env name="DB_DATABASE" value=":memory:"/> -->
         <env name="DB_URL" value=""/>
         <env name="MAIL_MAILER" value="array"/>
+        <!-- Blank, so push and SMS are logged as skipped instead of calling
+             the real FCM and Africa's Talking APIs. Tests that need them
+             set their own config and Http::fake(). -->
+        <env name="FCM_PROJECT_ID" value=""/>
+        <env name="FCM_ACCESS_TOKEN" value=""/>
+        <env name="AFRICASTALKING_USERNAME" value=""/>
+        <env name="AFRICASTALKING_API_KEY" value=""/>
         <env name="QUEUE_CONNECTION" value="sync"/>
         <env name="SESSION_DRIVER" value="array"/>
         <env name="PULSE_ENABLED" value="false"/>

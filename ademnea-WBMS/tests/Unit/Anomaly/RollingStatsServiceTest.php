@@ -5,6 +5,10 @@ namespace Tests\Unit\Anomaly;
 use App\Models\Apiary;
 use App\Models\Farmer;
 use App\Models\Hive;
+use App\Models\HiveRollingStat;
+use App\Models\HiveTemperature;
+use App\Models\IotDevice;
+use App\Models\IotHardwareTeam;
 use App\Services\Anomaly\RollingStatsService;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -14,65 +18,100 @@ class RollingStatsServiceTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeHive(): Hive
+    private function makeDevice(): IotDevice
     {
         $farmer = Farmer::factory()->create();
         $apiary = Apiary::factory()->create(['farmer_id' => $farmer->id]);
+        $hive = Hive::factory()->create(['apiary_id' => $apiary->id]);
 
-        return Hive::factory()->create(['apiary_id' => $apiary->id]);
+        return IotDevice::factory()->create(['hive_id' => $hive->id, 'hardware_team_id' => IotHardwareTeam::factory()]);
+    }
+
+    private function brood(IotDevice $device, float $value, int $minutesAgo, bool $suspect = false): HiveTemperature
+    {
+        return HiveTemperature::create([
+            'hive_id' => $device->hive_id,
+            'device_id' => $device->id,
+            'brood_section' => $value,
+            'suspect' => $suspect,
+            'recorded_at' => now()->subMinutes($minutesAgo),
+            'created_at' => now(),
+        ]);
     }
 
     #[Test]
-    public function it_converges_to_the_known_mean_and_variance_for_a_fixed_sequence(): void
+    public function the_baseline_is_the_mean_and_population_stddev_of_the_24_hours_before_the_reading(): void
     {
-        $hive = $this->makeHive();
-        $service = app(RollingStatsService::class);
+        $device = $this->makeDevice();
 
-        // Values: 2, 4, 4, 4, 5, 5, 7, 9 — textbook Welford example.
-        // Population mean = 5, population variance = 4.
-        foreach ([2, 4, 4, 4, 5, 5, 7, 9] as $value) {
-            $stats = $service->updateAndGet($hive->id, 'temperature', 'brood_section', $value);
+        // 2, 4, 4, 4, 5, 5, 7, 9: mean 5, population standard deviation 2.
+        foreach ([2, 4, 4, 4, 5, 5, 7, 9] as $i => $value) {
+            $this->brood($device, $value, 100 - $i);
         }
+        $reading = $this->brood($device, 50, 0);
 
-        $this->assertEquals(5.0, round($stats->mean, 6));
-        $this->assertEquals(4.0, round($stats->variance / $stats->sample_count, 6));
-        $this->assertEquals(8, $stats->sample_count);
+        $baseline = app(RollingStatsService::class)->baselineBefore($reading, 'temperature', 'brood_section');
+
+        $this->assertSame(8, $baseline['count']); // the reading itself is left out
+        $this->assertEqualsWithDelta(5.0, $baseline['mean'], 1e-6);
+        $this->assertEqualsWithDelta(2.0, $baseline['stddev'], 1e-6);
     }
 
     #[Test]
-    public function it_resets_the_window_after_24_hours(): void
+    public function the_window_slides_readings_older_than_24_hours_drop_out(): void
     {
-        $hive = $this->makeHive();
-        $service = app(RollingStatsService::class);
+        $device = $this->makeDevice();
 
-        $service->updateAndGet($hive->id, 'temperature', 'brood_section', 100.0);
+        $this->brood($device, 100, 25 * 60); // outside the window
+        $this->brood($device, 30, 60);
+        $reading = $this->brood($device, 31, 0);
 
-        $stats = \App\Models\HiveRollingStat::where('hive_id', $hive->id)
-            ->where('sensor_type', 'temperature')
-            ->where('channel', 'brood_section')
-            ->first();
-        $stats->update(['window_start' => now()->subHours(25)]);
+        $baseline = app(RollingStatsService::class)->baselineBefore($reading, 'temperature', 'brood_section');
 
-        $updated = $service->updateAndGet($hive->id, 'temperature', 'brood_section', 20.0);
-
-        $this->assertEquals(20.0, $updated->mean);
-        $this->assertEquals(0.0, $updated->variance);
-        $this->assertEquals(1, $updated->sample_count);
+        $this->assertSame(1, $baseline['count']);
+        $this->assertEqualsWithDelta(30.0, $baseline['mean'], 1e-6);
     }
 
     #[Test]
-    public function it_invalidates_the_cache_on_every_write(): void
+    public function suspect_readings_are_left_out_of_the_baseline(): void
     {
-        $hive = $this->makeHive();
-        $service = app(RollingStatsService::class);
+        $device = $this->makeDevice();
 
-        $service->updateAndGet($hive->id, 'weight', null, 10.0);
-        $first = $service->currentStats($hive->id, 'weight', null);
+        $this->brood($device, 34, 30);
+        $this->brood($device, 90, 20, suspect: true);
+        $reading = $this->brood($device, 35, 0);
 
-        $service->updateAndGet($hive->id, 'weight', null, 20.0);
-        $second = $service->currentStats($hive->id, 'weight', null);
+        $baseline = app(RollingStatsService::class)->baselineBefore($reading, 'temperature', 'brood_section');
 
-        $this->assertEquals(10.0, $first->mean);
-        $this->assertEquals(15.0, $second->mean);
+        $this->assertSame(1, $baseline['count']);
+        $this->assertEqualsWithDelta(34.0, $baseline['mean'], 1e-6);
+    }
+
+    #[Test]
+    public function an_empty_window_has_no_baseline(): void
+    {
+        $device = $this->makeDevice();
+        $reading = $this->brood($device, 35, 0);
+
+        $this->assertNull(app(RollingStatsService::class)->baselineBefore($reading, 'temperature', 'brood_section'));
+    }
+
+    #[Test]
+    public function the_snapshot_records_the_window_including_the_reading(): void
+    {
+        $device = $this->makeDevice();
+
+        $this->brood($device, 30, 10);
+        $reading = $this->brood($device, 40, 0);
+
+        app(RollingStatsService::class)->recordSnapshot($reading, 'temperature');
+
+        $stats = HiveRollingStat::where('hive_id', $device->hive_id)->where('channel', 'brood_section')->first();
+        $this->assertSame(2, $stats->sample_count);
+        $this->assertEqualsWithDelta(35.0, $stats->mean, 1e-6);
+        $this->assertEqualsWithDelta(25.0, $stats->variance, 1e-6);
+
+        // Zones with no value on the reading get no snapshot row.
+        $this->assertDatabaseMissing('hive_rolling_stats', ['hive_id' => $device->hive_id, 'channel' => 'honey_section']);
     }
 }

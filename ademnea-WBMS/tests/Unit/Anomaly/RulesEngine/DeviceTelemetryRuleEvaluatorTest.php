@@ -7,6 +7,7 @@ use App\Models\Farmer;
 use App\Models\Hive;
 use App\Models\IotDevice;
 use App\Models\IotDeviceTelemetry;
+use App\Models\IotDeviceTelemetryHistory;
 use App\Models\IotHardwareTeam;
 use App\Services\Anomaly\RulesEngine\DeviceTelemetryRuleEvaluator;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -60,10 +61,23 @@ class DeviceTelemetryRuleEvaluatorTest extends TestCase
         $this->assertEquals('critical_battery', $anomaly->anomaly_type);
     }
 
+    /** Heartbeat history with this signal at each of these minutes ago. */
+    private function signalHistory(IotDevice $device, int $signal, array $minutesAgo): void
+    {
+        foreach ($minutesAgo as $minutes) {
+            IotDeviceTelemetryHistory::create([
+                'device_id' => $device->id,
+                'signal_strength' => $signal,
+                'recorded_at' => now()->subMinutes($minutes),
+            ]);
+        }
+    }
+
     #[Test]
-    public function it_flags_weak_signal(): void
+    public function it_flags_weak_signal_that_has_lasted_30_minutes(): void
     {
         $device = $this->makeDevice();
+        $this->signalHistory($device, -90, [35, 20, 0]);
         $telemetry = IotDeviceTelemetry::create([
             'device_id' => $device->id,
             'battery_level' => 80,
@@ -74,6 +88,17 @@ class DeviceTelemetryRuleEvaluatorTest extends TestCase
 
         $this->assertNotNull($anomaly);
         $this->assertEquals('weak_signal', $anomaly->anomaly_type);
+        $this->assertEquals(35, $anomaly->record_value['weak_for_minutes']);
+    }
+
+    #[Test]
+    public function weak_signal_for_less_than_30_minutes_is_not_flagged_yet(): void
+    {
+        $device = $this->makeDevice();
+        $this->signalHistory($device, -90, [10, 0]);
+        $telemetry = IotDeviceTelemetry::create(['device_id' => $device->id, 'signal_strength' => -90]);
+
+        $this->assertNull((new DeviceTelemetryRuleEvaluator())->evaluate($telemetry, $device));
     }
 
     #[Test]
@@ -113,6 +138,7 @@ class DeviceTelemetryRuleEvaluatorTest extends TestCase
     public function repeated_violations_touch_one_incident_and_separate_problems_get_their_own(): void
     {
         $device = $this->makeDevice();
+        $this->signalHistory($device, -90, [40, 0]);
         $telemetry = IotDeviceTelemetry::create(['device_id' => $device->id, 'battery_level' => 15, 'signal_strength' => -90]);
         $evaluator = new DeviceTelemetryRuleEvaluator();
 

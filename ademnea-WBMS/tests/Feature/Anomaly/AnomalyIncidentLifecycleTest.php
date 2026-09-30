@@ -134,7 +134,8 @@ class AnomalyIncidentLifecycleTest extends TestCase
             'occurrences' => 3,
             'resolved' => false,
         ]);
-        $this->assertDatabaseCount('alerts', 1);
+        // One email to the hardware team's contact, not one per reading.
+        $this->assertDatabaseCount('notification_logs', 1);
     }
 
     #[Test]

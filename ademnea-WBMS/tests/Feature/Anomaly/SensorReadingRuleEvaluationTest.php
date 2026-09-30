@@ -60,10 +60,13 @@ class SensorReadingRuleEvaluationTest extends TestCase
             'anomaly_type' => 'static_threshold_breach',
         ]);
 
-        $this->assertDatabaseHas('alerts', [
-            'hive_id' => $hive->id,
-            'type' => 'data_anomaly',
+        // A sensor fault: the hardware team is told, the farmer isn't.
+        $this->assertDatabaseHas('notification_logs', [
+            'recipient_type' => 'hardware_team',
+            'channel' => 'email',
+            'type' => 'static_threshold_breach',
         ]);
+        $this->assertDatabaseCount('alerts', 0);
     }
 
     #[Test]
@@ -228,5 +231,58 @@ class SensorReadingRuleEvaluationTest extends TestCase
         $this->assertNotNull($telemetry);
         $this->assertTrue($telemetry->last_data_received_at->gte(now()->subMinute()));
         $this->assertNull($telemetry->last_heartbeat_at);
+    }
+
+    #[Test]
+    public function piggybacked_device_meta_updates_the_device_telemetry(): void
+    {
+        [, $device] = $this->makeDevice();
+
+        app(IotSensorIngestionService::class)->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->toIso8601String(),
+            'reading' => ['brood_section' => 35.0],
+            'device_meta' => ['battery_level' => 64.5, 'signal_strength' => -71, 'firmware_version' => '1.4.2'],
+        ]);
+
+        $telemetry = IotDeviceTelemetry::where('device_id', $device->id)->first();
+        $this->assertEquals(64.5, $telemetry->battery_level);
+        $this->assertEquals(-71, $telemetry->signal_strength);
+        $this->assertSame('1.4.2', $device->fresh()->firmware_version);
+    }
+
+    #[Test]
+    public function malformed_device_meta_fields_are_dropped_and_the_reading_still_stored(): void
+    {
+        [, $device] = $this->makeDevice();
+
+        app(IotSensorIngestionService::class)->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->toIso8601String(),
+            'reading' => ['brood_section' => 35.0],
+            'device_meta' => ['battery_level' => 'high', 'signal_strength' => -71],
+        ]);
+
+        $this->assertDatabaseCount('hive_temperatures', 1);
+        $telemetry = IotDeviceTelemetry::where('device_id', $device->id)->first();
+        $this->assertNull($telemetry->battery_level);
+        $this->assertEquals(-71, $telemetry->signal_strength);
+    }
+
+    #[Test]
+    public function device_meta_older_than_the_last_heartbeat_does_not_overwrite_it(): void
+    {
+        [, $device] = $this->makeDevice();
+        IotDeviceTelemetry::create(['device_id' => $device->id, 'battery_level' => 80, 'last_heartbeat_at' => now()]);
+
+        // A backlog reading from yesterday.
+        app(IotSensorIngestionService::class)->store($device, [
+            'sensor_type' => 'temperature',
+            'recorded_at' => now()->subDay()->toIso8601String(),
+            'reading' => ['brood_section' => 35.0],
+            'device_meta' => ['battery_level' => 30],
+        ]);
+
+        $this->assertEquals(80, IotDeviceTelemetry::where('device_id', $device->id)->value('battery_level'));
     }
 }

@@ -3,40 +3,106 @@
 namespace App\Services\Anomaly;
 
 use App\Models\Alert;
+use App\Models\Farmer;
+use App\Models\IotDevice;
 use App\Models\SensorAnomaly;
+use App\Models\User;
 use App\Services\Farmer\NotificationDispatchService;
-use Illuminate\Support\Facades\Log;
+use App\Services\Notifications\NotificationQueue;
 
 /**
- * Resolves the target farmer via $anomaly->hive->apiary->farmer (the Farm
- * model has been retired — see IotDeviceIdentificationService), checks
- * Alert::cooldownMinutesFor(), writes Alert::create() directly, then
- * delegates delivery to NotificationDispatchService. Deliberately does not
- * depend on App\Services\Farmer\AlertService.
+ * Sends each new incident to the recipients and channels in AlertRouting.
+ *
+ * Staff (admins, the device's hardware team) are notified whether or not
+ * the device is on a hive, so an unassigned device's problems still reach
+ * someone. A farmer route creates the farmer's Alert row and push.
+ *
+ * Cooldown (REQ-F-IOT-17) is per device and anomaly type: one notification
+ * per hour, 15 minutes for critical_battery, and none for device_offline,
+ * which is gated by its open incident until the device recovers.
  */
 class AnomalyAlertDispatchService
 {
-    public function __construct(private readonly NotificationDispatchService $notifications)
-    {
+    private const ADMIN_ROLES = ['admin', 'super-admin'];
+
+    public function __construct(
+        private readonly NotificationDispatchService $farmerNotifications,
+        private readonly NotificationQueue $queue,
+    ) {
     }
 
-    public function dispatch(SensorAnomaly $anomaly): ?Alert
+    /** @return bool false when the cooldown suppressed it */
+    public function dispatch(SensorAnomaly $anomaly): bool
     {
-        $farmer = $anomaly->hive?->apiary?->farmer;
-
-        if (! $farmer) {
-            Log::info('Anomaly dispatch skipped — no resolvable farmer', [
-                'sensor_anomaly_id' => $anomaly->id,
-                'hive_id' => $anomaly->hive_id,
-            ]);
-
-            return null;
-        }
-
         $minutes = (new Alert())->cooldownMinutesFor($anomaly->anomaly_type);
 
         if ($minutes !== null && $this->isWithinCooldown($anomaly, $minutes)) {
-            return null;
+            return false;
+        }
+
+        $routes = AlertRouting::for($anomaly->anomaly_type);
+        $device = $anomaly->device;
+
+        if (isset($routes[AlertRouting::FARMER])) {
+            $this->alertFarmer($anomaly);
+        }
+
+        if ($device) {
+            $this->notifyStaff($device, $routes, $anomaly->anomaly_type, $this->subjectFor($anomaly, $device), $this->bodyFor($anomaly, $device), $anomaly->id);
+        }
+
+        $anomaly->update(['alerted' => true, 'alerted_at' => now()]);
+
+        return true;
+    }
+
+    /** Tells staff an offline device is reporting again. Only sent if they were told it went offline. */
+    public function dispatchRecovery(SensorAnomaly $incident): void
+    {
+        $device = $incident->device;
+
+        if (! $incident->alerted || ! $device) {
+            return;
+        }
+
+        $subject = "[RESOLVED] Device {$device->device_code} is back online";
+        $body = "Device {$device->device_code} on {$this->hiveLabel($device)} has come back online.\n\n"
+            .'It was first reported offline at '.$incident->detected_at?->toDateTimeString().' UTC.';
+
+        $this->notifyStaff($device, AlertRouting::RECOVERY, 'device_recovered', $subject, $body, $incident->id);
+    }
+
+    /**
+     * Emails and texts admins and the device's hardware team, per $routes.
+     *
+     * @param  array<string, array<int, string>>  $routes
+     */
+    public function notifyStaff(IotDevice $device, array $routes, string $type, string $subject, string $body, ?int $anomalyId = null): void
+    {
+        $recipients = [
+            AlertRouting::ADMIN => fn (string $channel) => $channel === 'email' ? $this->adminEmails() : [],
+            AlertRouting::HARDWARE_TEAM => fn (string $channel) => $this->hardwareTeamContacts($device, $channel),
+        ];
+
+        foreach ($recipients as $recipientType => $contactsFor) {
+            foreach ($routes[$recipientType] ?? [] as $channel) {
+                foreach ($contactsFor($channel) as $contact) {
+                    $this->queue->send($channel, [
+                        'recipient_type' => $recipientType,
+                        'recipient' => $contact,
+                        'sensor_anomaly_id' => $anomalyId,
+                    ], $type, $subject, $channel === 'sms' ? $this->smsText($subject, $body) : $body);
+                }
+            }
+        }
+    }
+
+    private function alertFarmer(SensorAnomaly $anomaly): void
+    {
+        $farmer = $anomaly->hive?->apiary?->farmer;
+
+        if (! $farmer instanceof Farmer) {
+            return;
         }
 
         $alert = Alert::create([
@@ -44,27 +110,59 @@ class AnomalyAlertDispatchService
             'hive_id' => $anomaly->hive_id,
             'source_anomaly_id' => $anomaly->id,
             'type' => $this->alertTypeFor($anomaly),
-            'message' => $this->messageFor($anomaly),
+            'message' => $this->farmerMessageFor($anomaly),
             'is_read' => false,
             'created_at' => now(),
         ]);
 
-        $anomaly->update(['alerted' => true, 'alerted_at' => now()]);
+        $this->farmerNotifications->dispatch($alert);
+    }
 
-        $this->notifications->dispatch($alert);
+    private function isWithinCooldown(SensorAnomaly $anomaly, int $minutes): bool
+    {
+        return SensorAnomaly::where('device_id', $anomaly->device_id)
+            ->where('anomaly_type', $anomaly->anomaly_type)
+            ->whereKeyNot($anomaly->id)
+            ->where('alerted_at', '>=', now()->subMinutes($minutes))
+            ->exists();
+    }
 
-        return $alert;
+    /** @return array<int, string> */
+    private function adminEmails(): array
+    {
+        return User::query()
+            ->where('is_active', true)
+            ->whereHas('roles', fn ($q) => $q->whereIn('name', self::ADMIN_ROLES))
+            ->whereNotNull('email')
+            ->pluck('email')
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /** The team's own contact plus its active members, for 'email' or 'sms'. @return array<int, string> */
+    private function hardwareTeamContacts(IotDevice $device, string $channel): array
+    {
+        $team = $device->hardwareTeam;
+
+        if (! $team) {
+            return [];
+        }
+
+        [$teamField, $memberField] = $channel === 'sms' ? ['contact_phone', 'phone'] : ['contact_email', 'email'];
+
+        return collect([$team->{$teamField}])
+            ->merge($team->members()->where('is_active', true)->pluck($memberField))
+            ->filter()
+            ->unique()
+            ->values()
+            ->all();
     }
 
     /**
-     * alerts.type is a fixed enum (feed_required|malfunction|critical_event|
-     * low_battery|weak_signal|data_anomaly) — it does not have a slot for
-     * every anomaly_type this module produces. low_battery/weak_signal
-     * already have a matching enum value (pre-reserved for this module,
-     * per the SDD's extension-points table); everything else collapses
-     * into the generic data_anomaly bucket. The granular anomaly_type is
-     * never lost — it's still on sensor_anomalies, reachable from the
-     * Alert via source_anomaly_id.
+     * alerts.type is a fixed enum. low_battery and weak_signal have their
+     * own value; everything else is data_anomaly. The exact anomaly_type is
+     * still reachable through source_anomaly_id.
      */
     private function alertTypeFor(SensorAnomaly $anomaly): string
     {
@@ -74,26 +172,49 @@ class AnomalyAlertDispatchService
         };
     }
 
-    /**
-     * Cooldown is scoped by the granular anomaly_type, not by the
-     * collapsed alerts.type enum value — otherwise unrelated anomaly types
-     * that both map to 'data_anomaly' would incorrectly suppress each
-     * other's alerts on the same hive. Joins through source_anomaly_id.
-     */
-    private function isWithinCooldown(SensorAnomaly $anomaly, int $minutes): bool
+    private function subjectFor(SensorAnomaly $anomaly, IotDevice $device): string
     {
-        return Alert::where('hive_id', $anomaly->hive_id)
-            ->whereHas('sourceAnomaly', fn ($q) => $q->where('anomaly_type', $anomaly->anomaly_type))
-            ->where('created_at', '>=', now()->subMinutes($minutes))
-            ->exists();
+        return '['.strtoupper($anomaly->severity())."] {$anomaly->label()} on device {$device->device_code}";
     }
 
-    private function messageFor(SensorAnomaly $anomaly): string
+    private function bodyFor(SensorAnomaly $anomaly, IotDevice $device): string
     {
-        $value = collect($anomaly->record_value)
-            ->map(fn ($v, $k) => "{$k}={$v}")
-            ->implode(', ');
+        return implode("\n", [
+            "Device: {$device->device_code} ({$device->device_type})",
+            'Location: '.$this->hiveLabel($device),
+            "Condition: {$anomaly->label()}",
+            'Triggered by: '.SensorAnomaly::formatValues($anomaly->record_value),
+            'Detected: '.$anomaly->detected_at?->toDateTimeString().' UTC',
+            '',
+            'Recommended action: '.AlertRouting::recommendedAction($anomaly->anomaly_type),
+        ]);
+    }
 
-        return "Anomaly detected on hive #{$anomaly->hive_id}: {$anomaly->anomaly_type} ({$value}).";
+    private function farmerMessageFor(SensorAnomaly $anomaly): string
+    {
+        $hive = $anomaly->hive?->display_name ?: $anomaly->hive?->hive_code ?: "#{$anomaly->hive_id}";
+
+        return "{$anomaly->label()} on hive {$hive}: ".SensorAnomaly::formatValues($anomaly->record_value).'.';
+    }
+
+    private function hiveLabel(IotDevice $device): string
+    {
+        $hive = $device->hive;
+
+        if (! $hive) {
+            return 'not assigned to a hive';
+        }
+
+        $name = $hive->display_name ?: $hive->hive_code;
+
+        return "hive {$name}".($hive->apiary ? ", apiary {$hive->apiary->name}" : '');
+    }
+
+    /** SMS: the subject plus where the unit is, kept to one 160-character message. */
+    private function smsText(string $subject, string $body): string
+    {
+        $location = collect(explode("\n", $body))->first(fn (string $line) => str_starts_with($line, 'Location: '));
+
+        return mb_strimwidth($subject.($location ? '. '.$location : ''), 0, 160, '…');
     }
 }

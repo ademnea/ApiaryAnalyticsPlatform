@@ -10,8 +10,9 @@ use Illuminate\Database\Eloquent\Model;
 
 /**
  * Flags a reading more than N standard deviations from the hive's rolling
- * mean for that (sensor_type, channel). Requires a sample_count warm-up
- * floor before evaluating, to avoid flagging against a near-empty window.
+ * 24-hour mean for that (sensor_type, channel). Needs at least
+ * MIN_SAMPLE_COUNT readings in the window, so it never judges against a
+ * near-empty baseline.
  */
 class ZScoreRuleEvaluator
 {
@@ -33,23 +34,22 @@ class ZScoreRuleEvaluator
                 continue;
             }
 
-            $stats = $this->rollingStats->currentStats((int) $reading->hive_id, $sensorType, $channel);
+            $baseline = $this->rollingStats->baselineBefore($reading, $sensorType, $channel);
 
-            if (! $stats || $stats->sample_count < self::MIN_SAMPLE_COUNT) {
+            if (! $baseline || $baseline['count'] < self::MIN_SAMPLE_COUNT) {
                 continue;
             }
 
-            $variance = $stats->variance / $stats->sample_count;
-            $stdDev = sqrt($variance);
+            $stdDev = $baseline['stddev'];
 
-            if ($stdDev > 0 && abs($value - $stats->mean) > $threshold * $stdDev) {
+            if ($stdDev > 0 && abs($value - $baseline['mean']) > $threshold * $stdDev) {
                 return SensorAnomaly::recordOrTouch([
                     'device_id' => $reading->device_id,
                     'hive_id' => $reading->hive_id,
                     'sensor_type' => $sensorType,
                     'anomaly_type' => 'statistical_deviation',
                     'anomaly_score' => 1.0,
-                    'record_value' => [$column => $value, 'mean' => $stats->mean, 'stddev' => $stdDev],
+                    'record_value' => [$column => $value, 'mean' => round($baseline['mean'], 3), 'stddev' => round($stdDev, 3)],
                     'detection_layer' => 'rules',
                     'detected_at' => $reading->recorded_at,
                 ]);

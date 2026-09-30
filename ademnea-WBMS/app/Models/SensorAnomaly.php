@@ -231,7 +231,7 @@ class SensorAnomaly extends Model
     }
 
     public const SEVERITY_CRITICAL = ['critical_battery', 'device_offline', 'reboot_loop', 'storage_full'];
-    public const SEVERITY_WARNING = ['low_battery', 'weak_signal', 'static_threshold_breach', 'frozen_sensor', 'submission_delay'];
+    public const SEVERITY_WARNING = ['low_battery', 'weak_signal', 'static_threshold_breach', 'frozen_sensor', 'submission_delay', 'high_anomaly_rate'];
 
     /** Badge/icon tier for this anomaly_type — used consistently across the dashboard, analytics, and device-detail views. */
     public function severity(): string
@@ -239,7 +239,7 @@ class SensorAnomaly extends Model
         return match (true) {
             in_array($this->anomaly_type, self::SEVERITY_CRITICAL, true) => 'critical',
             in_array($this->anomaly_type, self::SEVERITY_WARNING, true) => 'warning',
-            default => 'info', // statistical_deviation, ml_* — statistically notable, not yet a hard rule breach
+            default => 'info', // statistical_deviation, firmware_outdated, ml_* — worth knowing, not yet a fault
         };
     }
 
@@ -265,6 +265,8 @@ class SensorAnomaly extends Model
             'storage_full' => 'bi-hdd-fill',
             'device_offline' => 'bi-wifi-off',
             'submission_delay' => 'bi-clock-history',
+            'high_anomaly_rate' => 'bi-exclamation-diamond',
+            'firmware_outdated' => 'bi-cpu',
             default => 'bi-shield-exclamation',
         };
     }

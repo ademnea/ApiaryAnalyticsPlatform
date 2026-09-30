@@ -18,67 +18,86 @@ class ZScoreRuleEvaluatorTest extends TestCase
 {
     use RefreshDatabase;
 
-    private function makeReadingContext(): array
+    private function makeDevice(): IotDevice
     {
         $farmer = Farmer::factory()->create();
         $apiary = Apiary::factory()->create(['farmer_id' => $farmer->id]);
         $hive = Hive::factory()->create(['apiary_id' => $apiary->id]);
-        $device = IotDevice::factory()->create([
+
+        return IotDevice::factory()->create([
             'hive_id' => $hive->id,
             'hardware_team_id' => IotHardwareTeam::factory(),
         ]);
+    }
 
-        return [$hive, $device];
+    private function weight(IotDevice $device, float $kg, int $minutesAgo): HiveWeight
+    {
+        return HiveWeight::create([
+            'hive_id' => $device->hive_id,
+            'device_id' => $device->id,
+            'weight_kg' => $kg,
+            'suspect' => false,
+            'recorded_at' => now()->subMinutes($minutesAgo),
+            'created_at' => now(),
+        ]);
+    }
+
+    private function evaluator(): ZScoreRuleEvaluator
+    {
+        return new ZScoreRuleEvaluator(app(RollingStatsService::class));
     }
 
     #[Test]
     public function it_does_not_evaluate_before_the_warm_up_sample_count_is_reached(): void
     {
-        [$hive, $device] = $this->makeReadingContext();
-        $rollingStats = app(RollingStatsService::class);
+        $device = $this->makeDevice();
 
         // Only 5 samples — below the 10-sample warm-up floor.
-        foreach ([50, 50, 50, 50, 50] as $value) {
-            $rollingStats->updateAndGet($hive->id, 'weight', null, $value);
+        foreach ([49, 50, 51, 50, 49] as $i => $kg) {
+            $this->weight($device, $kg, 60 - $i);
         }
 
-        $reading = HiveWeight::create([
-            'hive_id' => $hive->id,
-            'device_id' => $device->id,
-            'weight_kg' => 200.0, // would be a huge outlier if evaluated
-            'suspect' => false,
-            'recorded_at' => now(),
-            'created_at' => now(),
-        ]);
-
-        $anomaly = (new ZScoreRuleEvaluator($rollingStats))->evaluate($reading, 'weight');
-
-        $this->assertNull($anomaly);
+        $this->assertNull($this->evaluator()->evaluate($this->weight($device, 200.0, 0), 'weight'));
     }
 
     #[Test]
     public function it_flags_a_reading_far_outside_the_rolling_mean(): void
     {
-        [$hive, $device] = $this->makeReadingContext();
-        $rollingStats = app(RollingStatsService::class);
+        $device = $this->makeDevice();
 
-        // Stable baseline around 50kg, low variance.
-        foreach ([49, 50, 51, 50, 49, 51, 50, 49, 50, 51] as $value) {
-            $rollingStats->updateAndGet($hive->id, 'weight', null, $value);
+        // Stable baseline around 50 kg, low variance.
+        foreach ([49, 50, 51, 50, 49, 51, 50, 49, 50, 51] as $i => $kg) {
+            $this->weight($device, $kg, 60 - $i);
         }
 
-        $reading = HiveWeight::create([
-            'hive_id' => $hive->id,
-            'device_id' => $device->id,
-            'weight_kg' => 100.0,
-            'suspect' => false,
-            'recorded_at' => now(),
-            'created_at' => now(),
-        ]);
-
-        $anomaly = (new ZScoreRuleEvaluator($rollingStats))->evaluate($reading, 'weight');
+        $anomaly = $this->evaluator()->evaluate($this->weight($device, 100.0, 0), 'weight');
 
         $this->assertNotNull($anomaly);
         $this->assertEquals('statistical_deviation', $anomaly->anomaly_type);
+        $this->assertEqualsWithDelta(50.0, $anomaly->record_value['mean'], 0.01);
+    }
+
+    #[Test]
+    public function a_reading_within_three_standard_deviations_is_not_flagged(): void
+    {
+        $device = $this->makeDevice();
+
+        foreach ([49, 50, 51, 50, 49, 51, 50, 49, 50, 51] as $i => $kg) {
+            $this->weight($device, $kg, 60 - $i);
+        }
+
+        $this->assertNull($this->evaluator()->evaluate($this->weight($device, 51.5, 0), 'weight'));
+    }
+
+    #[Test]
+    public function readings_from_more_than_24_hours_ago_do_not_count_toward_the_warm_up(): void
+    {
+        $device = $this->makeDevice();
+
+        foreach ([49, 50, 51, 50, 49, 51, 50, 49, 50, 51] as $i => $kg) {
+            $this->weight($device, $kg, 25 * 60 + $i);
+        }
+
+        $this->assertNull($this->evaluator()->evaluate($this->weight($device, 100.0, 0), 'weight'));
     }
 }

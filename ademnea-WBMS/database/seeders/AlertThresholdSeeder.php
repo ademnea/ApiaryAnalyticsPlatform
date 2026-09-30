@@ -39,10 +39,13 @@ class AlertThresholdSeeder extends Seeder
             'stuck_sensor_reading_count' => ['10', 'Consecutive identical readings before a sensor is flagged as frozen/stuck.'],
             'zscore_stddev_threshold' => ['3', 'Standard deviations from the rolling mean before a reading is flagged as a statistical anomaly.'],
             'device_offline_silence_minutes' => ['120', 'Minutes of silence before a device is flagged offline.'],
-            'submission_delay_multiplier' => ['3', 'A device is flagged late (submission_delay) once silent for this many times its expected reporting interval.'],
+            'submission_interval_multiplier' => ['2', 'A device is flagged late (submission_delay) when the median gap between its last 10 submissions exceeds this many times its expected interval.'],
             'low_battery_pct' => ['20', 'Battery level (%) at or below which a low_battery anomaly fires.'],
             'critical_battery_pct' => ['5', 'Battery level (%) at or below which a critical_battery anomaly fires.'],
             'weak_signal_rssi_dbm' => ['-85', 'Signal strength (dBm) at or below which a weak_signal anomaly fires.'],
+            'weak_signal_sustained_minutes' => ['30', 'Minutes the signal must stay weak before a weak_signal anomaly fires.'],
+            'high_anomaly_rate_pct' => ['20', 'Share of a device\'s readings in the last hour (%) that, once flagged suspect, raises high_anomaly_rate.'],
+            'high_anomaly_rate_min_readings' => ['10', 'Readings a device must send in the hour before high_anomaly_rate is evaluated.'],
             'reboot_loop_count_per_hour' => ['3', 'Reboots within a 1-hour window before a reboot_loop anomaly fires.'],
             'storage_full_pct' => ['90', 'Storage usage (%) at or above which a storage_full anomaly fires.'],
             'telemetry_history_retention_days' => ['90', 'Days of iot_device_telemetry_history kept before PruneTelemetryHistory deletes them.'],
@@ -70,5 +73,12 @@ class AlertThresholdSeeder extends Seeder
                 ['value' => $value, 'description' => $description]
             );
         }
+
+        // Set by an admin at each firmware release, so never overwritten here.
+        // "0" keeps the check off: no version is older than 0.
+        AlertThreshold::firstOrCreate(
+            ['key' => 'latest_firmware_version', 'hive_id' => null],
+            ['value' => '0', 'description' => 'Current firmware release (e.g. 1.4.2). Devices on an older version raise firmware_outdated. 0 turns the check off.']
+        );
     }
 }

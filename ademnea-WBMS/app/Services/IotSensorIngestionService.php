@@ -10,6 +10,8 @@ use App\Models\HiveTemperature;
 use App\Models\HiveHumidity;
 use App\Models\HiveCarbondioxide;
 use App\Models\HiveWeight;
+use App\Services\Iot\TelemetryPayloadRules;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class IotSensorIngestionService
@@ -107,12 +109,41 @@ class IotSensorIngestionService
         // reported offline.
         IotDeviceTelemetry::updateOrCreate(
             ['device_id' => $device->id],
-            ['last_data_received_at' => now()],
+            ['last_data_received_at' => now()] + $this->deviceMeta($device, $payload['device_meta'] ?? null, $recordedAtUtc),
         );
 
         // Event dispatch to IoT Condition Monitoring stays exactly as
         // already designed in §4.5.8 — decoupled, not called directly.
         event(new \App\Events\SensorRecordReceived($device, $hive, $sensorType, $recordedAtUtc));
+    }
+
+    /**
+     * UC-IOT-02: battery, signal and firmware piggybacked on a reading, so
+     * the dashboard sees them more often than every heartbeat. Optional —
+     * older firmware doesn't send it — and ignored when the reading is older
+     * than the last heartbeat, which already holds newer values.
+     *
+     * @return array<string, mixed> telemetry columns to update
+     */
+    private function deviceMeta(IotDevice $device, mixed $meta, Carbon $recordedAt): array
+    {
+        $meta = TelemetryPayloadRules::validDeviceMeta($meta);
+
+        if ($meta === []) {
+            return [];
+        }
+
+        $lastHeartbeatAt = IotDeviceTelemetry::where('device_id', $device->id)->value('last_heartbeat_at');
+
+        if ($lastHeartbeatAt !== null && $recordedAt->lt(Carbon::parse($lastHeartbeatAt))) {
+            return [];
+        }
+
+        if (isset($meta['firmware_version'])) {
+            $device->update(['firmware_version' => $meta['firmware_version']]);
+        }
+
+        return $meta;
     }
 
     private function logRejected(IotDevice $device, array $payload, string $reason): void

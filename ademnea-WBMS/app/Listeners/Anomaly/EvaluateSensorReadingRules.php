@@ -85,9 +85,8 @@ class EvaluateSensorReadingRules
             $this->dispatchService->dispatch($anomaly);
         }
 
-        // Always update, regardless of anomaly outcome — Welford's algorithm
-        // needs every reading, and ZScoreRuleEvaluator above already read
-        // the pre-update baseline via RollingStatsService::currentStats().
-        $this->rollingStats->updateAllChannels($reading, $event->sensorType);
+        // Snapshot for display only; the z-score check computes its own
+        // baseline from the readings before this one.
+        $this->rollingStats->recordSnapshot($reading, $event->sensorType);
     }
 }

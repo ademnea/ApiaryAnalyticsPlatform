@@ -1,5 +1,6 @@
 <?php
 
+use App\Jobs\CheckAnomalyRate;
 use App\Jobs\CheckDeviceHealth;
 use App\Jobs\CheckFeedAlerts;
 use App\Jobs\PruneTelemetryHistory;
@@ -15,5 +16,6 @@ Artisan::command('inspire', function () {
 // framework no longer loads a console kernel's schedule() method.
 Schedule::job(new CheckFeedAlerts())->hourly();
 Schedule::job(new CheckDeviceHealth())->everyFiveMinutes();
+Schedule::job(new CheckAnomalyRate())->everyFifteenMinutes();
 Schedule::job(new PruneTelemetryHistory())->daily();
 Schedule::command('sanctum:prune-expired --hours=24')->daily();

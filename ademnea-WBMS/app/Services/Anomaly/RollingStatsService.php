@@ -5,88 +5,77 @@ namespace App\Services\Anomaly;
 use App\Models\HiveRollingStat;
 use App\Services\Anomaly\RulesEngine\Support\SensorChannels;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Carbon;
 
 /**
- * Incremental Welford update against hive_rolling_stats, fronted by a short
- * cache TTL, mirroring AlertThreshold::get()'s idiom. Uses a tumbling 24h
- * window (reset on schedule), not a true sliding window — see SDD §4.4.9(b).
+ * The rolling 24-hour baseline for the z-score check (REQ-F-IOT-07): mean
+ * and standard deviation of a hive's own readings, per sensor channel, over
+ * the 24 hours before the reading being judged.
  *
- * The `variance` column stores Welford's M2 accumulator, not the final
- * variance — callers divide by sample_count to get the actual variance.
+ * A true sliding window, computed in SQL on the (hive_id, recorded_at)
+ * index — no daily reset, and a backlog reading is judged against the day
+ * before it was taken, not the day before it arrived. Suspect readings are
+ * left out so a broken sensor can't widen the baseline and hide itself.
+ *
+ * hive_rolling_stats keeps the latest window per (hive, sensor, channel) as
+ * a snapshot for display; the rules never read it.
  */
 class RollingStatsService
 {
-    private const TUMBLING_WINDOW_HOURS = 24;
-    private const CACHE_TTL_SECONDS = 60;
+    public const WINDOW_HOURS = 24;
 
     /**
-     * Read-only, cached lookup of the stats as they stood before the
-     * current reading. Callers evaluating an incoming reading against the
-     * rolling baseline should use this, not updateAndGet(), so a reading
-     * is never evaluated against a baseline it has already skewed.
+     * The baseline as it stood just before $reading, which is not included.
+     *
+     * @return array{mean: float, stddev: float, count: int}|null null when the window holds no readings
      */
-    public function currentStats(int $hiveId, string $sensorType, ?string $channel): ?HiveRollingStat
+    public function baselineBefore(Model $reading, string $sensorType, ?string $channel): ?array
     {
-        return Cache::remember(
-            $this->cacheKey($hiveId, $sensorType, $channel),
-            self::CACHE_TTL_SECONDS,
-            fn () => HiveRollingStat::where('hive_id', $hiveId)
-                ->where('sensor_type', $sensorType)
-                ->where('channel', $channel)
-                ->first()
-        );
+        return $this->window($reading, $sensorType, $channel, includeReading: false);
     }
 
-    /**
-     * Updates the rolling stats for every channel present on $reading.
-     * Called once per ingested reading, after rule evaluation, regardless
-     * of anomaly outcome — Welford's algorithm requires every reading to
-     * update the running stats, not just non-anomalous ones.
-     */
-    public function updateAllChannels(Model $reading, string $sensorType): void
+    /** Updates the hive_rolling_stats snapshot for every channel on $reading, the reading included. */
+    public function recordSnapshot(Model $reading, string $sensorType): void
     {
         foreach (SensorChannels::channelsFor($sensorType) as $channel) {
-            $value = $reading->{SensorChannels::columnFor($sensorType, $channel)};
+            $window = $this->window($reading, $sensorType, $channel, includeReading: true);
 
-            if ($value !== null) {
-                $this->updateAndGet((int) $reading->hive_id, $sensorType, $channel, (float) $value);
+            if ($window === null) {
+                continue;
             }
+
+            HiveRollingStat::updateOrCreate(
+                ['hive_id' => $reading->hive_id, 'sensor_type' => $sensorType, 'channel' => $channel],
+                [
+                    'mean' => $window['mean'],
+                    'variance' => $window['stddev'] ** 2,
+                    'sample_count' => $window['count'],
+                    'window_start' => Carbon::parse($reading->recorded_at)->subHours(self::WINDOW_HOURS),
+                ],
+            );
         }
     }
 
-    public function updateAndGet(int $hiveId, string $sensorType, ?string $channel, float $value): HiveRollingStat
+    /** @return array{mean: float, stddev: float, count: int}|null */
+    private function window(Model $reading, string $sensorType, ?string $channel, bool $includeReading): ?array
     {
-        $stats = HiveRollingStat::firstOrCreate(
-            ['hive_id' => $hiveId, 'sensor_type' => $sensorType, 'channel' => $channel],
-            ['mean' => 0, 'variance' => 0, 'sample_count' => 0, 'window_start' => null]
-        );
+        $column = SensorChannels::columnFor($sensorType, $channel);
+        $end = Carbon::parse($reading->recorded_at);
 
-        $windowExpired = ! $stats->window_start
-            || $stats->window_start->diffInHours(now()) >= self::TUMBLING_WINDOW_HOURS;
+        $row = $reading->newQuery()
+            ->where('hive_id', $reading->hive_id)
+            ->where('recorded_at', '>=', $end->copy()->subHours(self::WINDOW_HOURS))
+            ->where('recorded_at', $includeReading ? '<=' : '<', $end)
+            ->where('suspect', false)
+            ->whereNotNull($column)
+            ->toBase()
+            ->selectRaw("COUNT({$column}) as sample_count, AVG({$column}) as mean, STDDEV_POP({$column}) as stddev")
+            ->first();
 
-        if ($windowExpired) {
-            $stats->mean = $value;
-            $stats->variance = 0;
-            $stats->sample_count = 1;
-            $stats->window_start = now();
-        } else {
-            $stats->sample_count++;
-            $delta = $value - $stats->mean;
-            $stats->mean += $delta / $stats->sample_count;
-            $delta2 = $value - $stats->mean;
-            $stats->variance += $delta * $delta2; // M2 accumulator
+        if (! $row || (int) $row->sample_count === 0) {
+            return null;
         }
 
-        $stats->save();
-
-        Cache::forget($this->cacheKey($hiveId, $sensorType, $channel));
-
-        return $stats;
-    }
-
-    private function cacheKey(int $hiveId, string $sensorType, ?string $channel): string
-    {
-        return "rolling_stats:{$hiveId}:{$sensorType}:" . ($channel ?? 'null');
+        return ['mean' => (float) $row->mean, 'stddev' => (float) $row->stddev, 'count' => (int) $row->sample_count];
     }
 }
