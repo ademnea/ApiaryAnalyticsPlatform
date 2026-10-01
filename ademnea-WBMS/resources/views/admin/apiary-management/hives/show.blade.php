@@ -48,7 +48,12 @@
                     <dd class="col-sm-8">{{ $hive->installation_date?->format('d M Y') ?? '—' }}</dd>
 
                     <dt class="col-sm-4 text-muted">Coordinates</dt>
-                    <dd class="col-sm-8">{{ $hive->latitude }}, {{ $hive->longitude }}</dd>
+                    <dd class="col-sm-8">
+                        {{ $hive->latitude }}, {{ $hive->longitude }}
+                        @if($hive->accuracy_meters !== null)
+                            <span class="text-muted">· accurate to about {{ round((float) $hive->accuracy_meters) }} m</span>
+                        @endif
+                    </dd>
 
                     <dt class="col-sm-4 text-muted">Notes</dt>
                     <dd class="col-sm-8">{{ $hive->notes ?? '—' }}</dd>

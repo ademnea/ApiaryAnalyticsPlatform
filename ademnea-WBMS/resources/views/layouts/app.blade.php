@@ -452,6 +452,7 @@
         .badge-pending  { background: #FFF3CD; color: #664D03; }
         .badge-offline  { background: #FFE0E0; color: #7F1D1D; }
         .badge-warning  { background: #FFF3CD; color: #664D03; }
+        .badge-info     { background: #DBEAFE; color: #1E3A8A; }
 
         /* ---- PAGINATION ----------------------------------------------- */
         .pagination {
@@ -785,6 +786,10 @@
             <a href="{{ route('admin.anomaly.analytics') }}"
                class="{{ request()->routeIs('admin.anomaly.analytics') ? 'active' : '' }}">
                 <i class="bi bi-bar-chart-line"></i> Analytics
+            </a>
+            <a href="{{ route('admin.anomaly.limits') }}"
+               class="{{ request()->routeIs('admin.anomaly.limits*') ? 'active' : '' }}">
+                <i class="bi bi-sliders"></i> Detection Limits
             </a>
             <span class="nav-dropdown-children-soon" title="Coming soon">
                 <i class="bi bi-robot"></i> ML Models

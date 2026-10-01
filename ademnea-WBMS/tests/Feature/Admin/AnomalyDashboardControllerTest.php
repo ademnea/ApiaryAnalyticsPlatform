@@ -51,6 +51,34 @@ class AnomalyDashboardControllerTest extends TestCase
     }
 
     #[Test]
+    public function the_dashboard_groups_the_rules_into_sensor_faults_and_colony_signals(): void
+    {
+        $this->actingAsAdminWithPermission('view-anomaly-analytics');
+        $this->makeAnomaly();
+
+        $this->get(route('admin.anomaly.dashboard'))
+            ->assertOk()
+            ->assertSee('Impossible Reading')
+            ->assertSee('Temperature: -10 to 60 °C')
+            ->assertSee('10 identical readings in a row')
+            ->assertSee('More than 3 standard deviations from the average')
+            ->assertDontSee('Static Threshold Breach')
+            ->assertViewHas('ruleGroups', function (array $groups) {
+                $rules = collect($groups)->flatMap(fn (array $group) => collect($group['rules'])->map(fn (array $rule) => $rule + ['group' => $group['title']]))->keyBy('type');
+
+                return $rules['static_threshold_breach']['group'] === 'Sensor faults'
+                    && $rules['static_threshold_breach']['openCount'] === 1
+                    && $rules['static_threshold_breach']['hivesAffected'] === 1
+                    && $rules['frozen_sensor']['openCount'] === 0
+                    && $rules['statistical_deviation']['group'] === 'Colony signals'
+                    && $rules['statistical_deviation']['notifies'] === [
+                        ['recipient' => 'Admins', 'channels' => ['email']],
+                        ['recipient' => 'Farmer', 'channels' => ['push']],
+                    ];
+            });
+    }
+
+    #[Test]
     public function user_without_permission_cannot_view_the_anomaly_dashboard(): void
     {
         $this->actingAsAdminWithPermission('manage-hives');

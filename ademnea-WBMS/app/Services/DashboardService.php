@@ -177,82 +177,93 @@ class DashboardService
 
     /**
      * Return chart-ready data for the last N days.
-     * Labels are ISO date strings; sensor series are daily averages of
-     * non-suspect readings, null for days with no data.
+     * A day runs from midnight to midnight in the local timezone
+     * (config app.local_timezone), not UTC. Sensor series are daily averages
+     * of non-suspect readings, null for days with no data.
      *
      * @param  int  $days  Number of past days to cover (default: 7)
      * @return array<string, mixed>
      */
     public function getChartData(int $days = 7): array
     {
-        $labels = [];
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $labels[] = Carbon::today()->subDays($i)->format('M d');
-        }
+        $dates = $this->localDates($days);
 
         return [
-            'labels' => $labels,
-            'temperature' => $this->getDailyAverages(HiveTemperature::class, 'brood_section', $days),
-            'humidity'    => $this->getDailyAverages(HiveHumidity::class, 'brood_section', $days),
-            'co2'         => $this->getDailyAverages(HiveCarbondioxide::class, 'co2_level', $days),
-            'weight'      => $this->getDailyAverages(HiveWeight::class, 'weight_kg', $days),
+            'labels' => array_map(fn (Carbon $date) => $date->format('M d'), $dates),
+            'temperature' => $this->getDailyAverages(HiveTemperature::class, 'brood_section', $dates),
+            'humidity'    => $this->getDailyAverages(HiveHumidity::class, 'brood_section', $dates),
+            'co2'         => $this->getDailyAverages(HiveCarbondioxide::class, 'co2_level', $dates),
+            'weight'      => $this->getDailyAverages(HiveWeight::class, 'weight_kg', $dates),
 
             // Hive activity: count of status-change events per day (real data)
-            'hive_activity' => $this->getHiveActivityByDay($days, $labels),
+            'hive_activity' => $this->getHiveActivityByDay($dates),
         ];
     }
 
     /**
-     * Daily average of a sensor column over the last N days, excluding
-     * suspect readings. Returns one value per day (null where no readings
-     * exist that day) in oldest-to-newest order, matching $labels.
+     * The last $days local days, oldest first, each as its local midnight.
+     *
+     * @return array<int, Carbon>
+     */
+    private function localDates(int $days): array
+    {
+        $today = Carbon::now(config('app.local_timezone'))->startOfDay();
+
+        return array_map(fn (int $i) => $today->copy()->subDays($i), range($days - 1, 0));
+    }
+
+    /**
+     * SQL for the local calendar date of a UTC timestamp column. The offset
+     * is passed as "+03:00" rather than a zone name, which MySQL only
+     * understands once its timezone tables are loaded. It is the offset in
+     * force now, which is exact for a timezone without daylight saving.
+     */
+    private function localDateSql(string $column): string
+    {
+        $offset = Carbon::now(config('app.local_timezone'))->format('P');
+
+        return "DATE(CONVERT_TZ({$column}, '+00:00', '{$offset}'))";
+    }
+
+    /**
+     * Daily average of a sensor column for each of $dates, excluding
+     * suspect readings. Returns one value per day, null where no readings
+     * exist that day. A day that averages exactly 0 is a value, not a gap.
      *
      * @param  class-string  $model
+     * @param  array<int, Carbon>  $dates
      * @return array<int, float|null>
      */
-    private function getDailyAverages(string $model, string $column, int $days): array
+    private function getDailyAverages(string $model, string $column, array $dates): array
     {
-        $since = Carbon::today()->subDays($days - 1)->startOfDay();
-
-        $raw = $model::selectRaw("DATE(recorded_at) as day, AVG({$column}) as avg")
+        $raw = $model::selectRaw($this->localDateSql('recorded_at')." as day, AVG({$column}) as avg")
             ->where('suspect', false)
-            ->where('recorded_at', '>=', $since)
+            ->where('recorded_at', '>=', $dates[0]->copy()->utc())
             ->whereNotNull($column)
             ->groupBy('day')
             ->pluck('avg', 'day');
 
-        $result = [];
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $date = Carbon::today()->subDays($i)->format('Y-m-d');
-            $result[] = isset($raw[$date]) ? round((float) $raw[$date], 1) : null;
-        }
+        return array_map(function (Carbon $date) use ($raw) {
+            $average = $raw[$date->format('Y-m-d')] ?? null;
 
-        return $result;
+            return $average !== null ? round((float) $average, 1) : null;
+        }, $dates);
     }
 
     /**
-     * Count hive status-change events per day for the chart.
+     * Count hive status-change events for each of $dates.
      *
-     * @param  int    $days
-     * @param  array  $labels
+     * @param  array<int, Carbon>  $dates
      * @return array<int, int>
      */
-    private function getHiveActivityByDay(int $days, array $labels): array
+    private function getHiveActivityByDay(array $dates): array
     {
-        $since = Carbon::today()->subDays($days - 1)->startOfDay();
-
-        $raw = HiveStatusHistory::selectRaw("DATE(created_at) as day, COUNT(*) as total")
-            ->where('created_at', '>=', $since)
+        $raw = HiveStatusHistory::selectRaw($this->localDateSql('created_at').' as day, COUNT(*) as total')
+            ->where('created_at', '>=', $dates[0]->copy()->utc())
             ->groupBy('day')
             ->pluck('total', 'day');
 
-        $result = [];
-        for ($i = $days - 1; $i >= 0; $i--) {
-            $date     = Carbon::today()->subDays($i)->format('Y-m-d');
-            $result[] = (int) ($raw[$date] ?? 0);
-        }
-
-        return $result;
+        return array_map(fn (Carbon $date) => (int) ($raw[$date->format('Y-m-d')] ?? 0), $dates);
     }
 
     // =========================================================================

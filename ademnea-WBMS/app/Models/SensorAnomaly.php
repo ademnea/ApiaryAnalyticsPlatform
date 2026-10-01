@@ -78,6 +78,12 @@ class SensorAnomaly extends Model
         return $this->hasMany(Alert::class, 'source_anomaly_id');
     }
 
+    /** Every email, SMS and push sent for this incident, to staff and farmers alike. */
+    public function notifications(): HasMany
+    {
+        return $this->hasMany(NotificationLog::class, 'sensor_anomaly_id');
+    }
+
     // ---- Scopes ----
 
     public function scopeOpen(Builder $query): Builder
@@ -271,9 +277,50 @@ class SensorAnomaly extends Model
         };
     }
 
+    /** Names a reader recognises, where the rule's own name is engineering shorthand. */
+    private const LABELS = [
+        'static_threshold_breach' => 'Impossible Reading',
+        'frozen_sensor' => 'Sensor Stuck',
+        'statistical_deviation' => 'Unusual Reading',
+    ];
+
     public function label(): string
     {
-        return ucwords(str_replace('_', ' ', $this->anomaly_type));
+        return self::labelFor($this->anomaly_type);
+    }
+
+    public static function labelFor(string $anomalyType): string
+    {
+        return self::LABELS[$anomalyType] ?? ucwords(str_replace('_', ' ', $anomalyType));
+    }
+
+    /**
+     * Hive conditions that mean the sensor is wrong, not the hive. These are
+     * the readings ingestion marks suspect; the remaining hive conditions
+     * may be a real colony event.
+     */
+    public const SENSOR_FAULT_TYPES = ['static_threshold_breach', 'frozen_sensor'];
+
+    public const COLONY_SIGNAL_TYPES = ['statistical_deviation'];
+
+    /** What the incident is about, which decides who should act on it. */
+    public function kind(): string
+    {
+        return match (true) {
+            $this->isDeviceIssue() => 'Device issue',
+            in_array($this->anomaly_type, self::SENSOR_FAULT_TYPES, true) => 'Sensor fault',
+            in_array($this->anomaly_type, self::COLONY_SIGNAL_TYPES, true) => 'Colony signal',
+            default => 'Hive condition',
+        };
+    }
+
+    public function kindIcon(): string
+    {
+        return match ($this->kind()) {
+            'Device issue' => 'bi-cpu',
+            'Sensor fault' => 'bi-tools',
+            default => 'bi-hexagon',
+        };
     }
 
     /** "brood_section=75, mean=34.2" — compact rendering of a record_value array. */

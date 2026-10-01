@@ -8,6 +8,7 @@ use App\Http\Controllers\Api\Farmer\{
     SensorDataController,
     MediaController,
     InspectionController,
+    HiveLocationController,
     AlertController,
     MessageController,
 };
@@ -90,6 +91,10 @@ Route::prefix('v1/farmer')->group(function () {
 
             // Inspections — REQ-F-FAPI-22
             Route::get('inspections', [InspectionController::class, 'index']);
+
+            // Hive position, taken from the phone at the hive. A write, so
+            // it needs the extended farmer-write role.
+            Route::put('location', [HiveLocationController::class, 'update'])->middleware('role:farmer-write');
         });
 
         // Alerts — REQ-F-FAPI-25, 26

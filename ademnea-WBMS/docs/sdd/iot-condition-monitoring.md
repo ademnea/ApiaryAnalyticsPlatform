@@ -8,7 +8,7 @@
 >
 > Branch: `feat-IoT_Condition_Monitoring`. Owning module in the SRS: §4.6.
 >
-> **Implementation status (2026-09-15): Part 1 is built. Part 2 (ML) is not started** — see
+> **Implementation status (2026-10-01): Part 1 is built. Part 2 (ML) is not started** — see
 > "Part 1 As Built" directly below for where the implementation deliberately differs from the
 > original design in the rest of this document.
 
@@ -38,9 +38,74 @@ only ever grew. `sensor_anomalies` now holds at most one *open* row per
 (`DeviceTelemetryRuleEvaluator::evaluateAll()`); critical battery supersedes low battery. Unassigned
 devices fall back to global thresholds (`getForHive()` requires a hive id).
 
-**`CheckDeviceHealth` also detects late submissions** (`submission_delay`): silent for more than
-`submission_delay_multiplier` (seeded `3`) × `expected_interval_minutes`, but not yet past
-`device_offline_silence_minutes`. Offline supersedes late.
+Two further device rules were added to the evaluator:
+- `weak_signal` fires only when the signal has stayed at or below `weak_signal_rssi_dbm` for
+  `weak_signal_sustained_minutes` (seeded `30`), measured across heartbeat history. A weak signal
+  that has not lasted that long neither opens nor resolves an incident.
+- `firmware_outdated` fires when the device's firmware is older than the
+  `latest_firmware_version` threshold. The seeded value `0` keeps the check off until an admin
+  sets a real version.
+
+**`CheckDeviceHealth` also detects late submissions** (`submission_delay`): the median gap between
+the device's last 11 readings (10 gaps, by `recorded_at`, taking the fastest sensor stream) is more
+than `submission_interval_multiplier` (seeded `2`) × `expected_interval_minutes`. Offline supersedes
+late, so a device never has both incidents open. A sensor reading counts as contact
+(`last_data_received_at`), so a device that sends data but no heartbeats is not reported offline.
+
+**The Z-score baseline is a true sliding 24-hour window**, not the tumbling Welford accumulator
+designed in §4.4.9(b). `RollingStatsService::baselineBefore()` computes the mean and standard
+deviation in SQL over the hive's readings in the 24 hours before the reading being judged, which
+is not itself included. A backlog reading is therefore judged against the day before it was taken,
+not the day before it arrived. The rule needs at least 10 readings in the window.
+`hive_rolling_stats` is now a display snapshot of the latest window, written by
+`recordSnapshot()`; the rules never read it, and there is no cache in front of it.
+
+**Untrustworthy readings are marked `suspect`.** When `static_threshold_breach` or `frozen_sensor`
+fires, the listener sets `suspect = true` on the reading row. Suspect readings are left out of the
+Z-score baseline, so a broken sensor cannot widen it and hide itself. `statistical_deviation` does
+not mark the reading suspect, because an unusual value can be a real colony event.
+
+**The sensor listener stops at the first rule that fires** (threshold, then stuck sensor, then
+Z-score). Each rule that ran and came back clean auto-resolves its open incident; rules skipped by
+the short-circuit are neither touched nor resolved on that reading.
+
+**`CheckAnomalyRate` (new job, every 15 minutes)** opens `high_anomaly_rate` when more than
+`high_anomaly_rate_pct` (seeded `20`) of a device's readings in the last hour are suspect, provided
+the device sent at least `high_anomaly_rate_min_readings` (seeded `10`). The incident closes itself
+once the rate drops back.
+
+**Out-of-order and malformed heartbeats.** An older heartbeat processed late is appended to
+`iot_device_telemetry_history` but does not overwrite the device's current telemetry row, and no
+rules run against it. A heartbeat that fails `TelemetryPayloadRules` is logged as
+`rejected_validation`, nothing from it is stored, and the hardware team is emailed at most once an
+hour per device.
+
+**Alert routing and delivery (REQ-F-IOT-17).** `AnomalyAlertDispatchService::dispatch()` returns
+`bool` (false when the cooldown suppressed it), not `?Alert`.
+- `AlertRouting` maps each anomaly type to recipients and channels. Sensor faults and device issues
+  email admins and the device's hardware team; `critical_battery` also sends the hardware team an
+  SMS; `statistical_deviation` and `submission_delay` push to the farmer; `weak_signal` and
+  `firmware_outdated` are dashboard-only. An unknown type emails admins.
+- Staff are notified whether or not the device is on a hive. A farmer route creates the farmer's
+  `alerts` row (`source_anomaly_id` set) and a push.
+- Cooldown is per device and anomaly type, checked against `sensor_anomalies.alerted_at`: 60
+  minutes by default, 15 for `critical_battery`, none for `device_offline`.
+- Dispatch is attempted only when an incident opens. An incident that opens inside the cooldown is
+  never alerted, because later repeats of the same incident do not retry.
+- A device coming back online sends staff a recovery notice, only if they were told it went
+  offline.
+- Every notification is a `notification_logs` row delivered by the `SendNotification` job (3
+  attempts, 60 s and 300 s backoff), with status `pending`, `sent`, `failed` or `skipped`.
+  Migration `add_recipient_fields_to_notification_logs_table` adds `recipient_type`, `recipient`,
+  `subject`, `attempts`, `sent_at` and `sensor_anomaly_id`, and makes `farmer_id` nullable.
+
+**Scheduled jobs are declared in `routes/console.php`**, not `app/Console/Kernel.php`, which has
+been removed: Laravel no longer calls it, so nothing declared there ever ran. The schedule needs a
+cron entry running `php artisan schedule:run` every minute.
+
+**Listeners are auto-discovered.** Nothing registers them explicitly; `php artisan event:list`
+shows `SensorRecordReceived` → `EvaluateSensorReadingRules` and `DeviceTelemetryReceived` →
+`EvaluateDeviceTelemetryRules`.
 
 **UI and routes**
 
@@ -54,6 +119,52 @@ devices fall back to global thresholds (`getForHive()` requires a hive id).
 | System Alerts — every alert sent to farmers, linked to its incident | `GET /admin/alerts` → `admin.alerts.index` | `view-monitoring-dashboard\|view-hive-data` | placeholder closure |
 | Hive page — open anomalies card | `admin.hives.show` | (hive permissions) | first consumer of `AnomalyStatusContract` |
 
+**How Layer 1 is presented.**
+- The three hive rules have reader-facing names (`SensorAnomaly::labelFor()`): `static_threshold_breach`
+  is "Impossible Reading", `frozen_sensor` is "Sensor Stuck", `statistical_deviation` is "Unusual
+  Reading". The stored `anomaly_type` values are unchanged. Emails and farmer messages use the same
+  names.
+- Hive conditions are split into **sensor faults** (`SensorAnomaly::SENSOR_FAULT_TYPES`, the readings
+  marked suspect) and **colony signals** (`statistical_deviation`). `SensorAnomaly::kind()` returns
+  the group for an incident.
+- The Anomaly Dashboard leads with what needs attention: the unresolved incidents, then the
+  most affected hives. Below that, one card per rule shows its fleet-wide limits, who it notifies
+  (`AlertRouting::describe()`), its unresolved count and a link to change its limits.
+- The dashboard and the incident list share one table (`_incident-table.blade.php`). Each row
+  says what was seen in a sentence (`AnomalyEvidenceService::headline()`) and can be acknowledged
+  in place.
+- The incident page links to the limit that raised it, for that hive, so a false alarm can be
+  followed straight to the setting.
+- The incident page (`AnomalyEvidenceService`) explains what the rule saw in a sentence, charts the
+  flagged channel's readings from 24 hours before the incident to 6 hours after it was last seen
+  with the limit drawn on it, and shows the recommended action. Its Notifications card lists every
+  `notification_logs` row and farmer alert for the incident, or says why nobody was notified.
+
+**Detection Limits page** (`GET|PUT /admin/anomaly/limits` → `admin.anomaly.limits`,
+`DetectionLimitController`, `DetectionLimitService`). The rule limits are set from Condition
+Monitoring, not by typing keys into the generic Alert Thresholds page.
+- The limits are split into three tabs (sensor faults, colony signals, device health), one card
+  per rule, each limit a labelled input with its unit. Values are still stored as
+  `alert_thresholds` rows.
+- A toolbar that stays at the top of the screen holds the hive picker, the count of unsaved
+  changes, Discard and Save, so saving never needs scrolling. One Save covers all three tabs; each
+  tab shows how many of its limits changed or failed validation.
+- Each rule card can be reset to its standard values, leaving with unsaved changes asks first, and
+  after saving the page returns to the same tab.
+- Accessibility: tabs follow the ARIA tab pattern with arrow-key navigation, every input has a
+  visible label and announces its unit, allowed range and error, and the page works as one long
+  form when scripts are off.
+- "Show limits for" switches between fleet limits and one hive. For a hive, an empty field inherits
+  the fleet limit and a filled one becomes that hive's override.
+- Validation: each limit within its allowed range, and each minimum below its maximum
+  (`DetectionLimitService::ORDERED_PAIRS`), checked for a hive against the fleet values it inherits.
+- Viewing needs `view-anomaly-analytics`, `view-device-fleet` or `manage-hives`; saving needs
+  `manage-hives`, the same permission as the Alert Thresholds page.
+- `AlertThreshold` now clears its cached values when a row is saved or deleted, so a changed limit
+  applies to the next reading rather than up to five minutes later.
+- The Alert Thresholds page under Hive Management is unchanged and still holds the other keys
+  (feed weight, brood target bands, telemetry retention).
+
 The topbar bell counts devices with an open `device_offline` incident; the sidebar "System Alerts"
 badge shows alerts sent in the last 24h. ML Models stays a "Soon" placeholder until Part 2.
 
@@ -66,14 +177,16 @@ DeviceHealthReportService, SystemAlertService}`.
 | # | Item | Status |
 |---|---|---|
 | 1 | Ingestion events | Done — both `event(...)` calls are live |
-| 2 | Tumbling vs sliding Z-score window | Built as tumbling 24h (`RollingStatsService`); sliding window still a Phase 2 refinement |
+| 2 | Tumbling vs sliding Z-score window | Done — built as a true sliding 24h window (`RollingStatsService::baselineBefore()`) |
 | 3 | Python/scikit-learn runtime | **Open** — blocks Part 2 |
-| 4 | `AlertService.php` fix | Done — file parses; delivery goes through `NotificationDispatchService` |
+| 4 | `AlertService.php` fix | Done — file parses; farmer push goes through `NotificationDispatchService`, staff email and SMS through `NotificationQueue` |
 | 5 | Telemetry history retention | Done — `PruneTelemetryHistory` daily, `telemetry_history_retention_days` (90) |
 | 6 | Other-module consumer of `AnomalyStatusContract` | Admin hive page uses it; Farmer Mobile API consumer **still undecided** |
 
-**Known external dependency:** `NotificationDispatchService` is still a logging stub (Farmer API
-module), so alerts are stored and visible in-app/admin but not pushed or sent by SMS.
+**Known external dependency:** delivery is implemented, but push and SMS need credentials. Without
+`services.fcm.*` or `services.africastalking.*` configured, those notifications are logged as
+`skipped` rather than sent; a farmer with no registered FCM token is also logged as `skipped`.
+Email uses the application's mail configuration.
 
 
 ## Existing Extension Points (read this first)
@@ -239,7 +352,7 @@ pattern being mirrored below. One existing table gets one optional additive colu
 | `device_id` | unsignedBigInteger, FK → `iot_devices.id` | no | — | `onDelete('restrict')`, named constraint `fk_sensor_anomalies_device` |
 | `hive_id` | unsignedBigInteger, FK → `hives.id` | yes | null | `onDelete('cascade')`, named constraint `fk_sensor_anomalies_hive`. Nullable because a device-telemetry anomaly (e.g. `low_battery`) may not always resolve to a hive if the device is unassigned. |
 | `sensor_type` | string | no | — | `temperature\|humidity\|co2\|weight\|telemetry` — matches `IotSensorIngestionService`'s existing match arms plus a `telemetry` arm for device-health anomalies |
-| `anomaly_type` | string | no | — | e.g. `static_threshold_breach`, `frozen_sensor`, `statistical_deviation`, `low_battery`, `critical_battery`, `weak_signal`, `reboot_loop`, `storage_full`, `device_offline`, `submission_delay`, `ml_isolation_forest`, `ml_random_forest` |
+| `anomaly_type` | string | no | — | e.g. `static_threshold_breach`, `frozen_sensor`, `statistical_deviation`, `low_battery`, `critical_battery`, `weak_signal`, `reboot_loop`, `storage_full`, `device_offline`, `submission_delay`, `ml_isolation_forest`, `ml_random_forest`; *(as built)* also `high_anomaly_rate`, `firmware_outdated` |
 | `anomaly_score` | float | yes | null | `1.0` for rules-layer certainty per SRS; the model's raw score for ML layers |
 | `record_value` | json | no | — | the flagged value(s), e.g. `{"brood_section": 71.2}` |
 | `detection_layer` | string | no | — | `rules\|ml\|rf\|lstm` |
@@ -315,7 +428,9 @@ Index: `(device_id, recorded_at)` — **mandatory**, serves the 7-day battery/si
 | `window_start` | timestamp | yes | null | start of the current tumbling window |
 | `updated_at` | timestamp | no | — | `$table->timestamps()` |
 
-Unique constraint: `(hive_id, sensor_type, channel)`. Soft delete: no.
+Unique constraint: `(hive_id, sensor_type, channel)`. Soft delete: no. *(As built)* this table is a
+display snapshot of the latest 24-hour window, not a Welford accumulator: `variance` is the
+window's population variance and `window_start` is the reading's `recorded_at` minus 24 hours.
 
 ### Additive change to an existing table
 
@@ -635,13 +750,13 @@ written:
 | REQ-F-IOT-03 (gap/interval detection) | `CheckDeviceHealth` job body (§4.4.5) — `device_offline` + `submission_delay` |
 | REQ-F-IOT-05 (static threshold) | `ThresholdRuleEvaluator` |
 | REQ-F-IOT-06 (stuck value) | `StuckSensorRuleEvaluator` |
-| REQ-F-IOT-07 (rolling Z-score) | `ZScoreRuleEvaluator` + `RollingStatsService` + `hive_rolling_stats` |
-| REQ-F-IOT-08 (device telemetry thresholds) | `DeviceTelemetryRuleEvaluator` |
+| REQ-F-IOT-07 (rolling Z-score) | *(as built)* `ZScoreRuleEvaluator` + `RollingStatsService::baselineBefore()` (sliding 24h window in SQL); `hive_rolling_stats` is a display snapshot |
+| REQ-F-IOT-08 (device telemetry thresholds) | `DeviceTelemetryRuleEvaluator`, including sustained weak signal |
 | REQ-F-IOT-09/10 (Isolation Forest train/score) | `MlTrainingInvoker`/`TrainAnomalyModels`, `MlScoringInvoker`/`ScoreHiveAnomalies` |
 | REQ-F-IOT-11 (Random Forest, Phase 1b) | Same `Ml*` service pattern, deferred — new script + real-time scoring hook added to the sensor-reading listener once Phase 1b is greenlit |
 | REQ-F-IOT-12 (LSTM, Phase 2) | Deferred per SRS; `MODULES/` layout leaves room, no design committed here |
 | REQ-F-IOT-13 (`sensor_anomalies` table) | §4.4.2 |
 | REQ-F-IOT-14/15/16 (dashboards) | *(as built)* `DeviceFleetController`, `AnomalyDashboardController`, `AnomalyController`, `AnomalyAnalyticsController`, device health on `IotDeviceRegistryController@show` |
-| REQ-F-IOT-17 (alert routing) | `AnomalyAlertDispatchService` + `Alert::cooldownMinutesFor()`; admin view `SystemAlertController` |
+| REQ-F-IOT-17 (alert routing) | *(as built)* `AlertRouting` + `AnomalyAlertDispatchService` + `Alert::cooldownMinutesFor()`; delivery by `NotificationQueue` / `SendNotification`; `CheckAnomalyRate` for high anomaly rate; admin view `SystemAlertController` |
 | REQ-F-IOT-18 (model versioning) | `ml_model_versions` + `AnomalyModelsController` rollback action |
 | REQ-F-IOT-19 (device auth) | Already implemented by the IoT Data Receiver module (`IotDeviceAuthenticationService`) — no change needed here |

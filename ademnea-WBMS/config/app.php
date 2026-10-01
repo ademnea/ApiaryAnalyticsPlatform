@@ -82,6 +82,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Local Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Times are stored in UTC. This is the timezone the people using the
+    | system live in: where a "day" starts and ends for daily figures such
+    | as the dashboard charts.
+    |
+    */
+
+    'local_timezone' => env('APP_LOCAL_TIMEZONE', 'Africa/Kampala'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Locale Configuration
     |--------------------------------------------------------------------------
     |

@@ -25,6 +25,23 @@
         .panel-empty { text-align: center; color: var(--clr-muted); font-size: 0.8rem; padding: 1.85rem 1rem; }
         .panel-empty i { font-size: 1.5rem; color: var(--clr-forest-light); display: block; margin-bottom: 0.4rem; }
 
+        .rule-card .rule-kind { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--clr-muted); margin-bottom: 0.35rem; }
+        .rule-card .rule-title { font-size: 0.92rem; font-weight: 700; color: var(--clr-forest); }
+        .rule-card .rule-desc { font-size: 0.8rem; margin: 0.35rem 0 0.6rem; }
+        .rule-card .rule-limits { list-style: none; padding: 0; margin: 0 0 0.6rem; font-size: 0.78rem; }
+        .rule-card .rule-limits li { padding: 0.15rem 0; border-top: 1px dashed var(--clr-border); }
+        .rule-card .rule-limits li:first-child { border-top: 0; }
+        .rule-card .rule-label { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: var(--clr-muted); }
+        .rule-card .rule-notifies { font-size: 0.76rem; color: var(--clr-muted); }
+        .rule-card .card-footer { font-size: 0.78rem; background: var(--clr-canvas); }
+        .rule-card .card-footer a { color: var(--clr-forest-mid); text-decoration: none; }
+        .rule-card .card-footer a:hover { text-decoration: underline; }
+
+        .attention-hives { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; font-size: 0.85rem; background: var(--clr-canvas); }
+        .attention-hives-label { font-size: 0.78rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.04em; color: #52635A; }
+        .attention-hives a { color: var(--clr-forest); text-decoration: none; font-weight: 600; }
+        .attention-hives a:hover { text-decoration: underline; }
+
         .fleet-callout {
             display: flex; align-items: center; gap: 0.75rem;
             padding: 0.65rem 0.9rem; margin-bottom: 1rem;
@@ -42,7 +59,7 @@
     <div class="section-heading">
         <div>
             <h6>Hive Conditions</h6>
-            <p>Threshold breaches, frozen sensors and statistical deviations in hive readings. Each row is one incident — repeats update it instead of piling up.</p>
+            <p>Unresolved incidents in hive readings. Acknowledge one to show someone is on it; it closes by itself once readings are back to normal.</p>
         </div>
         <a href="{{ route('admin.anomaly.anomalies.index', ['category' => 'hive', 'status' => 'unresolved']) }}" class="meta-link">
             View all unresolved <i class="bi bi-arrow-right"></i>
@@ -71,6 +88,38 @@
         @endforeach
     </div>
 
+    <div class="row g-3">
+        {{-- ---- Latest open incidents ---- --}}
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center">
+                    <span><i class="bi bi-list-ul me-1" aria-hidden="true"></i>Needs Attention</span>
+                    <span class="text-muted" style="font-size:0.78rem;font-weight:400;">The 10 most recently active</span>
+                </div>
+
+                @if($latestOpen->isEmpty())
+                    <div class="panel-empty py-5">
+                        <i class="bi bi-shield-check" style="font-size:1.8rem;"></i>
+                        No unresolved hive anomalies — all hives look normal.
+                    </div>
+                @else
+                    @include('admin.anomaly._incident-table', ['anomalies' => $latestOpen, 'caption' => 'The ten most recently active unresolved hive incidents'])
+
+                    <div class="card-footer attention-hives">
+                        <span class="attention-hives-label">Most affected hives</span>
+                        @foreach($mostAffectedHives as $hive)
+                            <a href="{{ route('admin.anomaly.anomalies.index', ['category' => 'hive', 'status' => 'unresolved', 'hive_id' => $hive->id]) }}">
+                                {{ $hive->display_name ?? $hive->hive_code }}
+                                <span class="badge badge-offline">{{ $mostAffected[$hive->id] }} unresolved</span>
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+            </div>
+        </div>
+    </div>
+
+    <div class="mt-3">
     <a href="{{ route('admin.devices.fleet') }}" class="fleet-callout">
         <i class="bi bi-grid-3x3-gap" style="font-size:1.1rem;color:var(--clr-forest);"></i>
         <span class="flex-grow-1">
@@ -84,127 +133,67 @@
         <i class="bi bi-arrow-right text-muted"></i>
     </a>
 
-    <div class="row g-3">
-        {{-- ---- Latest open incidents ---- --}}
-        <div class="col-lg-8">
-            <div class="card h-100">
-                <div class="card-header d-flex justify-content-between align-items-center">
-                    <span><i class="bi bi-list-ul me-1"></i>Latest Unresolved</span>
-                    <span class="text-muted" style="font-size:0.72rem;font-weight:400;">Most recently active 10</span>
-                </div>
+    </div>
 
-                @if($latestOpen->isEmpty())
-                    <div class="panel-empty py-5">
-                        <i class="bi bi-shield-check" style="font-size:1.8rem;"></i>
-                        No unresolved hive anomalies — all hives look normal.
-                    </div>
-                @else
-                    <div class="table-responsive">
-                        <table class="table table-hover mb-0">
-                            <thead>
-                                <tr>
-                                    <th>Anomaly</th>
-                                    <th>Hive</th>
-                                    <th>Since</th>
-                                    <th class="text-center">Count</th>
-                                    <th>Status</th>
-                                    <th></th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                @foreach($latestOpen as $anomaly)
-                                    <tr>
-                                        <td>
-                                            <span class="badge {{ $anomaly->badgeClass() }}">
-                                                <i class="bi {{ $anomaly->icon() }} me-1"></i>{{ $anomaly->label() }}
-                                            </span>
-                                            <div class="text-muted text-capitalize" style="font-size:0.7rem;">
-                                                {{ $anomaly->sensor_type }} · {{ $anomaly->device->device_code ?? '#' . $anomaly->device_id }}
-                                            </div>
-                                        </td>
-                                        <td>
-                                            @if($anomaly->hive)
-                                                <a href="{{ route('admin.hives.show', $anomaly->hive) }}" class="text-decoration-none">{{ $anomaly->hive->display_name ?? $anomaly->hive->hive_code }}</a>
-                                            @else
-                                                <span class="text-muted">Unassigned</span>
-                                            @endif
-                                        </td>
-                                        <td class="text-muted" title="{{ $anomaly->detected_at->format('Y-m-d H:i:s') }}">{{ $anomaly->detected_at->diffForHumans() }}</td>
-                                        <td class="text-center">{{ $anomaly->occurrences }}</td>
-                                        <td><span class="badge {{ $anomaly->statusBadgeClass() }} text-capitalize">{{ $anomaly->status() }}</span></td>
-                                        <td class="text-end pe-3">
-                                            <a href="{{ route('admin.anomaly.anomalies.show', $anomaly) }}" class="btn btn-sm btn-outline-forest" title="View anomaly"><i class="bi bi-eye"></i></a>
-                                        </td>
-                                    </tr>
+    <div class="section-heading mt-4">
+        <div>
+            <h6>How Readings Are Checked</h6>
+            <p>Three rules run on every reading as it arrives. A sensor fault means the hardware is wrong; a colony signal may be a real event in the hive.</p>
+        </div>
+        <a href="{{ route('admin.anomaly.limits') }}" class="meta-link">Change limits <i class="bi bi-arrow-right" aria-hidden="true"></i></a>
+    </div>
+
+    {{-- ---- The rules, each tagged with what a violation means ---- --}}
+    <div class="row g-3 mb-3">
+        @foreach($ruleGroups as $group)
+            @foreach($group['rules'] as $rule)
+                <div class="col-md-6 col-lg-4">
+                    <div class="card rule-card h-100">
+                        <div class="card-body">
+                            <div class="rule-kind" title="{{ $group['summary'] }}">
+                                <i class="bi {{ $group['icon'] }} me-1" aria-hidden="true"></i>{{ Str::singular($group['title']) }}
+                            </div>
+                            <div class="d-flex justify-content-between align-items-start gap-2">
+                                <span class="rule-title"><i class="bi {{ $rule['icon'] }} me-1" aria-hidden="true"></i>{{ $rule['label'] }}</span>
+                                @if($rule['openCount'] > 0)
+                                    <span class="badge badge-warning">{{ $rule['openCount'] }} unresolved</span>
+                                @else
+                                    <span class="badge badge-active">All clear</span>
+                                @endif
+                            </div>
+                            <p class="rule-desc">{{ $rule['description'] }}</p>
+
+                            <div class="rule-label">Flagged when</div>
+                            <ul class="rule-limits">
+                                @foreach($rule['limits'] as $limit)
+                                    <li>{{ $limit }}</li>
                                 @endforeach
-                            </tbody>
-                        </table>
-                    </div>
-                @endif
-            </div>
-        </div>
+                            </ul>
 
-        <div class="col-lg-4 d-flex flex-column gap-3">
-            {{-- ---- Unresolved by type ---- --}}
-            <div class="card">
-                <div class="card-header"><i class="bi bi-pie-chart me-1"></i>Unresolved by Type</div>
-                <div class="card-body">
-                    @if($byType->isEmpty())
-                        <div class="panel-empty py-3"><i class="bi bi-shield-check"></i>Nothing outstanding.</div>
-                    @else
-                        <canvas id="byTypeChart" height="200"></canvas>
-                        <div class="d-flex flex-wrap gap-1 mt-2">
-                            @foreach($bySensorType as $sensor => $total)
-                                <span class="badge badge-pending text-capitalize">{{ $sensor }}: {{ $total }}</span>
-                            @endforeach
+                            <div class="rule-label">Notifies</div>
+                            <div class="rule-notifies">
+                                @forelse($rule['notifies'] as $route)
+                                    {{ $route['recipient'] }} ({{ implode(', ', $route['channels']) }})@if(! $loop->last) · @endif
+                                @empty
+                                    Nobody. Dashboard only.
+                                @endforelse
+                            </div>
                         </div>
-                    @endif
-                </div>
-            </div>
-
-            {{-- ---- Most affected hives ---- --}}
-            <div class="card">
-                <div class="card-header"><i class="bi bi-hexagon me-1"></i>Most Affected Hives</div>
-                @if($mostAffectedHives->isEmpty())
-                    <div class="panel-empty py-3"><i class="bi bi-hexagon"></i>No hive has an open anomaly.</div>
-                @else
-                    <div class="list-group list-group-flush">
-                        @foreach($mostAffectedHives as $hive)
-                            <a href="{{ route('admin.anomaly.anomalies.index', ['category' => 'hive', 'status' => 'unresolved', 'hive_id' => $hive->id]) }}"
-                               class="list-group-item list-group-item-action d-flex justify-content-between align-items-center" style="font-size:0.82rem;">
-                                <span>
-                                    {{ $hive->display_name ?? $hive->hive_code }}
-                                    @if($hive->apiary)<span class="text-muted d-block" style="font-size:0.72rem;">{{ $hive->apiary->name }}</span>@endif
-                                </span>
-                                <span class="badge badge-offline">{{ $mostAffected[$hive->id] }} open</span>
+                        <div class="card-footer d-flex justify-content-between gap-2">
+                            <a href="{{ route('admin.anomaly.anomalies.index', array_filter(['category' => 'hive', 'status' => $rule['openCount'] > 0 ? 'unresolved' : null, 'type' => $rule['type']])) }}">
+                                @if($rule['openCount'] > 0)
+                                    View {{ $rule['openCount'] }} in {{ $rule['hivesAffected'] }} {{ Str::plural('hive', $rule['hivesAffected']) }}
+                                @else
+                                    View history
+                                @endif
+                                <i class="bi bi-arrow-right" aria-hidden="true"></i>
                             </a>
-                        @endforeach
+                            <a href="{{ route('admin.anomaly.limits') }}#rule-{{ $rule['type'] }}"><i class="bi bi-sliders me-1" aria-hidden="true"></i>Change limits</a>
+                        </div>
                     </div>
-                @endif
-            </div>
-        </div>
+                </div>
+            @endforeach
+        @endforeach
     </div>
 
 @endsection
-
-@if($byType->isNotEmpty())
-    @push('scripts')
-        <script>
-            new Chart(document.getElementById('byTypeChart'), {
-                type: 'doughnut',
-                data: {
-                    labels: @json($byType->keys()->map(fn ($t) => ucwords(str_replace('_', ' ', $t)))),
-                    datasets: [{
-                        data: @json($byType->values()),
-                        backgroundColor: ['#7F1D1D', '#D4A017', '#0057b8', '#2D6A4F', '#40916C', '#664D03'],
-                        borderWidth: 0,
-                    }],
-                },
-                options: {
-                    plugins: { legend: { position: 'bottom', labels: { boxWidth: 10, font: { size: 11 } } } },
-                    maintainAspectRatio: true,
-                },
-            });
-        </script>
-    @endpush
-@endif

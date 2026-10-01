@@ -23,4 +23,7 @@
     <a href="{{ route('admin.anomaly.analytics') }}" class="{{ request()->routeIs('admin.anomaly.analytics') ? 'active' : '' }}">
         <i class="bi bi-bar-chart-line"></i> Analytics
     </a>
+    <a href="{{ route('admin.anomaly.limits') }}" class="{{ request()->routeIs('admin.anomaly.limits*') ? 'active' : '' }}">
+        <i class="bi bi-sliders"></i> Detection Limits
+    </a>
 </div>

@@ -30,8 +30,8 @@
             <form method="GET" class="row g-2 align-items-end">
                 <input type="hidden" name="category" value="{{ $filters['category'] }}">
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1" style="font-size:0.75rem;">Status</label>
-                    <select name="status" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label for="filter-status" class="form-label mb-1" style="font-size:0.8rem;">Status</label>
+                    <select name="status" id="filter-status" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Any</option>
                         @foreach($statuses as $value => $label)
                             <option value="{{ $value }}" @selected($filters['status'] === $value)>{{ $label }}</option>
@@ -39,8 +39,8 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1" style="font-size:0.75rem;">Severity</label>
-                    <select name="severity" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label for="filter-severity" class="form-label mb-1" style="font-size:0.8rem;">Severity</label>
+                    <select name="severity" id="filter-severity" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Any</option>
                         @foreach($severities as $value => $label)
                             <option value="{{ $value }}" @selected($filters['severity'] === $value)>{{ $label }}</option>
@@ -48,17 +48,17 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1" style="font-size:0.75rem;">Type</label>
-                    <select name="type" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label for="filter-type" class="form-label mb-1" style="font-size:0.8rem;">Type</label>
+                    <select name="type" id="filter-type" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Any</option>
                         @foreach($types as $type)
-                            <option value="{{ $type }}" @selected($filters['type'] === $type)>{{ ucwords(str_replace('_', ' ', $type)) }}</option>
+                            <option value="{{ $type }}" @selected($filters['type'] === $type)>{{ \App\Models\SensorAnomaly::labelFor($type) }}</option>
                         @endforeach
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1" style="font-size:0.75rem;">Hive</label>
-                    <select name="hive_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label for="filter-hive_id" class="form-label mb-1" style="font-size:0.8rem;">Hive</label>
+                    <select name="hive_id" id="filter-hive_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Any</option>
                         @foreach($hives as $hive)
                             <option value="{{ $hive->id }}" @selected($filters['hive_id'] === $hive->id)>{{ $hive->display_name ?? $hive->hive_code }}</option>
@@ -66,8 +66,8 @@
                     </select>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1" style="font-size:0.75rem;">Device</label>
-                    <select name="device_id" class="form-select form-select-sm" onchange="this.form.submit()">
+                    <label for="filter-device_id" class="form-label mb-1" style="font-size:0.8rem;">Device</label>
+                    <select name="device_id" id="filter-device_id" class="form-select form-select-sm" onchange="this.form.submit()">
                         <option value="">Any</option>
                         @foreach($devices as $device)
                             <option value="{{ $device->id }}" @selected($filters['device_id'] === $device->id)>{{ $device->device_code }}</option>
@@ -80,12 +80,12 @@
                     </a>
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1" style="font-size:0.75rem;">Detected from</label>
-                    <input type="date" name="from" class="form-control form-control-sm" value="{{ $filters['from']?->format('Y-m-d') }}" onchange="this.form.submit()">
+                    <label for="filter-from" class="form-label mb-1" style="font-size:0.8rem;">Detected from</label>
+                    <input type="date" name="from" id="filter-from" class="form-control form-control-sm" value="{{ $filters['from']?->format('Y-m-d') }}" onchange="this.form.submit()">
                 </div>
                 <div class="col-6 col-md-2">
-                    <label class="form-label mb-1" style="font-size:0.75rem;">Detected to</label>
-                    <input type="date" name="to" class="form-control form-control-sm" value="{{ $filters['to']?->format('Y-m-d') }}" onchange="this.form.submit()">
+                    <label for="filter-to" class="form-label mb-1" style="font-size:0.8rem;">Detected to</label>
+                    <input type="date" name="to" id="filter-to" class="form-control form-control-sm" value="{{ $filters['to']?->format('Y-m-d') }}" onchange="this.form.submit()">
                 </div>
             </form>
         </div>
@@ -104,62 +104,7 @@
                 No anomalies match these filters.
             </div>
         @else
-            <div class="table-responsive">
-                <table class="table table-hover mb-0">
-                    <thead>
-                        <tr>
-                            <th>Anomaly</th>
-                            <th>Hive</th>
-                            <th>Device</th>
-                            <th>First Detected</th>
-                            <th>Last Seen</th>
-                            <th class="text-center">Count</th>
-                            <th>Status</th>
-                            <th class="text-end pe-3"></th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        @foreach($anomalies as $anomaly)
-                            <tr>
-                                <td>
-                                    <span class="badge {{ $anomaly->badgeClass() }}">
-                                        <i class="bi {{ $anomaly->icon() }} me-1"></i>{{ $anomaly->label() }}
-                                    </span>
-                                    @unless($anomaly->isDeviceIssue())
-                                        <div class="text-muted text-capitalize" style="font-size:0.7rem;">{{ $anomaly->sensor_type }}</div>
-                                    @endunless
-                                </td>
-                                <td>
-                                    @if($anomaly->hive)
-                                        <a href="{{ route('admin.hives.show', $anomaly->hive) }}" class="text-decoration-none">{{ $anomaly->hive->display_name ?? $anomaly->hive->hive_code }}</a>
-                                    @else
-                                        <span class="text-muted">Unassigned</span>
-                                    @endif
-                                </td>
-                                <td>
-                                    @if($anomaly->device)
-                                        <a href="{{ route('admin.iot-devices.show', $anomaly->device) }}" class="text-decoration-none">{{ $anomaly->device->device_code }}</a>
-                                    @else
-                                        <span class="text-muted">#{{ $anomaly->device_id }}</span>
-                                    @endif
-                                </td>
-                                <td class="text-muted" title="{{ $anomaly->detected_at->format('Y-m-d H:i:s') }}">{{ $anomaly->detected_at->diffForHumans() }}</td>
-                                <td class="text-muted" title="{{ $anomaly->last_seen_at?->format('Y-m-d H:i:s') }}">{{ ($anomaly->last_seen_at ?? $anomaly->detected_at)->diffForHumans() }}</td>
-                                <td class="text-center">{{ $anomaly->occurrences }}</td>
-                                <td>
-                                    <span class="badge {{ $anomaly->statusBadgeClass() }} text-capitalize">{{ $anomaly->status() }}</span>
-                                    @if($anomaly->auto_resolved)
-                                        <div class="text-muted" style="font-size:0.68rem;">auto</div>
-                                    @endif
-                                </td>
-                                <td class="text-end pe-3">
-                                    <a href="{{ route('admin.anomaly.anomalies.show', $anomaly) }}" class="btn btn-sm btn-outline-forest" title="View anomaly"><i class="bi bi-eye"></i></a>
-                                </td>
-                            </tr>
-                        @endforeach
-                    </tbody>
-                </table>
-            </div>
+            @include('admin.anomaly._incident-table', ['caption' => $categories[$filters['category']].', unresolved first, then most recently active'])
         @endif
 
         @if($anomalies->hasPages())

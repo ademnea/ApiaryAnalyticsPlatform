@@ -75,6 +75,7 @@ class AnomalyIncidentService
             'acknowledgedBy',
             'resolvedBy',
             'alerts' => fn ($q) => $q->with('farmer')->orderByDesc('created_at'),
+            'notifications' => fn ($q) => $q->with('farmer')->orderBy('created_at')->orderBy('id'),
         ]);
     }
 

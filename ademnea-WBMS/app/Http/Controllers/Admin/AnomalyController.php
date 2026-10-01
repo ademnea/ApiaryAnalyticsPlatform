@@ -4,7 +4,10 @@ namespace App\Http\Controllers\Admin;
 
 use App\Http\Controllers\Controller;
 use App\Models\SensorAnomaly;
+use App\Services\Anomaly\AlertRouting;
+use App\Services\Anomaly\AnomalyEvidenceService;
 use App\Services\Anomaly\AnomalyIncidentService;
+use App\Services\Anomaly\DetectionLimitService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -16,16 +19,22 @@ use Illuminate\View\View;
  */
 class AnomalyController extends Controller
 {
-    public function __construct(private readonly AnomalyIncidentService $incidents)
-    {
+    public function __construct(
+        private readonly AnomalyIncidentService $incidents,
+        private readonly AnomalyEvidenceService $evidence,
+        private readonly DetectionLimitService $limits,
+    ) {
     }
 
     public function index(Request $request): View
     {
         $filters = $this->incidents->filtersFrom($request->query());
 
+        $anomalies = $this->incidents->paginate($filters)->withQueryString();
+
         return view('admin.anomaly.index', [
-            'anomalies' => $this->incidents->paginate($filters)->withQueryString(),
+            'anomalies' => $anomalies,
+            'headlines' => $anomalies->getCollection()->mapWithKeys(fn (SensorAnomaly $anomaly) => [$anomaly->id => $this->evidence->headline($anomaly)]),
             'filters' => $filters,
             'categories' => AnomalyIncidentService::CATEGORIES,
             'statuses' => AnomalyIncidentService::STATUSES,
@@ -36,9 +45,16 @@ class AnomalyController extends Controller
 
     public function show(SensorAnomaly $anomaly): View
     {
+        $anomaly = $this->incidents->loadDetail($anomaly);
+
         return view('admin.anomaly.show', [
-            'anomaly' => $this->incidents->loadDetail($anomaly),
+            'anomaly' => $anomaly,
             'history' => $this->incidents->history($anomaly),
+            'explanation' => $this->evidence->explain($anomaly),
+            'recommendedAction' => AlertRouting::recommendedAction($anomaly->anomaly_type),
+            'limitRule' => $this->limits->ruleFor($anomaly->anomaly_type),
+            'chart' => $this->evidence->chart($anomaly),
+            'notificationSummary' => $this->evidence->notificationSummary($anomaly),
         ]);
     }
 

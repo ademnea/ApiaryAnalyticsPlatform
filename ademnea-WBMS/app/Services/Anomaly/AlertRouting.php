@@ -52,7 +52,26 @@ final class AlertRouting
         return self::ROUTES[$anomalyType] ?? [self::ADMIN => ['email']];
     }
 
-    /** Recommended action for the email body. */
+    public const RECIPIENT_LABELS = [
+        self::ADMIN => 'Admins',
+        self::HARDWARE_TEAM => 'Hardware team',
+        self::FARMER => 'Farmer',
+    ];
+
+    /**
+     * The route for a type in display form, for the admin pages.
+     *
+     * @return array<int, array{recipient: string, channels: array<int, string>}>
+     */
+    public static function describe(string $anomalyType): array
+    {
+        return collect(self::for($anomalyType))
+            ->map(fn (array $channels, string $recipient) => ['recipient' => self::RECIPIENT_LABELS[$recipient] ?? $recipient, 'channels' => $channels])
+            ->values()
+            ->all();
+    }
+
+    /** Recommended action for the email body and the incident page. */
     public static function recommendedAction(string $anomalyType): string
     {
         return match ($anomalyType) {

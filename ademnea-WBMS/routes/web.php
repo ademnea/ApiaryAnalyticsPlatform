@@ -12,6 +12,7 @@ use App\Http\Controllers\Admin\AnomalyDashboardController;
 use App\Http\Controllers\Admin\AnomalyAnalyticsController;
 use App\Http\Controllers\Admin\AnomalyController;
 use App\Http\Controllers\Admin\DeviceFleetController;
+use App\Http\Controllers\Admin\DetectionLimitController;
 use App\Http\Controllers\Admin\SystemAlertController;
 use App\Http\Controllers\Admin\MonitoringController;
 use App\Enums\MediaKind;
@@ -507,6 +508,16 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
             Route::patch('/{anomaly}/acknowledge', [AnomalyController::class, 'acknowledge'])->name('acknowledge');
             Route::patch('/{anomaly}/resolve', [AnomalyController::class, 'resolve'])->name('resolve');
         });
+
+    // Detection limits — the thresholds the condition-monitoring rules judge
+    // against. Readable from both monitoring areas; changing them needs
+    // manage-hives, as on the Alert Thresholds page.
+    Route::get('/admin/anomaly/limits', [DetectionLimitController::class, 'index'])
+        ->middleware('permission:view-anomaly-analytics|view-device-fleet|manage-hives')
+        ->name('admin.anomaly.limits');
+    Route::put('/admin/anomaly/limits', [DetectionLimitController::class, 'update'])
+        ->middleware('permission:manage-hives')
+        ->name('admin.anomaly.limits.update');
 
     // Anomaly Detection
     Route::middleware(['permission:view-anomaly-analytics'])->group(function () {
