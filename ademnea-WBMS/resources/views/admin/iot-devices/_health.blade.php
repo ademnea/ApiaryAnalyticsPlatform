@@ -13,11 +13,12 @@
         default => 'green',
     };
     $signalTone = $health['signal_strength'] === null ? 'blue' : ($health['is_weak_signal'] ? 'honey' : 'green');
-    $contactTone = match ($health['status']) { 'offline' => 'red', default => 'green' };
-    [$statusBadge, $statusIcon] = match ($health['status']) {
-        'offline' => ['badge-offline', 'bi-wifi-off'],
-        'warning' => ['badge-warning', 'bi-exclamation-triangle'],
-        default => ['badge-active', 'bi-wifi'],
+    $contactTone = match (true) { $health['never_reported'] => 'blue', $health['status'] === 'offline' => 'red', default => 'green' };
+    [$statusBadge, $statusIcon, $statusLabel] = match (true) {
+        $health['never_reported'] => ['badge-retired', 'bi-hourglass-split', 'Never reported'],
+        $health['status'] === 'offline' => ['badge-offline', 'bi-wifi-off', 'Offline'],
+        $health['status'] === 'warning' => ['badge-warning', 'bi-exclamation-triangle', 'Needs attention'],
+        default => ['badge-active', 'bi-wifi', 'Online'],
     };
 @endphp
 
@@ -26,61 +27,80 @@
         <span><i class="bi bi-activity me-1"></i>Device Health</span>
         @if($iotDevice->active_flag)
             <span class="badge {{ $statusBadge }}">
-                <i class="bi {{ $statusIcon }} me-1"></i>{{ $health['never_reported'] ? 'Never reported' : ucfirst($health['status']) }}
+                <i class="bi {{ $statusIcon }} me-1"></i>{{ $statusLabel }}
             </span>
+        @else
+            <span class="badge badge-retired"><i class="bi bi-lock me-1"></i>Not monitored — access revoked</span>
         @endif
     </div>
     <div class="card-body">
+        @if($health['never_reported'])
+            <div class="alert-ademnea mb-3">
+                <i class="bi bi-info-circle me-1"></i>
+                This device has not sent any data yet. Battery, signal and storage appear here after its first report.
+            </div>
+        @endif
+
         <div class="row g-3">
-            <div class="col-6 col-md-3">
+            <div class="col-sm-6">
                 <div class="stat-card h-100">
                     <div class="stat-icon {{ $batteryTone }}"><i class="bi bi-battery-half"></i></div>
                     <div>
-                        <div class="stat-value" style="font-size:1.2rem;">{{ $health['battery_level'] !== null ? (int) $health['battery_level'] . '%' : '—' }}</div>
-                        <div class="stat-label">Battery</div>
+                        <div class="stat-label mt-0">Battery</div>
+                        <div class="stat-value" style="font-size:1.2rem;">{{ $health['battery_level'] !== null ? (int) $health['battery_level'] . '%' : 'No data' }}</div>
+                        @if($health['battery_level'] !== null)
+                            <div class="stat-label">{{ $health['is_critical_battery'] ? 'Critical — replace now' : ($health['is_low_battery'] ? 'Low — plan a replacement' : 'Healthy') }}</div>
+                        @endif
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-sm-6">
                 <div class="stat-card h-100">
                     <div class="stat-icon {{ $signalTone }}"><i class="bi bi-reception-4"></i></div>
                     <div>
-                        <div class="stat-value" style="font-size:1.2rem;">{{ $health['signal_strength'] !== null ? (int) $health['signal_strength'] . ' dBm' : '—' }}</div>
-                        <div class="stat-label">Signal</div>
+                        <div class="stat-label mt-0">Network signal</div>
+                        <div class="stat-value" style="font-size:1.2rem;">{{ $health['signal_strength'] !== null ? ($health['is_weak_signal'] ? 'Weak' : 'Good') : 'No data' }}</div>
+                        @if($health['signal_strength'] !== null)
+                            <div class="stat-label">{{ (int) $health['signal_strength'] }} dBm</div>
+                        @endif
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-sm-6">
                 <div class="stat-card h-100">
                     <div class="stat-icon blue"><i class="bi bi-hdd"></i></div>
                     <div>
-                        <div class="stat-value" style="font-size:1.2rem;">{{ $telemetry?->storage_usage !== null ? round($telemetry->storage_usage) . '%' : '—' }}</div>
-                        <div class="stat-label">Storage Used</div>
+                        <div class="stat-label mt-0">Storage used</div>
+                        <div class="stat-value" style="font-size:1.2rem;">{{ $telemetry?->storage_usage !== null ? round($telemetry->storage_usage) . '%' : 'No data' }}</div>
+                        @if($telemetry?->storage_usage !== null)
+                            <div class="stat-label">of the device's memory</div>
+                        @endif
                     </div>
                 </div>
             </div>
-            <div class="col-6 col-md-3">
+            <div class="col-sm-6">
                 <div class="stat-card h-100">
                     <div class="stat-icon {{ $contactTone }}"><i class="bi bi-clock-history"></i></div>
                     <div>
-                        <div class="stat-value" style="font-size:1rem;" @if($health['last_contact']) title="{{ $health['last_contact']->format('Y-m-d H:i:s') }}" @endif>
-                            {{ $health['last_contact']?->diffForHumans() ?? 'Never' }}
-                        </div>
-                        <div class="stat-label">Last Contact</div>
+                        <div class="stat-label mt-0">Last heard from</div>
+                        <div class="stat-value" style="font-size:1.05rem;line-height:1.2;">{{ $health['last_contact']?->diffForHumans() ?? 'Never' }}</div>
+                        @if($health['last_contact'])
+                            <div class="stat-label">{{ $health['last_contact']->format('d M Y, H:i') }}</div>
+                        @endif
                     </div>
                 </div>
             </div>
         </div>
 
         @if($telemetry)
-            <dl class="row mb-0 mt-3" style="font-size:0.8rem;">
-                <dt class="col-sm-4 text-muted">Reported Firmware</dt>
+            <dl class="row mb-0 mt-3 device-facts" style="font-size:0.82rem;">
+                <dt class="col-sm-4">Firmware it reports</dt>
                 <dd class="col-sm-8">{{ $telemetry->firmware_version ?: '—' }}</dd>
-                <dt class="col-sm-4 text-muted">Uptime</dt>
+                <dt class="col-sm-4">Running since last restart</dt>
                 <dd class="col-sm-8">{{ $telemetry->uptime_seconds !== null ? \Carbon\CarbonInterval::seconds($telemetry->uptime_seconds)->cascade()->forHumans(['short' => true, 'parts' => 2]) : '—' }}</dd>
-                <dt class="col-sm-4 text-muted">Reboots</dt>
+                <dt class="col-sm-4">Restarts</dt>
                 <dd class="col-sm-8">{{ $telemetry->reboot_count ?? '—' }}</dd>
-                <dt class="col-sm-4 text-muted">Sensor Read Success</dt>
+                <dt class="col-sm-4">Successful sensor reads</dt>
                 <dd class="col-sm-8">{{ $telemetry->sensor_read_success_rate !== null ? round($telemetry->sensor_read_success_rate, 1) . '%' : '—' }}</dd>
             </dl>
         @endif
@@ -88,7 +108,7 @@
 </div>
 
 <div class="card mb-3">
-    <div class="card-header"><i class="bi bi-graph-up me-1"></i>Battery &amp; Signal Trend — 7 Days</div>
+    <div class="card-header"><i class="bi bi-graph-up me-1"></i>Battery &amp; Signal — Last 7 Days</div>
     <div class="card-body">
         @if($telemetryTrend->isEmpty())
             <div class="text-center text-muted py-4" style="font-size:0.82rem;">
@@ -103,16 +123,16 @@
 
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-bar-chart me-1"></i>Submissions — Last 24 Hours</span>
+        <span><i class="bi bi-bar-chart me-1"></i>Check-ins — Last 24 Hours</span>
         <span class="text-muted" style="font-size:0.72rem;font-weight:400;">
-            {{ $submissionChart['received']->sum() }} received · expected ~{{ $submissionChart['expected'] }}/hour
+            {{ $submissionChart['received']->sum() }} received · about {{ $submissionChart['expected'] }} expected per hour
         </span>
     </div>
     <div class="card-body">
         @if($submissionChart['received']->sum() === 0)
             <div class="text-center text-muted py-4" style="font-size:0.82rem;">
                 <i class="bi bi-broadcast d-block mb-2" style="font-size:1.5rem;"></i>
-                No heartbeats received from this device in the last 24 hours.
+                This device has not checked in during the last 24 hours.
             </div>
         @else
             <canvas id="submissionChart" height="110"></canvas>
@@ -140,7 +160,7 @@
         <div class="table-responsive">
             <table class="table table-hover mb-0" style="font-size:0.82rem;">
                 <thead>
-                    <tr><th>Anomaly</th><th>Since</th><th class="text-center">Count</th><th>Status</th><th></th></tr>
+                    <tr><th>Anomaly</th><th>First seen</th><th class="text-center">Times seen</th><th>Status</th><th><span class="visually-hidden">Open</span></th></tr>
                 </thead>
                 <tbody>
                     @foreach($anomalies as $anomaly)
@@ -152,7 +172,7 @@
                             <td class="text-muted" title="{{ $anomaly->detected_at->format('Y-m-d H:i:s') }}">{{ $anomaly->detected_at->diffForHumans() }}</td>
                             <td class="text-center">{{ $anomaly->occurrences }}</td>
                             <td><span class="badge {{ $anomaly->statusBadgeClass() }} text-capitalize">{{ $anomaly->status() }}</span></td>
-                            <td class="text-end"><a href="{{ route('admin.anomaly.anomalies.show', $anomaly) }}" title="View anomaly"><i class="bi bi-arrow-right"></i></a></td>
+                            <td class="text-end"><a href="{{ route('admin.anomaly.anomalies.show', $anomaly) }}" class="text-decoration-none">Details <i class="bi bi-arrow-right"></i></a></td>
                         </tr>
                     @endforeach
                 </tbody>
@@ -171,14 +191,14 @@
                     datasets: [
                         {
                             type: 'bar',
-                            label: 'Heartbeats received',
+                            label: 'Check-ins received',
                             data: @json($submissionChart['received']),
                             backgroundColor: 'rgba(45,106,79,0.55)',
                             borderRadius: 3,
                         },
                         {
                             type: 'line',
-                            label: 'Expected',
+                            label: 'Expected per hour',
                             data: @json(array_fill(0, 24, $submissionChart['expected'])),
                             borderColor: '#D4A017',
                             borderDash: [5, 4],

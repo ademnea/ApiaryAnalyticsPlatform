@@ -8,26 +8,11 @@
 @endsection
 
 @section('content')
+@include('admin.iot-devices._styles')
 
 {{-- One-time API key banner: only appears right after a device is
      provisioned from this team's "Add Device" flow. Never shown again. --}}
-@if(session('plaintext_api_key'))
-    <div class="alert-ademnea mb-3" role="alert">
-        <div class="d-flex justify-content-between align-items-start">
-            <div>
-                <strong><i class="bi bi-key me-1"></i> Device API Key — copy this now</strong>
-                <p class="mb-1 mt-1">This key will not be shown again. Install it on the Raspberry Pi as <code>X-Api-Key</code>.</p>
-                <code style="font-size:0.95rem;background:#fff;padding:0.35rem 0.6rem;border-radius:6px;display:inline-block;">
-                    {{ session('plaintext_api_key') }}
-                </code>
-            </div>
-            <button type="button" class="btn btn-sm btn-outline-forest"
-                    onclick="navigator.clipboard.writeText('{{ session('plaintext_api_key') }}'); this.innerText='Copied';">
-                <i class="bi bi-clipboard me-1"></i>Copy
-            </button>
-        </div>
-    </div>
-@endif
+@include('admin.iot-devices._api-key-notice')
 
 <div class="card mb-3">
     <div class="card-body d-flex justify-content-between align-items-start flex-wrap gap-3">
@@ -44,22 +29,26 @@
                 <i class="bi bi-geo-alt me-1"></i>{{ $hardwareTeam->country }}
                 @if($hardwareTeam->contact_email)&nbsp;&bull;&nbsp;<i class="bi bi-envelope me-1"></i>{{ $hardwareTeam->contact_email }}@endif
                 @if($hardwareTeam->contact_phone)&nbsp;&bull;&nbsp;<i class="bi bi-telephone me-1"></i>{{ $hardwareTeam->contact_phone }}@endif
+                @if(!$hardwareTeam->contact_email && !$hardwareTeam->contact_phone)
+                    &nbsp;&bull;&nbsp;No team contact set —
+                    <a href="{{ route('admin.hardware-teams.edit', $hardwareTeam) }}">add one</a> so alerts reach the team
+                @endif
             </p>
         </div>
         <div class="d-flex gap-2">
             <a href="{{ route('admin.hardware-teams.edit', $hardwareTeam) }}" class="btn btn-outline-forest">
-                <i class="bi bi-pencil me-1"></i>Edit
+                <i class="bi bi-pencil me-1"></i>Edit team
             </a>
             @if($hardwareTeam->is_active)
                 <form action="{{ route('admin.hardware-teams.deactivate', $hardwareTeam) }}" method="POST"
                       onsubmit="return confirm('Deactivate this team? It will stop receiving alert dispatches. Its devices stay active.');">
                     @csrf @method('PATCH')
-                    <button type="submit" class="btn btn-outline-danger"><i class="bi bi-pause-circle me-1"></i>Deactivate</button>
+                    <button type="submit" class="btn btn-outline-danger"><i class="bi bi-pause-circle me-1"></i>Deactivate team</button>
                 </form>
             @else
                 <form action="{{ route('admin.hardware-teams.reactivate', $hardwareTeam) }}" method="POST">
                     @csrf @method('PATCH')
-                    <button type="submit" class="btn btn-primary"><i class="bi bi-play-circle me-1"></i>Reactivate</button>
+                    <button type="submit" class="btn btn-primary"><i class="bi bi-play-circle me-1"></i>Reactivate team</button>
                 </form>
             @endif
         </div>
@@ -72,7 +61,7 @@
             <div class="stat-icon green"><i class="bi bi-cpu"></i></div>
             <div>
                 <div class="stat-value">{{ $hardwareTeam->devices->count() }}</div>
-                <div class="stat-label">Registered Devices</div>
+                <div class="stat-label">Devices owned by this team</div>
             </div>
         </div>
     </div>
@@ -81,7 +70,7 @@
             <div class="stat-icon honey"><i class="bi bi-people"></i></div>
             <div>
                 <div class="stat-value">{{ $hardwareTeam->members->where('is_active', true)->count() }}</div>
-                <div class="stat-label">Active Team Members</div>
+                <div class="stat-label">Active members (receive alerts)</div>
             </div>
         </div>
     </div>
@@ -90,7 +79,7 @@
             <div class="stat-icon blue"><i class="bi bi-hexagon"></i></div>
             <div>
                 <div class="stat-value">{{ $hardwareTeam->devices->whereNotNull('hive_id')->count() }}</div>
-                <div class="stat-label">Devices Deployed to Hives</div>
+                <div class="stat-label">Devices installed on a hive</div>
             </div>
         </div>
     </div>
@@ -98,47 +87,45 @@
 
 <div class="card mb-3">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-cpu me-1"></i>Devices</span>
+        <span><i class="bi bi-cpu me-1"></i>Devices <span class="text-muted fw-normal">({{ $hardwareTeam->devices->count() }})</span></span>
         <a href="{{ route('admin.hardware-teams.devices.create', $hardwareTeam) }}" class="btn btn-honey btn-sm">
             <i class="bi bi-plus-circle me-1"></i>Add Device
         </a>
     </div>
-    <div class="card-body p-0">
-        <table class="table mb-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 device-table">
             <thead>
                 <tr>
-                    <th>Device Code</th><th>Type</th><th>Assigned Hive</th><th>Status</th><th>Access</th>
+                    <th class="ps-3">Device</th>
+                    <th>Hive</th>
+                    <th>Lifecycle<span class="th-hint">Where it is in deployment</span></th>
+                    <th>Data access<span class="th-hint">May it send data?</span></th>
                     <th class="text-end pe-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($hardwareTeam->devices as $device)
                     <tr @if((int) session('new_device_id') === $device->id) style="background:#FFFBF0;" @endif>
-                        <td class="fw-medium">
-                            <a href="{{ route('admin.iot-devices.show', $device) }}" class="text-decoration-none" style="color:#1a2e1f;">
-                                {{ $device->device_code }}
-                            </a>
+                        <td class="ps-3">
+                            <a href="{{ route('admin.iot-devices.show', $device) }}" class="text-decoration-none fw-medium">{{ $device->device_code }}</a>
+                            <div class="cell-sub text-capitalize">{{ str_replace('_', ' ', $device->device_type) }}</div>
                         </td>
-                        <td class="text-capitalize">{{ str_replace('_', ' ', $device->device_type) }}</td>
+                        <td>@include('admin.iot-devices._hive-cell', ['device' => $device])</td>
+                        <td>@include('admin.iot-devices._lifecycle-badge', ['status' => $device->status])</td>
                         <td>
-                            @if($device->hive_id)
-                                {{-- Placeholder label — Apiary module supplies the real hive display field --}}
-                                <span class="badge badge-active"><i class="bi bi-geo-alt-fill me-1"></i>Hive #{{ $device->hive_id }}</span>
-                            @else
-                                <span class="badge badge-pending">Unassigned</span>
-                            @endif
-                        </td>
-                        <td class="text-capitalize">{{ $device->status }}</td>
-                        <td>
-                            @if($device->active_flag)<span class="badge badge-active">Active</span>
+                            @if($device->active_flag)<span class="badge badge-active">Allowed</span>
                             @else<span class="badge badge-offline">Revoked</span>@endif
                         </td>
-                        <td class="text-end pe-3">
-                            @include('admin.iot-devices._row-actions', ['device' => $device])
-                        </td>
+                        <td class="text-end pe-3">@include('admin.iot-devices._row-actions', ['device' => $device])</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">No devices registered under this team yet.</td></tr>
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-cpu d-block mb-2" style="font-size:1.5rem;"></i>
+                            This team has no devices yet.
+                            <a href="{{ route('admin.hardware-teams.devices.create', $hardwareTeam) }}">Add the first device</a>
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
@@ -147,57 +134,68 @@
 
 <div class="card">
     <div class="card-header d-flex justify-content-between align-items-center">
-        <span><i class="bi bi-people me-1"></i>Team Members</span>
+        <span><i class="bi bi-people me-1"></i>Team Members <span class="text-muted fw-normal">({{ $hardwareTeam->members->count() }})</span></span>
         <a href="{{ route('admin.hardware-teams.members.create', $hardwareTeam) }}" class="btn btn-honey btn-sm">
             <i class="bi bi-person-plus me-1"></i>Add Member
         </a>
     </div>
-    <div class="card-body p-0">
-        <table class="table mb-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 device-table">
             <thead>
                 <tr>
-                    <th>Name</th><th>Team Role</th><th>Profession</th><th>Country</th><th>Contact</th><th>Status</th>
+                    <th class="ps-3">Member</th>
+                    <th>Profession</th>
+                    <th>Country</th>
+                    <th>Contact<span class="th-hint">Where their alerts are sent</span></th>
+                    <th>Status<span class="th-hint">Active members receive alerts</span></th>
                     <th class="text-end pe-3">Actions</th>
                 </tr>
             </thead>
             <tbody>
                 @forelse($hardwareTeam->members as $member)
                     <tr>
-                        <td class="fw-medium">{{ $member->name }}</td>
-                        <td>{{ $member->team_role ?: '—' }}</td>
-                        <td>{{ $member->profession ?: '—' }}</td>
-                        <td>{{ $member->country ?: '—' }}</td>
-                        <td class="text-muted" style="font-size:0.78rem;">
-                            @if($member->email)<div><i class="bi bi-envelope me-1"></i>{{ $member->email }}</div>@endif
-                            @if($member->phone)<div><i class="bi bi-telephone me-1"></i>{{ $member->phone }}</div>@endif
-                            @if(!$member->email && !$member->phone)—@endif
+                        <td class="ps-3 cell-wrap">
+                            <span class="fw-medium">{{ $member->name }}</span>
+                            <div class="cell-sub">{{ $member->team_role ?: 'No role recorded' }}</div>
+                        </td>
+                        <td class="cell-wrap">{!! $member->profession ? e($member->profession) : '<span class="text-muted">Not recorded</span>' !!}</td>
+                        <td>{!! $member->country ? e($member->country) : '<span class="text-muted">Not recorded</span>' !!}</td>
+                        <td>
+                            @if($member->email)<div><i class="bi bi-envelope me-1 text-muted"></i>{{ $member->email }}</div>@endif
+                            @if($member->phone)<div class="cell-sub"><i class="bi bi-telephone me-1"></i>{{ $member->phone }}</div>@endif
+                            @if(!$member->email && !$member->phone)<span class="text-muted">No contact set</span>@endif
                         </td>
                         <td>
                             @if($member->is_active)<span class="badge badge-active">Active</span>
                             @else<span class="badge badge-offline">Inactive</span>@endif
                         </td>
                         <td class="text-end pe-3">
-                            <a href="{{ route('admin.hardware-teams.members.edit', [$hardwareTeam, $member]) }}"
-                               class="btn btn-sm btn-outline-forest" title="Edit member"><i class="bi bi-pencil"></i></a>
-                            @if($member->is_active)
-                                <form action="{{ route('admin.hardware-teams.members.deactivate', [$hardwareTeam, $member]) }}"
-                                      method="POST" class="d-inline" onsubmit="return confirm('Mark {{ $member->name }} as inactive?');">
-                                    @csrf @method('PATCH')
-                                    <button type="submit" class="btn btn-sm btn-outline-danger" title="Deactivate member"><i class="bi bi-person-dash"></i></button>
-                                </form>
-                            @else
-                                <form action="{{ route('admin.hardware-teams.members.reactivate', [$hardwareTeam, $member]) }}" method="POST" class="d-inline">
-                                    @csrf @method('PATCH')
-                                    <button type="submit" class="btn btn-sm btn-outline-forest" title="Reactivate member"><i class="bi bi-person-check"></i></button>
-                                </form>
-                            @endif
+                            <div class="d-inline-flex align-items-center gap-1">
+                                <a href="{{ route('admin.hardware-teams.members.edit', [$hardwareTeam, $member]) }}" class="btn btn-sm btn-outline-forest">
+                                    <i class="bi bi-pencil me-1"></i>Edit
+                                </a>
+                                @if($member->is_active)
+                                    <form action="{{ route('admin.hardware-teams.members.deactivate', [$hardwareTeam, $member]) }}"
+                                          method="POST" onsubmit="return confirm('Mark {{ $member->name }} as inactive? They will stop receiving this team\'s alerts.');">
+                                        @csrf @method('PATCH')
+                                        <button type="submit" class="btn btn-sm btn-outline-danger"><i class="bi bi-person-dash me-1"></i>Deactivate</button>
+                                    </form>
+                                @else
+                                    <form action="{{ route('admin.hardware-teams.members.reactivate', [$hardwareTeam, $member]) }}" method="POST">
+                                        @csrf @method('PATCH')
+                                        <button type="submit" class="btn btn-sm btn-outline-forest"><i class="bi bi-person-check me-1"></i>Reactivate</button>
+                                    </form>
+                                @endif
+                            </div>
                         </td>
                     </tr>
                 @empty
                     <tr>
-                        <td colspan="7" class="text-center text-muted py-4">
-                            No team members recorded yet. Add the people responsible for deploying and
-                            maintaining this team's devices so admins know who to contact.
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="bi bi-people d-block mb-2" style="font-size:1.5rem;"></i>
+                            No team members recorded yet. Add the people responsible for this team's devices
+                            so admins know who to contact.
+                            <a href="{{ route('admin.hardware-teams.members.create', $hardwareTeam) }}">Add the first member</a>
                         </td>
                     </tr>
                 @endforelse

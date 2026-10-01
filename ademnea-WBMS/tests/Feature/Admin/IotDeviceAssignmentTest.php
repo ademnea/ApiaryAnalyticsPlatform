@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Apiary;
+use App\Models\Hive;
 use App\Models\IotDevice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -99,6 +101,20 @@ class IotDeviceAssignmentTest extends TestCase
         $response = $this->get(route('admin.iot-devices.assign.form', $device));
 
         $response->assertForbidden();
+    }
+
+    #[Test]
+    public function selecting_an_apiary_lists_its_available_hives(): void
+    {
+        $this->actingAsAdminWithPermission();
+        $device = IotDevice::factory()->create(['hive_id' => null]);
+        $hive = Hive::factory()->for(Apiary::factory()->active())->create();
+
+        $response = $this->get(route('admin.iot-devices.assign.hives', $device) . '?apiary_id=' . $hive->apiary_id);
+
+        $response->assertOk();
+        $response->assertViewIs('admin.iot-devices.assign-hives');
+        $response->assertSee($hive->hybrid_identifier);
     }
 
     #[Test]

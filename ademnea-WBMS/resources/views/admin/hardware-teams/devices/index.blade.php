@@ -9,16 +9,9 @@
 @endsection
 
 @section('content')
+@include('admin.iot-devices._styles')
 
-@if(session('plaintext_api_key'))
-    <div class="alert-ademnea mb-3" role="alert">
-        <strong><i class="bi bi-key me-1"></i>Device API Key — copy this now</strong>
-        <p class="mb-1 mt-1">This key will not be shown again.</p>
-        <code style="font-size:0.95rem;background:#fff;padding:0.35rem 0.6rem;border-radius:6px;display:inline-block;">
-            {{ session('plaintext_api_key') }}
-        </code>
-    </div>
-@endif
+@include('admin.iot-devices._api-key-notice')
 
 <div class="d-flex justify-content-between align-items-center mb-3">
     <p class="text-muted mb-0" style="font-size:0.82rem;">All devices registered under <strong>{{ $hardwareTeam->name }}</strong>.</p>
@@ -28,32 +21,40 @@
 </div>
 
 <div class="card">
-    <div class="card-body p-0">
-        <table class="table mb-0">
+    <div class="table-responsive">
+        <table class="table table-hover mb-0 device-table">
             <thead>
-                <tr><th>Device Code</th><th>Type</th><th>Assigned Hive</th><th>Status</th><th>Access</th><th class="text-end pe-3">Actions</th></tr>
+                <tr>
+                    <th class="ps-3">Device</th>
+                    <th>Hive</th>
+                    <th>Lifecycle<span class="th-hint">Where it is in deployment</span></th>
+                    <th>Data access<span class="th-hint">May it send data?</span></th>
+                    <th class="text-end pe-3">Actions</th>
+                </tr>
             </thead>
             <tbody>
                 @forelse($devices as $device)
                     <tr @if((int) session('new_device_id') === $device->id) style="background:#FFFBF0;" @endif>
-                        <td class="fw-medium">{{ $device->device_code }}</td>
-                        <td class="text-capitalize">{{ str_replace('_', ' ', $device->device_type) }}</td>
-                        <td>
-                            @if($device->hive_id)
-                                <span class="badge badge-active"><i class="bi bi-geo-alt-fill me-1"></i>Hive #{{ $device->hive_id }}</span>
-                            @else
-                                <span class="badge badge-pending">Unassigned</span>
-                            @endif
+                        <td class="ps-3">
+                            <a href="{{ route('admin.iot-devices.show', $device) }}" class="text-decoration-none fw-medium">{{ $device->device_code }}</a>
+                            <div class="cell-sub text-capitalize">{{ str_replace('_', ' ', $device->device_type) }}</div>
                         </td>
-                        <td class="text-capitalize">{{ $device->status }}</td>
+                        <td>@include('admin.iot-devices._hive-cell', ['device' => $device])</td>
+                        <td>@include('admin.iot-devices._lifecycle-badge', ['status' => $device->status])</td>
                         <td>
-                            @if($device->active_flag)<span class="badge badge-active">Active</span>
+                            @if($device->active_flag)<span class="badge badge-active">Allowed</span>
                             @else<span class="badge badge-offline">Revoked</span>@endif
                         </td>
                         <td class="text-end pe-3">@include('admin.iot-devices._row-actions', ['device' => $device])</td>
                     </tr>
                 @empty
-                    <tr><td colspan="6" class="text-center text-muted py-4">No devices yet.</td></tr>
+                    <tr>
+                        <td colspan="5" class="text-center text-muted py-5">
+                            <i class="bi bi-cpu d-block mb-2" style="font-size:1.5rem;"></i>
+                            This team has no devices yet.
+                            <a href="{{ route('admin.hardware-teams.devices.create', $hardwareTeam) }}">Add the first device</a>
+                        </td>
+                    </tr>
                 @endforelse
             </tbody>
         </table>
