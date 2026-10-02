@@ -6,6 +6,7 @@ use App\Models\Farmer;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Spatie\Permission\Models\Permission;
 use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 use Tests\TestCase;
@@ -27,15 +28,20 @@ class FarmerApprovalLinksUserTest extends TestCase
     {
         Role::findOrCreate('farmer', 'web');
         Role::findOrCreate('farmer-write', 'web');
+        // The approve/reject routes sit in the permission:manage-farmers group.
+        Permission::findOrCreate('manage-farmers', 'web');
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        return User::create([
+        $admin = User::create([
             'name'     => 'Admin',
             'email'    => 'admin@example.com',
             'password' => Hash::make('password123'),
             'role'     => 'admin',
             'status'   => 'active',
         ]);
+        $admin->givePermissionTo('manage-farmers');
+
+        return $admin;
     }
 
     /**
