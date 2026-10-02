@@ -44,10 +44,8 @@ class InspectionManagementTest extends TestCase
             'hive_id' => $hive->id,
             'strength_rating' => 'Strong',
         ]);
-        $this->assertDatabaseHas('hives', [
-            'id' => $hive->id,
-            'last_inspection_date' => now()->format('Y-m-d'),
-        ]);
+        // Compare as a date: SQLite stores date columns with a time part, MySQL doesn't.
+        $this->assertSame(now()->toDateString(), $hive->fresh()->last_inspection_date?->toDateString());
     }
 
     #[Test]
