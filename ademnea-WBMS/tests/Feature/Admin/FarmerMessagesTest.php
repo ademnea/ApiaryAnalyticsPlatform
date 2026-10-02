@@ -75,6 +75,6 @@ class FarmerMessagesTest extends TestCase
     {
         $response = $this->get(route('admin.farmers.messages'));
 
-        $response->assertRedirect(route('login'));
+        $response->assertRedirect(route('admin.login'));
     }
 }
