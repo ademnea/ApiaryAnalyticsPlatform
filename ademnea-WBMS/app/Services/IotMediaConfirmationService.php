@@ -35,11 +35,11 @@ class IotMediaConfirmationService
         }
 
         try {
-        ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
-    } catch (\App\Exceptions\IotDeviceNotAssignedException $e) {
-        $this->logRejected($device, $e->getMessage());
-        return;
-    }
+            ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
+        } catch (\App\Exceptions\IotDeviceNotAssignedException $e) {
+            $this->logRejected($device, $e->getMessage());
+            return;
+        }
 
         $attrs = [
             'hive_id' => $hive->id,

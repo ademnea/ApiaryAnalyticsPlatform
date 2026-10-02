@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Exceptions\IotDeviceNotAssignedException;
 use App\Models\IotDevice;
 use App\Models\IotIngestionLog;
 use App\Models\HiveTemperature;
@@ -27,14 +28,14 @@ class IotSensorIngestionService
             return;
         }
 
-        ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
+        try {
+            ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
+        } catch (IotDeviceNotAssignedException $e) {
+            // Permanent condition: log it and acknowledge, don't retry.
+            $this->logRejected($device, $payload, $e->getMessage());
 
-         try {
-           ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
-             } catch (\App\Exceptions\IotDeviceNotAssignedException $e) {
-           $this->logRejected($device, $payload, $e->getMessage());
-        return;
-    }
+            return;
+        }
 
         $recordedAtUtc = \Illuminate\Support\Carbon::parse($recordedAt)->utc();
 
