@@ -12,7 +12,6 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Http;
-use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 
 class AlertService
@@ -62,12 +61,13 @@ class AlertService
 
     public function evaluateThresholds(): void
     {
-        $hives = Hive::whereHas('farm.farmer', function ($q) {
-            $q->where('status', 'active');
-        })->with('farm.farmer')->get();
+        // Ownership is hive → apiary → farmer (same rule as FarmerHiveAccessService).
+        $hives = Hive::whereHas('apiary.farmer', fn ($q) => $q->active())
+            ->with('apiary.farmer')
+            ->get();
 
         foreach ($hives as $hive) {
-            $farmer = $hive->farm->farmer ?? null;
+            $farmer = $hive->apiary->farmer ?? null;
             if (!$farmer) {
                 continue;
             }
@@ -89,7 +89,6 @@ class AlertService
                 'type'       => $type,
                 'message'    => $message,
                 'is_read'    => false,
-                'created_at' => now(),
             ]);
         });
 
@@ -119,11 +118,13 @@ class AlertService
         }
 
         if ((float) $latest->weight_kg <= $threshold) {
+            $hiveLabel = $hive->display_name ?: $hive->name ?: $hive->hive_code;
+
             $this->createAlert(
                 $farmerId,
                 $hive->id,
                 'feed_required',
-                "Hive '{$hive->name}' weight is {$latest->weight_kg} kg — below the {$threshold} kg threshold. Feeding required."
+                "Hive '{$hiveLabel}' weight is {$latest->weight_kg} kg — below the {$threshold} kg threshold. Feeding required."
             );
         }
     }
@@ -150,10 +151,7 @@ class AlertService
                 ],
             ]);
 
-        $alert->update([
-            'is_read' => true,
-            'read_at' => now(),
-        ]);
+            $success = $response->successful();
 
             NotificationLog::create([
                 'farmer_id'     => $farmer->id,
@@ -180,33 +178,16 @@ class AlertService
                 'error'     => $e->getMessage(),
             ]);
 
-
-    /**
-     * Create alert.
-     */
-    public function createAlert(
-        array $data
-    ): Alert {
-
-        $alert = Alert::create($data);
-
-
-        if ($this->notifications) {
-            $this->notifications->dispatch($alert);
+            return false;
         }
-
-
-        return $alert;
     }
 
     public function sendEmailNotification(Farmer $farmer, string $subject, string $content): bool
     {
+        try {
+            $user = $farmer->user;
 
-        $weightThreshold =
-            (float) AlertThreshold::get(
-                'feed_required_weight_kg',
-                15
-            );
+            Mail::to($user->email)->send(new \App\Mail\Farmer\AlertNotification($farmer, $subject, $content));
 
             NotificationLog::create([
                 'farmer_id' => $farmer->id,
@@ -232,22 +213,7 @@ class AlertService
                 'error'     => $e->getMessage(),
             ]);
 
-        foreach ($hives as $hive) {
-
-            $farmer =
-                $hive->farm->farmer ?? null;
-
-
-            if (!$farmer) {
-                continue;
-            }
-
-
-            $this->checkFeedRequired(
-                $hive,
-                $farmer->id,
-                $weightThreshold
-            );
+            return false;
         }
     }
 
@@ -268,6 +234,7 @@ class AlertService
                 'message'  => $message,
             ]);
 
+            $success = $response->successful();
 
             NotificationLog::create([
                 'farmer_id'     => $farmer->id,
@@ -293,8 +260,9 @@ class AlertService
                 'farmer_id' => $farmer->id,
                 'error'     => $e->getMessage(),
             ]);
-        }
 
+            return false;
+        }
     }
 
     private function getFcmAccessToken(): string

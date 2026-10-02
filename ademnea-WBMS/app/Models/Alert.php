@@ -10,8 +10,6 @@ class Alert extends Model
 {
     use HasFactory;
 
-    public $timestamps = false;
-
     protected $fillable = [
         'farmer_id',
         'hive_id',
