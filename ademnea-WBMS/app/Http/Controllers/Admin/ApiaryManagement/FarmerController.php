@@ -26,7 +26,6 @@ class FarmerController extends Controller
         private readonly FarmerRegistryServiceContract $farmerService,
         private readonly FarmerApprovalService $approvals,
     ) {
-        $this->middleware('auth');
     }
 
     public function index(Request $request): View

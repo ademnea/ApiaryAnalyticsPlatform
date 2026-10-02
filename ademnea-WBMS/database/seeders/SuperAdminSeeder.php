@@ -37,6 +37,8 @@ class SuperAdminSeeder extends Seeder
         'manage-apiaries',
         'manage-hives',
         'manage-iot-devices',
+        'manage-inspections',
+        'manage-harvests',
         'view-hive-data',
 
         // Farmer management

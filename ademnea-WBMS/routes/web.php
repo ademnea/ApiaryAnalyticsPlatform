@@ -415,7 +415,6 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
 
             // --- Team Members (nested under a team) ---
             Route::prefix('/{hardwareTeam}/members')->name('members.')->group(function () {
-                Route::get('/', [IotHardwareTeamMemberController::class, 'index'])->name('index');
                 Route::get('/create', [IotHardwareTeamMemberController::class, 'create'])->name('create');
                 Route::post('/', [IotHardwareTeamMemberController::class, 'store'])->name('store');
                 Route::get('/{member}/edit', [IotHardwareTeamMemberController::class, 'edit'])->name('edit');

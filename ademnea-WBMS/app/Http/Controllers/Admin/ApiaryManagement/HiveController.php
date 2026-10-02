@@ -22,7 +22,6 @@ class HiveController extends Controller
         private readonly HiveRegistryServiceContract $registrationService,
         private readonly HiveStatusChangeServiceContract $statusService
     ) {
-        $this->middleware('auth');
     }
 
     public function index(Request $request): View
