@@ -2,79 +2,42 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
-use App\Models\Farmer;
 use App\Services\Farmer\MediaService;
+use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * REQ-F-FAPI-19 to 21: hive media, paginated with ?per_page= (max 50).
+ */
 class MediaController extends Controller
 {
-    protected MediaService $mediaService;
+    use ApiResponse;
+    use ResolvesFarmer;
 
-    public function __construct(MediaService $mediaService)
+    public function __construct(private readonly MediaService $mediaService)
     {
-        $this->mediaService = $mediaService;
     }
 
     public function photos(Request $request, int $hiveId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
-
-        $perPage = $request->input('per_page', 8);
-        $photos = $this->mediaService->getPhotos($farmer, $hiveId, $perPage);
-
-        $items = $photos->items();
-        foreach ($items as $photo) {
-            $photo->url = asset('storage/' . $photo->path);
-        }
-
-        return response()->json([
-            'data' => $items,
-            'meta' => [
-                'current_page' => $photos->currentPage(),
-                'last_page'    => $photos->lastPage(),
-                'per_page'     => $photos->perPage(),
-                'total'        => $photos->total(),
-            ],
-        ]);
+        return $this->paginated($this->mediaService->getPhotos($this->currentFarmer($request), $hiveId, $this->perPage($request)));
     }
 
     public function audio(Request $request, int $hiveId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
-
-        $audio = $this->mediaService->getAudio($farmer, $hiveId);
-
-        foreach ($audio as &$item) {
-            $item['url'] = asset('storage/' . $item['path']);
-        }
-
-        return response()->json([
-            'data' => $audio,
-        ]);
+        return $this->paginated($this->mediaService->getAudio($this->currentFarmer($request), $hiveId, $this->perPage($request)));
     }
 
     public function videos(Request $request, int $hiveId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
+        return $this->paginated($this->mediaService->getVideos($this->currentFarmer($request), $hiveId, $this->perPage($request)));
+    }
 
-        $perPage = $request->input('per_page', 8);
-        $videos = $this->mediaService->getVideos($farmer, $hiveId, $perPage);
-
-        $items = $videos->items();
-        foreach ($items as $video) {
-            $video->url = asset('storage/' . $video->path);
-        }
-
-        return response()->json([
-            'data' => $items,
-            'meta' => [
-                'current_page' => $videos->currentPage(),
-                'last_page'    => $videos->lastPage(),
-                'per_page'     => $videos->perPage(),
-                'total'        => $videos->total(),
-            ],
-        ]);
+    private function perPage(Request $request): int
+    {
+        return max(1, min((int) $request->input('per_page', 8), 50));
     }
 }

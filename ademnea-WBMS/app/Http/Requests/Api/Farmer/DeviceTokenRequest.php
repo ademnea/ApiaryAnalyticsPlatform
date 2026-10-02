@@ -14,7 +14,7 @@ class DeviceTokenRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'device_token' => ['required', 'string', 'not_empty'],
+            'device_token' => ['required', 'string', 'max:255'],
         ];
     }
 
@@ -22,7 +22,6 @@ class DeviceTokenRequest extends FormRequest
     {
         return [
             'device_token.required' => 'Device token is required.',
-            'device_token.not_empty' => 'Device token cannot be empty.',
         ];
     }
 }

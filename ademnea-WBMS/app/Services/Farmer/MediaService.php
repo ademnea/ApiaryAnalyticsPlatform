@@ -2,61 +2,56 @@
 
 namespace App\Services\Farmer;
 
+use App\Contracts\MediaUploadStorageContract;
 use App\Models\Farmer;
-use App\Models\Hive;
-use App\Models\HivePhoto;
 use App\Models\HiveAudio;
+use App\Models\HivePhoto;
 use App\Models\HiveVideo;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Photos, audio and video captured by a farmer's hive devices, newest first,
+ * each with a `url` from the active media storage (S3 signed URL or local mock).
+ */
 class MediaService
 {
-    public function __construct(private readonly FarmerHiveAccessService $hiveAccess)
-    {
+    public function __construct(
+        private readonly FarmerHiveAccessService $hiveAccess,
+        private readonly MediaUploadStorageContract $storage,
+    ) {
     }
-    /**
-     * Get photos for a hive
-     */
+
     public function getPhotos(Farmer $farmer, int $hiveId, int $perPage = 8): LengthAwarePaginator
     {
-        $this->verifyHiveOwnership($farmer, $hiveId);
-
-        return HivePhoto::where('hive_id', $hiveId)
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        return $this->paginate(HivePhoto::class, $farmer, $hiveId, $perPage);
     }
 
-    /**
-     * Get audio recordings for a hive
-     */
-    public function getAudio(Farmer $farmer, int $hiveId, int $limit = 20): array
+    public function getAudio(Farmer $farmer, int $hiveId, int $perPage = 8): LengthAwarePaginator
     {
-        $this->verifyHiveOwnership($farmer, $hiveId);
-
-        return HiveAudio::where('hive_id', $hiveId)
-            ->orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get()
-            ->toArray();
+        return $this->paginate(HiveAudio::class, $farmer, $hiveId, $perPage);
     }
 
-    /**
-     * Get videos for a hive
-     */
     public function getVideos(Farmer $farmer, int $hiveId, int $perPage = 8): LengthAwarePaginator
     {
-        $this->verifyHiveOwnership($farmer, $hiveId);
-
-        return HiveVideo::where('hive_id', $hiveId)
-            ->orderBy('created_at', 'desc')
-            ->paginate($perPage);
+        return $this->paginate(HiveVideo::class, $farmer, $hiveId, $perPage);
     }
 
     /**
-     * Verify hive ownership
+     * @param  class-string<Model>  $model
      */
-    private function verifyHiveOwnership(Farmer $farmer, int $hiveId): void
+    private function paginate(string $model, Farmer $farmer, int $hiveId, int $perPage): LengthAwarePaginator
     {
         $this->hiveAccess->findOwnedHive($farmer, $hiveId);
+
+        $page = $model::where('hive_id', $hiveId)
+            ->latest('recorded_at')
+            ->paginate($perPage);
+
+        $page->getCollection()->each(function (Model $item) {
+            $item->setAttribute('url', $this->storage->publicUrl($item->s3_object_key ?: $item->file_path));
+        });
+
+        return $page;
     }
 }

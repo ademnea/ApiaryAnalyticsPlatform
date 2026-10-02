@@ -1,85 +1,70 @@
 <?php
 
+use App\Http\Controllers\Api\Farmer\AlertController;
+use App\Http\Controllers\Api\Farmer\ApiaryController;
+use App\Http\Controllers\Api\Farmer\AuthController;
+use App\Http\Controllers\Api\Farmer\InspectionController;
+use App\Http\Controllers\Api\Farmer\MediaController;
+use App\Http\Controllers\Api\Farmer\MessageController;
+use App\Http\Controllers\Api\Farmer\SensorDataController;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\Farmer\{
-    AuthController,
-    ProfileController,
-    ApiaryController,
-    HiveController,
-    SensorDataController,
-    MediaController,
-    InspectionController,
-    AlertController,
-    MessageController,
-};
 
 /*
 |--------------------------------------------------------------------------
-| Farmer Mobile API Routes
+| Farmer Mobile API — /api/v1/farmer
 |--------------------------------------------------------------------------
-| All routes are prefixed /api/v1/farmer (REQ-F-FAPI-33).
-| Public routes (no token): register, login, password reset.
-| Protected routes: auth:sanctum + role:farmer middleware.
+| Included from routes/api.php (which adds the /api prefix and the general
+| 60 req/min limit). This file is the only place farmer routes are defined.
 |
-| Include this file from routes/api.php:
-|   require __DIR__.'/farmer_api.php';
-|--------------------------------------------------------------------------
+| Auth: a farmer is a User (role = farmer) linked to a Farmer profile.
+| Ownership: hive → apiary → farmer, enforced in the services.
+|
+| Responses: reads { data, meta }, actions { message, data }, errors { message, errors }.
 */
 
 Route::prefix('v1/farmer')->group(function () {
 
-    // -------------------------------------------------------------------------
-    // Public — no authentication required
-    // -------------------------------------------------------------------------
-    Route::post('register',         [AuthController::class, 'register']);
-    Route::post('login',            [AuthController::class, 'login']);
-    Route::post('password/forgot',  [AuthController::class, 'forgotPassword']);
-    Route::post('password/reset',   [AuthController::class, 'resetPassword']);
+    // Public — throttled harder to slow down password guessing.
+    Route::middleware('throttle:10,1')->group(function () {
+        Route::post('register', [AuthController::class, 'register']);
+        Route::post('login', [AuthController::class, 'login']);
+        Route::post('password/forgot', [AuthController::class, 'forgotPassword']);
+        Route::post('password/reset', [AuthController::class, 'resetPassword']);
+    });
 
-    // -------------------------------------------------------------------------
-    // Protected — must be authenticated farmer with active account
-    // -------------------------------------------------------------------------
     Route::middleware(['auth:sanctum', 'role:farmer'])->group(function () {
 
-        // Auth
+        // Account
         Route::post('logout', [AuthController::class, 'logout']);
+        Route::get('profile', [AuthController::class, 'profile']);
+        Route::put('profile', [AuthController::class, 'updateProfile']);
+        Route::post('device-token', [AuthController::class, 'registerDeviceToken']);
 
-        // Profile — REQ-F-FAPI-05
-        Route::get ('profile', [ProfileController::class, 'show']);
-        Route::put ('profile', [ProfileController::class, 'update']);
-
-        // FCM device token — REQ-F-FAPI-27
-        Route::post('device-token', [AlertController::class, 'storeDeviceToken']);
-
-        // Apiaries and their hives — apiary is the single physical-site model.
+        // Apiaries and their hives
         Route::get('apiaries', [ApiaryController::class, 'index']);
-        Route::get('apiaries/{apiaryId}/hives', [ApiaryController::class, 'hives']);
+        Route::get('apiaries/{apiaryId}/hives', [ApiaryController::class, 'hives'])->whereNumber('apiaryId');
 
-        // Hive-scoped routes (all require hive ownership check in Form Request)
-        Route::prefix('hives/{hive_id}')->group(function () {
-
-            // Sensor data — REQ-F-FAPI-14 to 18
-            Route::get('temperature',   [SensorDataController::class, 'temperature']);
-            Route::get('humidity',      [SensorDataController::class, 'humidity']);
+        // Per-hive data
+        Route::prefix('hives/{hiveId}')->whereNumber('hiveId')->group(function () {
+            Route::get('temperature', [SensorDataController::class, 'temperature']);
+            Route::get('humidity', [SensorDataController::class, 'humidity']);
             Route::get('carbondioxide', [SensorDataController::class, 'carbonDioxide']);
-            Route::get('weight',        [SensorDataController::class, 'weight']);
-            Route::get('latest',        [SensorDataController::class, 'latest']);
+            Route::get('weight', [SensorDataController::class, 'weight']);
+            Route::get('latest', [SensorDataController::class, 'latest']);
 
-            // Media — REQ-F-FAPI-19 to 21
             Route::get('photos', [MediaController::class, 'photos']);
-            Route::get('audio',  [MediaController::class, 'audio']);
+            Route::get('audio', [MediaController::class, 'audio']);
             Route::get('videos', [MediaController::class, 'videos']);
 
-            // Inspections — REQ-F-FAPI-22
             Route::get('inspections', [InspectionController::class, 'index']);
         });
 
-        // Alerts — REQ-F-FAPI-25, 26
-        Route::get  ('alerts',                  [AlertController::class, 'index']);
-        Route::patch('alerts/{alert_id}/read',  [AlertController::class, 'markRead']);
+        // Alerts
+        Route::get('alerts', [AlertController::class, 'index']);
+        Route::patch('alerts/{alertId}/read', [AlertController::class, 'markRead'])->whereNumber('alertId');
 
-        // Farmer-to-admin messages — REQ-F-FAPI-31, 32
+        // Farmer-to-admin messages
+        Route::get('messages', [MessageController::class, 'index']);
         Route::post('messages', [MessageController::class, 'store']);
-        Route::get ('messages', [MessageController::class, 'index']);
     });
 });

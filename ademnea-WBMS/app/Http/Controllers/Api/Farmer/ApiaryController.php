@@ -2,37 +2,41 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
-use App\Models\Farmer;
 use App\Services\Farmer\ApiaryDataService;
+use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 
+/**
+ * The farmer's apiaries and the hives in each (ownership: apiary.farmer_id).
+ */
 class ApiaryController extends Controller
 {
+    use ApiResponse;
+    use ResolvesFarmer;
+
     public function __construct(private readonly ApiaryDataService $apiaryData)
     {
     }
 
     public function index(Request $request): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
-
-        return response()->json($this->paginated($this->apiaryData->getApiaries($farmer, (int) $request->input('per_page', 25))));
+        return $this->paginated(
+            $this->apiaryData->getApiaries($this->currentFarmer($request), $this->perPage($request))
+        );
     }
 
     public function hives(Request $request, int $apiaryId): JsonResponse
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
-
-        return response()->json($this->paginated($this->apiaryData->getHives($farmer, $apiaryId, (int) $request->input('per_page', 25))));
+        return $this->paginated(
+            $this->apiaryData->getHives($this->currentFarmer($request), $apiaryId, $this->perPage($request))
+        );
     }
 
-    private function paginated($paginator): array
+    private function perPage(Request $request): int
     {
-        return ['data' => $paginator->items(), 'meta' => [
-            'current_page' => $paginator->currentPage(), 'last_page' => $paginator->lastPage(),
-            'per_page' => $paginator->perPage(), 'total' => $paginator->total(),
-        ]];
+        return max(1, min((int) $request->input('per_page', 25), 100));
     }
 }

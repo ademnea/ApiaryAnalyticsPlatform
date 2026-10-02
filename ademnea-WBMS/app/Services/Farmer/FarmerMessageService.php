@@ -25,7 +25,7 @@ class FarmerMessageService
             'status'    => 'sent',
         ]);
 
-        $this->audit->log($farmerId, 'message_submitted', $message->id);
+        $this->audit->log($farmerId, 'message_submitted', 'farmer_message', $message->id);
 
         return $message;
     }

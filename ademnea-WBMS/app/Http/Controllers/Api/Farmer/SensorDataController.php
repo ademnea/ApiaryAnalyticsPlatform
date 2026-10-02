@@ -2,108 +2,78 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Farmer\Sensor\SensorDataRequest;
-use App\Models\Farmer;
+use App\Http\Requests\Api\Farmer\SensorDataRequest;
+use App\Models\Hive;
 use App\Services\Farmer\FarmerHiveAccessService;
 use App\Traits\ApiResponse;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Http\JsonResponse;
 
 /**
- * REQ-F-FAPI-14 to 18: Sensor data read-only endpoints.
+ * REQ-F-FAPI-14 to 18: sensor readings for a hive the farmer owns.
  *
- * Routes:
- *   GET /api/v1/farmer/hives/{hive_id}/temperature
- *   GET /api/v1/farmer/hives/{hive_id}/humidity
- *   GET /api/v1/farmer/hives/{hive_id}/carbondioxide
- *   GET /api/v1/farmer/hives/{hive_id}/weight
- *   GET /api/v1/farmer/hives/{hive_id}/latest    ← aggregates all 4 in one call
- *
- * All queries go through Dev C's tables:
- *   hive_temperatures, hive_humidities, hive_co2_levels, hive_weights
- * Confirm exact table/column names with Dev C before running php artisan migrate.
+ *   GET /api/v1/farmer/hives/{hiveId}/temperature|humidity|carbondioxide|weight
+ *   GET /api/v1/farmer/hives/{hiveId}/latest    ← newest reading of each sensor
  */
 class SensorDataController extends Controller
 {
     use ApiResponse;
+    use ResolvesFarmer;
 
     public function __construct(private readonly FarmerHiveAccessService $hiveAccess)
     {
     }
 
-    /** REQ-F-FAPI-14 */
     public function temperature(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = $this->ownedHive($request, $hiveId);
-        $data = $this->buildQuery($hive->temperatures(), $request)->paginate($request->perPage());
-
-        return $this->success($data);
+        return $this->readings($this->ownedHive($request, $hiveId)->temperatures(), $request);
     }
 
-    /** REQ-F-FAPI-15 */
     public function humidity(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = $this->ownedHive($request, $hiveId);
-        $data = $this->buildQuery($hive->humidities(), $request)->paginate($request->perPage());
-
-        return $this->success($data);
+        return $this->readings($this->ownedHive($request, $hiveId)->humidities(), $request);
     }
 
-    /** REQ-F-FAPI-16 */
     public function carbonDioxide(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = $this->ownedHive($request, $hiveId);
-        $data = $this->buildQuery($hive->carbondioxides(), $request)->paginate($request->perPage());
-
-        return $this->success($data);
+        return $this->readings($this->ownedHive($request, $hiveId)->carbondioxides(), $request);
     }
 
-    /** REQ-F-FAPI-17 */
     public function weight(SensorDataRequest $request, int $hiveId): JsonResponse
     {
-        $hive = $this->ownedHive($request, $hiveId);
-        $data = $this->buildQuery($hive->weights(), $request)->paginate($request->perPage());
-
-        return $this->success($data);
+        return $this->readings($this->ownedHive($request, $hiveId)->weights(), $request);
     }
 
-    /**
-     * REQ-F-FAPI-18: Latest reading aggregated from all 4 sensors.
-     * Returns a single object — no pagination needed.
-     */
     public function latest(SensorDataRequest $request, int $hiveId): JsonResponse
     {
         $hive = $this->ownedHive($request, $hiveId);
 
         return $this->success([
-            'hive_id'      => $hiveId,
-            'temperature'  => $hive->temperatures()->latest()->first(),
-            'humidity'     => $hive->humidities()->latest()->first(),
-            'co2'          => $hive->carbondioxides()->latest()->first(),
-            'weight'       => $hive->weights()->latest()->first(),
-            'fetched_at'   => now()->toISOString(),
+            'hive_id' => $hive->id,
+            'temperature' => $hive->temperatures()->latest('recorded_at')->first(),
+            'humidity' => $hive->humidities()->latest('recorded_at')->first(),
+            'co2' => $hive->carbondioxides()->latest('recorded_at')->first(),
+            'weight' => $hive->weights()->latest('recorded_at')->first(),
+            'fetched_at' => now()->toIso8601String(),
         ]);
     }
 
-    // -------------------------------------------------------------------------
-    // Shared: apply optional date range filter to any sensor relationship query
-    // -------------------------------------------------------------------------
-    private function buildQuery($query, SensorDataRequest $request)
+    private function readings(HasMany $query, SensorDataRequest $request): JsonResponse
     {
         if ($request->filled('from')) {
-            $query->where('created_at', '>=', $request->input('from'));
+            $query->where('recorded_at', '>=', $request->date('from')->utc());
         }
         if ($request->filled('to')) {
-            $query->where('created_at', '<=', $request->input('to'));
+            $query->where('recorded_at', '<=', $request->date('to')->utc());
         }
 
-        return $query->orderByDesc('created_at');
+        return $this->paginated($query->latest('recorded_at')->paginate($request->perPage()));
     }
 
-    private function ownedHive(SensorDataRequest $request, int $hiveId)
+    private function ownedHive(SensorDataRequest $request, int $hiveId): Hive
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
-
-        return $this->hiveAccess->findOwnedHive($farmer, $hiveId);
+        return $this->hiveAccess->findOwnedHive($this->currentFarmer($request), $hiveId);
     }
 }

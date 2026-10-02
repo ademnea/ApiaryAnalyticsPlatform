@@ -10,7 +10,6 @@ class FarmerAuditLog extends Model
 {
     use HasFactory;
 
-    public $timestamps = false;
 
     protected $fillable = [
         'farmer_id',
@@ -31,13 +30,13 @@ class FarmerAuditLog extends Model
         return $this->belongsTo(Farmer::class);
     }
 
-    public static function record(int $farmerId, string $actionType, ?int $affectedRecordId = null): self
+    public static function record(int $farmerId, string $actionType, string $affectedRecordType, ?int $affectedRecordId = null): self
     {
         return static::create([
-            'farmer_id'          => $farmerId,
-            'action_type'        => $actionType,
-            'affected_record_id' => $affectedRecordId,
-            'created_at'         => now(),
+            'farmer_id'            => $farmerId,
+            'action_type'          => $actionType,
+            'affected_record_type' => $affectedRecordType,
+            'affected_record_id'   => $affectedRecordId,
         ]);
     }
 }

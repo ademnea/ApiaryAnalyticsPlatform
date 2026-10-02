@@ -16,7 +16,6 @@ class FarmerController extends Controller
 {
     public function __construct(private readonly FarmerRegistryServiceContract $farmerService)
     {
-        $this->middleware('auth');
     }
 
     public function index(Request $request): View
@@ -101,6 +100,8 @@ class FarmerController extends Controller
     public function approve(Farmer $farmer): RedirectResponse
     {
         $farmer->update(['profile_status' => 'active']);
+        // Self-registered farmers log in to the mobile API through their User account.
+        $farmer->user?->update(['status' => 'active']);
 
         return redirect()
             ->route('admin.farmers.pending')
@@ -110,6 +111,8 @@ class FarmerController extends Controller
     public function reject(Farmer $farmer): RedirectResponse
     {
         $farmer->update(['profile_status' => 'incomplete']);
+        $farmer->user?->update(['status' => 'rejected']);
+        $farmer->user?->tokens()->delete();
 
         return redirect()
             ->route('admin.farmers.pending')

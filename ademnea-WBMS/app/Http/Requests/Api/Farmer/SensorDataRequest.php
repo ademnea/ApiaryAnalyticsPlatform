@@ -4,6 +4,10 @@ namespace App\Http\Requests\Api\Farmer;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * Sensor data read endpoints: optional ?from=&to= (any date/ISO 8601) and ?per_page=.
+ * The range filters on recorded_at, the time the device took the reading.
+ */
 class SensorDataRequest extends FormRequest
 {
     public function authorize(): bool
@@ -14,21 +18,14 @@ class SensorDataRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'start' => ['nullable', 'date', 'date_format:Y-m-d\TH:i:s\Z'],
-            'end' => ['nullable', 'date', 'date_format:Y-m-d\TH:i:s\Z', 'after_or_equal:start'],
+            'from' => ['nullable', 'date'],
+            'to' => ['nullable', 'date', 'after_or_equal:from'],
             'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
         ];
     }
 
-    public function messages(): array
+    public function perPage(): int
     {
-        return [
-            'start.date_format' => 'Start date must be in ISO 8601 UTC format (Y-m-d\TH:i:s\Z).',
-            'end.date_format' => 'End date must be in ISO 8601 UTC format (Y-m-d\TH:i:s\Z).',
-            'end.after_or_equal' => 'End date must be after or equal to start date.',
-            'per_page.integer' => 'Per page must be an integer.',
-            'per_page.min' => 'Per page must be at least 1.',
-            'per_page.max' => 'Per page cannot exceed 100.',
-        ];
+        return (int) $this->input('per_page', 15);
     }
 }

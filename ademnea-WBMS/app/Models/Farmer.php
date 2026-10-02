@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Support\Str;
@@ -13,6 +14,7 @@ class Farmer extends Model
     use HasFactory, SoftDeletes;
 
     protected $fillable = [
+        'user_id',
         'first_name',
         'last_name',
         'email',
@@ -68,6 +70,12 @@ class Farmer extends Model
         } while (static::withTrashed()->where('farmer_code', $code)->exists());
 
         return $code;
+    }
+
+    /** Login account for the farmer mobile API (null for admin-managed farmers). */
+    public function user(): BelongsTo
+    {
+        return $this->belongsTo(User::class);
     }
 
     public function apiaries(): HasMany

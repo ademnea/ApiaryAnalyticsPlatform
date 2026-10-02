@@ -2,52 +2,80 @@
 
 namespace App\Traits;
 
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Http\JsonResponse;
 
 /**
- * Consistent response envelope: {success, data, message, code}
- * Used by every controller in App\Http\Controllers\Api\Farmer.
- * REQ-F-FAPI-34
+ * One JSON shape for the whole farmer API, matching Laravel's own
+ * validation/auth error responses:
+ *
+ *   reads:   { "data": ..., "meta": { pagination } }
+ *   actions: { "message": "...", "data": ... }
+ *   errors:  { "message": "...", "errors": { ... } }   + HTTP status
  */
 trait ApiResponse
 {
-    protected function success(mixed $data = null, string $message = 'OK', int $code = 200): JsonResponse
+    protected function success(mixed $data = null, ?string $message = null, int $code = 200): JsonResponse
     {
-        return response()->json([
-            'success' => true,
-            'message' => $message,
-            'data'    => $data,
-        ], $code);
+        if ($data instanceof LengthAwarePaginator) {
+            return $this->paginated($data, $message, $code);
+        }
+
+        $body = [];
+        if ($message !== null) {
+            $body['message'] = $message;
+        }
+        if ($data !== null) {
+            $body['data'] = $data;
+        }
+
+        return response()->json($body, $code);
     }
 
-    protected function created(mixed $data = null, string $message = 'Created'): JsonResponse
+    protected function created(mixed $data = null, ?string $message = null): JsonResponse
     {
         return $this->success($data, $message, 201);
     }
 
-    protected function error(string $message, int $code = 400, mixed $errors = null): JsonResponse
+    protected function paginated(LengthAwarePaginator $paginator, ?string $message = null, int $code = 200): JsonResponse
     {
         $body = [
-            'success' => false,
-            'message' => $message,
+            'data' => $paginator->items(),
+            'meta' => [
+                'current_page' => $paginator->currentPage(),
+                'last_page' => $paginator->lastPage(),
+                'per_page' => $paginator->perPage(),
+                'total' => $paginator->total(),
+            ],
         ];
-        if ($errors !== null) {
-            $body['errors'] = $errors;
+        if ($message !== null) {
+            $body = ['message' => $message] + $body;
         }
+
         return response()->json($body, $code);
     }
 
-    protected function notFound(string $message = 'Resource not found'): JsonResponse
+    protected function error(string $message, int $code = 400, mixed $errors = null): JsonResponse
+    {
+        $body = ['message' => $message];
+        if ($errors !== null) {
+            $body['errors'] = $errors;
+        }
+
+        return response()->json($body, $code);
+    }
+
+    protected function notFound(string $message = 'Resource not found.'): JsonResponse
     {
         return $this->error($message, 404);
     }
 
-    protected function forbidden(string $message = 'Access denied'): JsonResponse
+    protected function forbidden(string $message = 'Access denied.'): JsonResponse
     {
         return $this->error($message, 403);
     }
 
-    protected function unauthorized(string $message = 'Unauthenticated'): JsonResponse
+    protected function unauthorized(string $message = 'Unauthenticated.'): JsonResponse
     {
         return $this->error($message, 401);
     }
