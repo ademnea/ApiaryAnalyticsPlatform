@@ -126,11 +126,13 @@ class AlertService
         }
 
         if ((float) $latest->weight_kg <= $threshold) {
+            $hiveLabel = $hive->display_name ?: $hive->name ?: $hive->hive_code;
+
             $this->createAlert(
                 $farmerId,
                 $hive->id,
                 'feed_required',
-                "Hive '{$hive->name}' weight is {$latest->weight_kg} kg — below the {$threshold} kg threshold. Feeding required."
+                "Hive '{$hiveLabel}' weight is {$latest->weight_kg} kg — below the {$threshold} kg threshold. Feeding required."
             );
         }
     }

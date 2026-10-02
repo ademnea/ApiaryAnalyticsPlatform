@@ -10,8 +10,6 @@ class FarmerAuditLog extends Model
 {
     use HasFactory;
 
-    public $timestamps = false;
-
     protected $fillable = [
         'farmer_id',
         'action_type',
@@ -47,7 +45,6 @@ class FarmerAuditLog extends Model
             'action_type'          => $actionType,
             'affected_record_type' => $affectedRecordType,
             'affected_record_id'   => $affectedRecordId,
-            'created_at'           => now(),
         ]);
     }
 }
