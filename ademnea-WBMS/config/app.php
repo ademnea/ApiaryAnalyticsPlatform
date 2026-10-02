@@ -54,6 +54,9 @@ return [
 
     'url' => env('APP_URL', 'http://localhost'),
 
+    // Base URL for links in farmer emails (password reset, alerts) that open the mobile app.
+    'mobile_app_url' => env('MOBILE_APP_URL', env('APP_URL', 'http://localhost')),
+
     /*
     |--------------------------------------------------------------------------
     | Application Timezone

@@ -17,6 +17,22 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Module-specific disks
+    |--------------------------------------------------------------------------
+    |
+    | Read these via config(), never env(), so they still work after
+    | `php artisan config:cache` in production.
+    |
+    */
+
+    // Disk for public feedback attachments (defaults to the default disk).
+    'feedback_disk' => env('FEEDBACK_FILES_DISK', env('FILESYSTEM_DISK', 'public')),
+
+    // "s3" = real presigned S3 uploads for IoT media; anything else = local mock.
+    'iot_media_disk' => env('IOT_MEDIA_DISK', 'local'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Filesystem Disks
     |--------------------------------------------------------------------------
     |
@@ -65,9 +81,11 @@ return [
             'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
             'throw' => false,
             'report' => false,
+            // Keep TLS verification on. Only set AWS_VERIFY_SSL=false on a machine with a broken
+            // CA bundle, and fix the bundle instead (it exposes S3 traffic to interception).
             'http' => [
-        'verify' => false,
-    ],
+                'verify' => (bool) env('AWS_VERIFY_SSL', true),
+            ],
         ],
 
     ],

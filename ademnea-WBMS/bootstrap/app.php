@@ -26,6 +26,9 @@ return Application::configure(basePath: dirname(__DIR__))
         // the default 'login' route (which doesn't exist in this project).
         $middleware->redirectGuestsTo(fn () => route('admin.login'));
 
+        // 60 requests/minute per user (or IP) on /api routes — limiter defined in AppServiceProvider.
+        $middleware->throttleApi();
+
         $middleware->alias([
             'permission'         => \Spatie\Permission\Middleware\PermissionMiddleware::class,
             'role'               => \Spatie\Permission\Middleware\RoleMiddleware::class,
