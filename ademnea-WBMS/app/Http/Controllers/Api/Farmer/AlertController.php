@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ClampsPageSize;
 use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
 use App\Models\Alert;
@@ -19,7 +20,7 @@ use Illuminate\Http\Request;
  */
 class AlertController extends Controller
 {
-    use ApiResponse, ResolvesFarmer;
+    use ApiResponse, ClampsPageSize, ResolvesFarmer;
 
     public function __construct(
         private readonly AlertService $alertService
@@ -29,7 +30,7 @@ class AlertController extends Controller
     {
         $alerts = $this->alertService->fetchForFarmer(
             $this->farmerId($request),
-            (int) $request->input('per_page', 15)
+            $this->pageSize($request, 15)
         );
 
         return $this->success($alerts);

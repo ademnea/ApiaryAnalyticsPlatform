@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Api\Farmer;
 
 use App\Contracts\MediaUploadStorageContract;
+use App\Http\Controllers\Api\Farmer\Concerns\ClampsPageSize;
 use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
 use App\Services\Farmer\MediaService;
@@ -21,7 +22,7 @@ use Illuminate\Http\Request;
  */
 class MediaController extends Controller
 {
-    use ResolvesFarmer;
+    use ClampsPageSize, ResolvesFarmer;
 
     public function __construct(
         private readonly MediaService $mediaService,
@@ -34,7 +35,7 @@ class MediaController extends Controller
             $this->mediaService->getPhotos(
                 $this->farmer($request),
                 $hiveId,
-                (int) $request->input('per_page', 8)
+                $this->pageSize($request, 8, 50)
             )
         );
     }
@@ -45,7 +46,7 @@ class MediaController extends Controller
             $this->mediaService->getAudio(
                 $this->farmer($request),
                 $hiveId,
-                (int) $request->input('per_page', 8)
+                $this->pageSize($request, 8, 50)
             )
         );
     }
@@ -56,7 +57,7 @@ class MediaController extends Controller
             $this->mediaService->getVideos(
                 $this->farmer($request),
                 $hiveId,
-                (int) $request->input('per_page', 8)
+                $this->pageSize($request, 8, 50)
             )
         );
     }

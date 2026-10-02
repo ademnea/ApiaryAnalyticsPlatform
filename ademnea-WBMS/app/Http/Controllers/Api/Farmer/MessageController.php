@@ -2,9 +2,11 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ClampsPageSize;
 use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Api\Farmer\SubmitMessageRequest;
+use App\Services\Farmer\FarmerHiveAccessService;
 use App\Services\Farmer\FarmerMessageService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -21,19 +23,24 @@ use Illuminate\Http\Request;
  */
 class MessageController extends Controller
 {
-    use ApiResponse, ResolvesFarmer;
+    use ApiResponse, ClampsPageSize, ResolvesFarmer;
 
     public function __construct(
-        private readonly FarmerMessageService $messageService
+        private readonly FarmerMessageService $messageService,
+        private readonly FarmerHiveAccessService $hiveAccess,
     ) {}
 
     /** REQ-F-FAPI-31 */
     public function store(SubmitMessageRequest $request): JsonResponse
     {
-        $message = $this->messageService->submit(
-            $this->farmerId($request),
-            $request->validated()
-        );
+        $data = $request->validated();
+
+        // exists:hives only proves the hive exists; it must also be this farmer's.
+        if (! empty($data['hive_id'])) {
+            $this->hiveAccess->findOwnedHive($this->farmer($request), (int) $data['hive_id']);
+        }
+
+        $message = $this->messageService->submit($this->farmerId($request), $data);
 
         return $this->created([
             'id'         => $message->id,
@@ -48,7 +55,7 @@ class MessageController extends Controller
     {
         $messages = $this->messageService->listForFarmer(
             $this->farmerId($request),
-            (int) $request->input('per_page', 15)
+            $this->pageSize($request, 15)
         );
 
         return $this->success($messages);

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Api\Farmer;
 
 use App\Models\Alert;
+use App\Models\Farmer;
 use App\Models\FarmerMessage;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
@@ -49,9 +50,11 @@ class IdentityScopingTest extends FarmerApiTestCase
         ]);
 
         // An alert numbered after the caller's USER id — what the buggy code
-        // would have matched on.
+        // would have matched on. Make sure a farmer with that id exists, or the
+        // alerts.farmer_id foreign key rejects the row on MySQL.
+        $shadow = Farmer::find($user->id) ?? Farmer::factory()->create(['id' => $user->id]);
         Alert::create([
-            'farmer_id' => $user->id,
+            'farmer_id' => $shadow->id,
             'type'      => 'malfunction',
             'message'   => 'Belongs to whoever farmers.id = users.id is',
             'is_read'   => false,

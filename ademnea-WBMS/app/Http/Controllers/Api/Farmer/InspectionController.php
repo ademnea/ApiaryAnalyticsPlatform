@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ClampsPageSize;
 use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
 use App\Services\Farmer\InspectionService;
@@ -10,7 +11,7 @@ use Illuminate\Http\JsonResponse;
 
 class InspectionController extends Controller
 {
-    use ResolvesFarmer;
+    use ClampsPageSize, ResolvesFarmer;
 
     protected InspectionService $inspectionService;
 
@@ -26,7 +27,7 @@ class InspectionController extends Controller
     {
         $farmer = $this->farmer($request);
 
-        $perPage = $request->input('per_page', 25);
+        $perPage = $this->pageSize($request, 25);
         $inspections = $this->inspectionService->getInspections($farmer, $hiveId, $perPage);
 
         return response()->json([
