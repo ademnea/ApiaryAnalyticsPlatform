@@ -10,10 +10,12 @@ app = Flask(__name__)
 
 REDIS_HOST = os.environ.get("ADEMNEA_REDIS_HOST", "127.0.0.1")
 REDIS_PORT = int(os.environ.get("ADEMNEA_REDIS_PORT", 6379))
-QUEUE_NAME = os.environ.get("ADEMNEA_IOT_QUEUE_NAME", "ademnea-iot-queue")
+REDIS_DB = int(os.environ.get("ADEMNEA_REDIS_DB", 0))
+REDIS_PASSWORD = os.environ.get("ADEMNEA_REDIS_PASSWORD") or None
+# Must match IOT_QUEUE_NAME in the Laravel .env (config/services.php).
+QUEUE_NAME = os.environ.get("ADEMNEA_IOT_QUEUE_NAME", "ademnea-iot-ingest")
 
-# TO THIS:
-r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=0, protocol=2)
+r = redis.Redis(host=REDIS_HOST, port=REDIS_PORT, db=REDIS_DB, password=REDIS_PASSWORD, protocol=2)
 
 
 def build_envelope(resource: str) -> dict | None:
