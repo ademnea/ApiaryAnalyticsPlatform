@@ -69,8 +69,7 @@ class GalleryController extends Controller
 
     public function store(GalleryAlbumRequest $request): RedirectResponse
     {
-        $album = $this->galleryService->createAlbum($request);
-        dd($album);
+        $this->galleryService->createAlbum($request);
 
         return redirect()->route('admin.gallery.index')->with('success', 'Gallery album created successfully.');
     }
