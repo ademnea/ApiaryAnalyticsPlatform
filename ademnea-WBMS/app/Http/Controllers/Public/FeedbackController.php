@@ -34,7 +34,7 @@ class FeedbackController extends Controller
             'submitted_at' => $data['submitted_at'],
         ]);
 
-        $disk = env('FEEDBACK_FILES_DISK', config('filesystems.default'));
+        $disk = config('filesystems.feedback_disk');
 
         if ($request->hasFile('attachments')) {
             foreach ($request->file('attachments') as $file) {

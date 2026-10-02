@@ -33,39 +33,27 @@ return [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
             'channel' => env('SLACK_BOT_USER_DEFAULT_CHANNEL'),
         ],
-        
     ],
-  'fcm' => [
+
+    'fcm' => [
         'project_id' => env('FCM_PROJECT_ID'),
         'access_token' => env('FCM_ACCESS_TOKEN'),
     ],
 
     'iot' => [
-    'queue_driver' => env('IOT_QUEUE_DRIVER', 'sqs'), // redis | sqs
-    'queue_name' => env('IOT_QUEUE_NAME', 'ademnea-iot-ingest'),
-    'dead_letter_name' => env('IOT_QUEUE_NAME', 'ademnea-iot-ingest') . '-dlq',
-    'redis_connection' => env('IOT_REDIS_CONNECTION', 'default'),
-    'max_delivery_attempts' => (int) env('IOT_MAX_DELIVERY_ATTEMPTS', 5),
-    'sqs_queue_url' => env('IOT_SQS_QUEUE_URL'),
-    'aws_region' => env('AWS_DEFAULT_REGION', 'eu-north-1'),
-],
-
-
-'s3' => [
-    'driver' => 's3',
-    'key' => env('AWS_S3_ACCESS_KEY_ID'),
-    'secret' => env('AWS_S3_SECRET_ACCESS_KEY'),
-    'region' => env('AWS_DEFAULT_REGION'),
-    'bucket' => env('AWS_BUCKET'),
-    'url' => env('AWS_URL'),
-    'endpoint' => env('AWS_ENDPOINT'),
-    'use_path_style_endpoint' => env('AWS_USE_PATH_STYLE_ENDPOINT', false),
-    
-],
-
+        // redis = local/VPS queue fed by apigateway.py; sqs = AWS API Gateway + SQS.
+        'queue_driver' => env('IOT_QUEUE_DRIVER', 'redis'),
+        'queue_name' => env('IOT_QUEUE_NAME', 'ademnea-iot-ingest'),
+        'dead_letter_name' => env('IOT_QUEUE_NAME', 'ademnea-iot-ingest').'-dlq',
+        'redis_connection' => env('IOT_REDIS_CONNECTION', 'iotredis'),
+        'max_delivery_attempts' => (int) env('IOT_MAX_DELIVERY_ATTEMPTS', 5),
+        'sqs_queue_url' => env('IOT_SQS_QUEUE_URL'),
+        'aws_region' => env('AWS_DEFAULT_REGION', 'eu-north-1'),
+        'verify_ssl' => (bool) env('AWS_VERIFY_SSL', true),
+    ],
 
     'africastalking' => [
         'api_key' => env('AFRICASTALKING_API_KEY'),
         'username' => env('AFRICASTALKING_USERNAME'),
-           ],
+    ],
 ];

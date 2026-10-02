@@ -30,28 +30,32 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\ApiaryManagement\ApiaryDirectoryService::class
         );
 
-                $this->app->bind(\App\Contracts\MediaUploadStorageContract::class, function () {
-                    return config('filesystems.default_iot_media_driver', env('IOT_MEDIA_DISK')) === 's3'
-                        ? new \App\Services\Storage\S3MediaUploadService()
-                        : new \App\Services\Storage\LocalMediaUploadMockService();
-                });
+        // IOT_MEDIA_DISK=s3 uses real presigned S3 uploads; anything else uses the local mock.
+        $this->app->bind(\App\Contracts\MediaUploadStorageContract::class, function () {
+            return config('filesystems.iot_media_disk') === 's3'
+                ? new \App\Services\Storage\S3MediaUploadService()
+                : new \App\Services\Storage\LocalMediaUploadMockService();
+        });
 
-                $this->app->bind(\App\Contracts\IotQueueTransportContract::class, function () {
-                                 $cfg = config('services.iot');
+        // IOT_QUEUE_DRIVER picks where the IoT worker reads device envelopes from.
+        $this->app->bind(\App\Contracts\IotQueueTransportContract::class, function () {
+            $cfg = config('services.iot');
 
-                                return match ($cfg['queue_driver']) {
-                                    'sqs' => new \App\Services\Iot\Transport\SqsIotQueueTransport(
-                                        $cfg['sqs_queue_url'],
-                                        $cfg['aws_region'],
-                                    ),
-                                    default => new \App\Services\Iot\Transport\RedisIotQueueTransport(
-                                        $cfg['queue_name'],
-                                        $cfg['dead_letter_name'],
-                                        $cfg['max_delivery_attempts'],
-                                        $cfg['redis_connection'],
-                                    ),
-    };
-});
+            return match ($cfg['queue_driver']) {
+                'sqs' => new \App\Services\Iot\Transport\SqsIotQueueTransport(
+                    $cfg['sqs_queue_url'],
+                    $cfg['aws_region'],
+                    $cfg['verify_ssl'],
+                ),
+                default => new \App\Services\Iot\Transport\RedisIotQueueTransport(
+                    $cfg['queue_name'],
+                    $cfg['dead_letter_name'],
+                    $cfg['max_delivery_attempts'],
+                    $cfg['redis_connection'],
+                ),
+            };
+        });
+
         // Bind DashboardService as a singleton so only one instance is
         // created per request cycle — avoids redundant DB connections.
         $this->app->singleton(DashboardService::class);
