@@ -274,51 +274,17 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // ============================================================
     // IOT DEVICE REGISTRY — legacy /admin/hardware-teams and
     // /admin/iot-devices URLs from the device receiver module.
-    // Route names are redefined by the /admin/iot group below
-    // (the later definition wins for route()), so these only keep
-    // the old URLs working. Guarded by the same permission.
+    // Kept as redirects so old links and bookmarks still work. They are
+    // deliberately unnamed: registering the route names twice breaks
+    // `php artisan route:cache`. The real routes are the /admin/iot group.
     // ============================================================
-    Route::middleware(['permission:manage-iot-devices'])->prefix('admin')->name('admin.')->group(function () {
-        // Hardware teams (never hard/soft deleted — deactivate only)
-        Route::resource('hardware-teams', IotHardwareTeamRegistryController::class)->except(['destroy']);
-        Route::patch('hardware-teams/{hardwareTeam}/deactivate', [IotHardwareTeamRegistryController::class, 'deactivate'])
-            ->name('hardware-teams.deactivate');
-        Route::patch('hardware-teams/{hardwareTeam}/reactivate', [IotHardwareTeamRegistryController::class, 'reactivate'])
-            ->name('hardware-teams.reactivate');
-
-        // Team members (nested under a team)
-        Route::prefix('hardware-teams/{hardwareTeam}/members')->name('hardware-teams.members.')->group(function () {
-            Route::get('create', [IotHardwareTeamMemberController::class, 'create'])->name('create');
-            Route::post('/', [IotHardwareTeamMemberController::class, 'store'])->name('store');
-            Route::get('{member}/edit', [IotHardwareTeamMemberController::class, 'edit'])->name('edit');
-            Route::put('{member}', [IotHardwareTeamMemberController::class, 'update'])->name('update');
-            Route::patch('{member}/deactivate', [IotHardwareTeamMemberController::class, 'deactivate'])->name('deactivate');
-            Route::patch('{member}/reactivate', [IotHardwareTeamMemberController::class, 'reactivate'])->name('reactivate');
-        });
-
-        // Devices scoped to a team (the "Add Device" flow from a team page)
-        Route::prefix('hardware-teams/{hardwareTeam}/devices')->name('hardware-teams.devices.')->group(function () {
-            Route::get('/', [IotDeviceRegistryController::class, 'indexForTeam'])->name('index');
-            Route::get('create', [IotDeviceRegistryController::class, 'createForTeam'])->name('create');
-            Route::post('/', [IotDeviceRegistryController::class, 'storeForTeam'])->name('store');
-        });
-
-        // Global IoT device registry
-        Route::resource('iot-devices', IotDeviceRegistryController::class);
-        Route::patch('iot-devices/{iotDevice}/revoke', [IotDeviceRegistryController::class, 'revoke'])
-            ->name('iot-devices.revoke');
-        Route::patch('iot-devices/{iotDevice}/reactivate', [IotDeviceRegistryController::class, 'reactivate'])
-            ->name('iot-devices.reactivate');
-
-        // Device-to-hive assignment wizard
-        Route::get('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assignForm'])
-            ->name('iot-devices.assign.form');
-        Route::get('iot-devices/{iotDevice}/assign/hives', [IotDeviceRegistryController::class, 'assignHives'])
-            ->name('iot-devices.assign.hives');
-        Route::post('iot-devices/{iotDevice}/assign', [IotDeviceRegistryController::class, 'assign'])
-            ->name('iot-devices.assign.store');
-        Route::patch('iot-devices/{iotDevice}/unassign', [IotDeviceRegistryController::class, 'unassign'])
-            ->name('iot-devices.unassign');
+    Route::middleware(['permission:manage-iot-devices'])->group(function () {
+        foreach (['hardware-teams', 'iot-devices'] as $legacy) {
+            Route::get("/admin/{$legacy}/{path?}", fn (?string $path = null) => redirect(
+                "/admin/iot/{$legacy}".($path ? "/{$path}" : ''),
+                301
+            ))->where('path', '.*');
+        }
     });
 
     // Hives — read-only access (view-hive-data or manage-hives)

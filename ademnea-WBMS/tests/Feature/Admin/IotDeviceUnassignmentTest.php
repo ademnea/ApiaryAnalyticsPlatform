@@ -94,7 +94,7 @@ class IotDeviceUnassignmentTest extends TestCase
     {
         $this->actingAsAdminWithPermission();
 
-        $response = $this->patch('/admin/iot-devices/999999/unassign');
+        $response = $this->patch(route('admin.iot-devices.unassign', 999999));
 
         $response->assertNotFound();
     }
