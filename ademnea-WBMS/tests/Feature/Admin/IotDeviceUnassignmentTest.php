@@ -80,14 +80,13 @@ class IotDeviceUnassignmentTest extends TestCase
     #[Test]
     public function guest_cannot_unassign_a_device(): void
     {
-        // $hiveId = $this->createTestHiveId();
-        // $device = IotDevice::factory()->create(['hive_id' => $hiveId,]);
+        $hiveId = $this->createTestHiveId();
+        $device = IotDevice::factory()->create(['hive_id' => $hiveId,]);
 
-        // $response = $this->patch(route('admin.iot-devices.unassign', $device));
+        $response = $this->patch(route('admin.iot-devices.unassign', $device));
 
-        // $response->assertRedirect(route('login'));
-        // $this->assertDatabaseHas('iot_devices', ['id' => $device->id, 'hive_id' => $hiveId,]);
-        $this->markTestSkipped('Auth/RBAC not yet implemented — module pending.');
+        $response->assertRedirect(route('admin.login'));
+        $this->assertDatabaseHas('iot_devices', ['id' => $device->id, 'hive_id' => $hiveId,]);
     }
 
     #[Test]
@@ -95,7 +94,7 @@ class IotDeviceUnassignmentTest extends TestCase
     {
         $this->actingAsAdminWithPermission();
 
-        $response = $this->patch('/admin/iot-devices/999999/unassign');
+        $response = $this->patch(route('admin.iot-devices.unassign', 999999));
 
         $response->assertNotFound();
     }

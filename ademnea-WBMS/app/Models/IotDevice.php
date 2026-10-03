@@ -46,14 +46,19 @@ class IotDevice extends Model
         return $this->belongsTo(Hive::class, 'hive_id');
     }
 
-    // public function telemetry(): HasOne
-    // {
-    //     return $this->hasOne(IotDeviceTelemetry::class, 'device_id');
-    // }
+    public function telemetry(): HasOne
+    {
+        return $this->hasOne(IotDeviceTelemetry::class, 'device_id');
+    }
 
     public function authLogs(): HasMany
     {
         return $this->hasMany(IotAuthLog::class, 'device_id');
+    }
+
+    public function anomalies(): HasMany
+    {
+        return $this->hasMany(SensorAnomaly::class, 'device_id');
     }
 
     // public function ingestionLogs(): HasMany

@@ -2,13 +2,19 @@
 
 namespace App\Providers;
 
+use App\Models\Alert;
 use App\Models\Farmer;
 use App\Models\Hive;
+use App\Models\SensorAnomaly;
 use App\Services\DashboardService;
 use App\Contracts\ApiaryRegistryServiceContract;
 use App\Contracts\HiveRegistryServiceContract;
 use App\Contracts\HiveStatusChangeServiceContract;
 use App\Contracts\FarmerRegistryServiceContract;
+use Illuminate\Cache\RateLimiting\Limit;
+use Illuminate\Http\Request;
+use Illuminate\Pagination\Paginator;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
@@ -24,28 +30,32 @@ class AppServiceProvider extends ServiceProvider
             \App\Services\ApiaryManagement\ApiaryDirectoryService::class
         );
 
-                $this->app->bind(\App\Contracts\MediaUploadStorageContract::class, function () {
-                    return config('filesystems.default_iot_media_driver', env('IOT_MEDIA_DISK')) === 's3'
-                        ? new \App\Services\Storage\S3MediaUploadService()
-                        : new \App\Services\Storage\LocalMediaUploadMockService();
-                });
+        // IOT_MEDIA_DISK=s3 uses real presigned S3 uploads; anything else uses the local mock.
+        $this->app->bind(\App\Contracts\MediaUploadStorageContract::class, function () {
+            return config('filesystems.iot_media_disk') === 's3'
+                ? new \App\Services\Storage\S3MediaUploadService()
+                : new \App\Services\Storage\LocalMediaUploadMockService();
+        });
 
-                $this->app->bind(\App\Contracts\IotQueueTransportContract::class, function () {
-                                 $cfg = config('services.iot');
+        // IOT_QUEUE_DRIVER picks where the IoT worker reads device envelopes from.
+        $this->app->bind(\App\Contracts\IotQueueTransportContract::class, function () {
+            $cfg = config('services.iot');
 
-                                return match ($cfg['queue_driver']) {
-                                    'sqs' => new \App\Services\Iot\Transport\SqsIotQueueTransport(
-                                        $cfg['sqs_queue_url'],
-                                        $cfg['aws_region'],
-                                    ),
-                                    default => new \App\Services\Iot\Transport\RedisIotQueueTransport(
-                                        $cfg['queue_name'],
-                                        $cfg['dead_letter_name'],
-                                        $cfg['max_delivery_attempts'],
-                                        $cfg['redis_connection'],
-                                    ),
-    };
-});
+            return match ($cfg['queue_driver']) {
+                'sqs' => new \App\Services\Iot\Transport\SqsIotQueueTransport(
+                    $cfg['sqs_queue_url'],
+                    $cfg['aws_region'],
+                    $cfg['verify_ssl'],
+                ),
+                default => new \App\Services\Iot\Transport\RedisIotQueueTransport(
+                    $cfg['queue_name'],
+                    $cfg['dead_letter_name'],
+                    $cfg['max_delivery_attempts'],
+                    $cfg['redis_connection'],
+                ),
+            };
+        });
+
         // Bind DashboardService as a singleton so only one instance is
         // created per request cycle — avoids redundant DB connections.
         $this->app->singleton(DashboardService::class);
@@ -54,6 +64,11 @@ class AppServiceProvider extends ServiceProvider
         $this->app->bind(HiveRegistryServiceContract::class, \App\Services\ApiaryManagement\HiveRegistrationService::class);
         $this->app->bind(HiveStatusChangeServiceContract::class, \App\Services\ApiaryManagement\HiveStatusChangeService::class);
         $this->app->bind(FarmerRegistryServiceContract::class, \App\Services\ApiaryManagement\FarmerRegistrationService::class);
+
+        $this->app->bind(
+            \App\Contracts\AnomalyStatusContract::class,
+            \App\Services\Anomaly\AnomalyStatusService::class
+        );
     }
 
     /**
@@ -61,6 +76,12 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
+        // The admin UI is Bootstrap; Laravel's default pagination markup is
+        // Tailwind, which renders as oversized unstyled arrows here.
+        Paginator::useBootstrapFive();
+
+        $this->configureRateLimiting();
+
         // Share $unreadAlerts with every view that uses the admin layout.
         // This drives the topbar bell badge without requiring each controller
         // to pass the count individually.
@@ -74,10 +95,47 @@ class AppServiceProvider extends ServiceProvider
                 // Farmers awaiting approval
                 $count += Farmer::where('profile_status', 'pending')->count();
 
-                // TODO: add IotDevice offline count once model exists
+                // Devices currently offline (open device_offline incidents)
+                $count += SensorAnomaly::open()->where('anomaly_type', 'device_offline')->distinct()->count('device_id');
 
                 $view->with('unreadAlerts', $count);
+
+                // Sidebar "System Alerts" badge: alerts dispatched to farmers in the last 24h.
+                $view->with('activeAlertsCount', Alert::where('created_at', '>=', now()->subDay())->count());
             }
+        });
+    }
+
+    /**
+     * Named limiters for the farmer mobile API.
+     *
+     * Applied per route rather than through Middleware::throttleApi(), which
+     * would also throttle the IoT ingestion endpoints — those are machine
+     * traffic with very different volume characteristics.
+     */
+    private function configureRateLimiting(): void
+    {
+        // UC-FAPI-02 alternative flow D.
+        //
+        // Note for review: this is per-IP, as the SRS specifies. A co-op or
+        // village sharing one NAT address could hit it legitimately; revisit
+        // if that shows up in the field.
+        RateLimiter::for('farmer-login', function (Request $request) {
+            return Limit::perMinute(10)
+                ->by($request->ip())
+                ->response(fn () => response()->json([
+                    'message' => 'Too many login attempts. Please try again later.',
+                ], 429));
+        });
+
+        // The password broker throttles per-user; this covers an attacker
+        // spraying many different addresses from one source.
+        RateLimiter::for('farmer-password-forgot', function (Request $request) {
+            return Limit::perMinute(5)
+                ->by($request->ip())
+                ->response(fn () => response()->json([
+                    'message' => 'Too many requests. Please try again later.',
+                ], 429));
         });
     }
 }

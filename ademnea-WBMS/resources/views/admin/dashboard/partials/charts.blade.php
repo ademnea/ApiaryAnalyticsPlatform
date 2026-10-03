@@ -21,6 +21,9 @@
         </div>
     </div>
 
+    {{-- A trend card shows its chart when any day has an average. Only null
+         means no readings; a day that averages exactly 0 is still data. --}}
+
     {{-- ── Temperature Trend ───────────────────────────────────────── --}}
     <div class="col-12 col-xl-6">
         <div class="card h-100">
@@ -30,7 +33,7 @@
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">
-                @if(collect($chartData['temperature'])->filter()->isNotEmpty())
+                @if(collect($chartData['temperature'])->whereNotNull()->isNotEmpty())
                     <canvas id="chartTemperature" aria-label="Temperature trend chart" role="img"></canvas>
                 @else
                     <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
@@ -54,7 +57,7 @@
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">
-                @if(collect($chartData['humidity'])->filter()->isNotEmpty())
+                @if(collect($chartData['humidity'])->whereNotNull()->isNotEmpty())
                     <canvas id="chartHumidity" aria-label="Humidity trend chart" role="img"></canvas>
                 @else
                     <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
@@ -78,7 +81,7 @@
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">
-                @if(collect($chartData['co2'])->filter()->isNotEmpty())
+                @if(collect($chartData['co2'])->whereNotNull()->isNotEmpty())
                     <canvas id="chartCo2" aria-label="CO2 trend chart" role="img"></canvas>
                 @else
                     <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">
@@ -102,7 +105,7 @@
                    style="font-size:0.72rem;color:var(--clr-forest-mid);">View detail →</a>
             </div>
             <div class="card-body" style="position:relative;height:220px;">
-                @if(collect($chartData['weight'])->filter()->isNotEmpty())
+                @if(collect($chartData['weight'])->whereNotNull()->isNotEmpty())
                     <canvas id="chartWeight" aria-label="Hive weight trend chart" role="img"></canvas>
                 @else
                     <div class="d-flex flex-column align-items-center justify-content-center h-100 text-muted">

@@ -41,13 +41,13 @@
                     ],
                     [
                         'label'  => 'Monitoring',
-                        'route'  => 'admin.monitoring.temperature',
+                        'route'  => 'admin.monitoring.index',
                         'icon'   => 'bi-activity',
                         'color'  => 'red',
                     ],
                     [
                         'label'  => 'IoT Devices',
-                        'route'  => 'admin.devices.index',
+                        'route'  => 'admin.iot-devices.index',
                         'icon'   => 'bi-cpu-fill',
                         'color'  => 'blue',
                     ],

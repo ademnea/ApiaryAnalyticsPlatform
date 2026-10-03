@@ -109,7 +109,7 @@ class IotDeviceRegistryService
 
     public function list(array $filters = []): LengthAwarePaginator
     {
-        $query = IotDevice::query()->with('hardwareTeam', 'hive');
+        $query = IotDevice::query()->with('hardwareTeam', 'hive', 'telemetry');
 
         if (! empty($filters['hardware_team_id'])) {
             $query->where('hardware_team_id', $filters['hardware_team_id']);

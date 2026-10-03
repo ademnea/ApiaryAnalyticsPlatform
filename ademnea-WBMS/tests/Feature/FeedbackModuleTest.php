@@ -6,6 +6,7 @@ use App\Models\Feedback;
 use App\Models\FeedbackCategory;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Spatie\Permission\Models\Permission;
 use Tests\TestCase;
 
 class FeedbackModuleTest extends TestCase
@@ -39,7 +40,9 @@ class FeedbackModuleTest extends TestCase
 
     public function test_admin_can_view_and_update_feedback_status(): void
     {
+        Permission::findOrCreate('manage-feedback', 'web');
         $user = User::factory()->create();
+        $user->givePermissionTo('manage-feedback');
         $category = FeedbackCategory::create([
             'name' => 'Technical Issue',
             'description' => 'Technical problems',

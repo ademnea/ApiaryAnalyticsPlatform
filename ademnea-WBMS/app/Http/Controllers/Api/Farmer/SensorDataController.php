@@ -2,9 +2,9 @@
 
 namespace App\Http\Controllers\Api\Farmer;
 
+use App\Http\Controllers\Api\Farmer\Concerns\ResolvesFarmer;
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Farmer\Sensor\SensorDataRequest;
-use App\Models\Farmer;
+use App\Http\Requests\Api\Farmer\SensorDataRequest;
 use App\Services\Farmer\FarmerHiveAccessService;
 use App\Traits\ApiResponse;
 use Illuminate\Http\JsonResponse;
@@ -25,7 +25,7 @@ use Illuminate\Http\JsonResponse;
  */
 class SensorDataController extends Controller
 {
-    use ApiResponse;
+    use ApiResponse, ResolvesFarmer;
 
     public function __construct(private readonly FarmerHiveAccessService $hiveAccess)
     {
@@ -102,7 +102,7 @@ class SensorDataController extends Controller
 
     private function ownedHive(SensorDataRequest $request, int $hiveId)
     {
-        $farmer = Farmer::where('user_id', $request->user()->id)->firstOrFail();
+        $farmer = $this->farmer($request);
 
         return $this->hiveAccess->findOwnedHive($farmer, $hiveId);
     }

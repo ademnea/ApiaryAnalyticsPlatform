@@ -4,6 +4,13 @@ namespace App\Http\Requests\Api\Farmer;
 
 use Illuminate\Foundation\Http\FormRequest;
 
+/**
+ * UC-FAPI-04 step 1: request a password reset link.
+ *
+ * Deliberately no `exists:users,email` rule. The endpoint must answer
+ * identically whether or not the address is registered, and an exists rule
+ * would turn a 422 field error into an account-enumeration oracle.
+ */
 class ForgotPasswordRequest extends FormRequest
 {
     public function authorize(): bool
@@ -14,16 +21,7 @@ class ForgotPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'email', 'exists:users,email'],
-        ];
-    }
-
-    public function messages(): array
-    {
-        return [
-            'email.required' => 'Email address is required.',
-            'email.email' => 'Please provide a valid email address.',
-            'email.exists' => 'We could not find an account with that email address.',
+            'email' => ['required', 'email'],
         ];
     }
 }

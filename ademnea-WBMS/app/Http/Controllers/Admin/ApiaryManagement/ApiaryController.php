@@ -13,8 +13,6 @@ class ApiaryController extends Controller
 {
     public function __construct(private ApiaryRegistryServiceContract $service)
     {
-        $this->middleware('auth');
-        $this->middleware('permission:manage-apiaries');
     }
 
     public function index(Request $request)

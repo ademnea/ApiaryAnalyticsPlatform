@@ -27,17 +27,19 @@ class MediaService
     }
 
     /**
-     * Get audio recordings for a hive
+     * Get audio recordings for a hive.
+     *
+     * Paginated like photos and video. This previously returned a plain array
+     * capped at 20 rows, ignoring per_page and giving the client no way to
+     * reach older recordings.
      */
-    public function getAudio(Farmer $farmer, int $hiveId, int $limit = 20): array
+    public function getAudio(Farmer $farmer, int $hiveId, int $perPage = 8): LengthAwarePaginator
     {
         $this->verifyHiveOwnership($farmer, $hiveId);
 
         return HiveAudio::where('hive_id', $hiveId)
             ->orderBy('created_at', 'desc')
-            ->limit($limit)
-            ->get()
-            ->toArray();
+            ->paginate($perPage);
     }
 
     /**

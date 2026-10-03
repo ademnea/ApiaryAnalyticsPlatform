@@ -2,62 +2,117 @@
 
 namespace App\Services\Farmer;
 
+use App\Mail\Farmer\FarmerPasswordReset;
+use App\Mail\Farmer\NewRegistrationForReview;
+use App\Mail\Farmer\RegistrationPending;
 use App\Models\Farmer;
 use App\Models\User;
-use App\Models\FarmerAuditLog;
-use Carbon\Carbon;
-use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Str;
+use Illuminate\Support\Facades\Password;
 
+/**
+ * UC-FAPI-01 to 05: farmer authentication and account management.
+ *
+ * Identity lives on `User` — it is the only model with a password, Sanctum
+ * tokens and Spatie roles. `Farmer` is the profile row hanging off it, and
+ * the account lifecycle (pending / active / rejected / suspended) is carried
+ * by `users.status`. `farmers.status` is the operational flag and cannot hold
+ * a pending state: it is enum('Active','Inactive','Suspended') with a CHECK
+ * constraint behind it.
+ */
 class AuthService
 {
     /**
-     * Register a new farmer (pending approval)
+     * Longer than an enterprise default on purpose: farmers are in rural areas
+     * with intermittent connectivity, and forcing a re-login on a dropped
+     * connection is a worse failure than a longer-lived token.
+     */
+    private const TOKEN_TTL_DAYS = 30;
+
+    public function __construct(
+        private readonly FarmerProfileLinker $linker,
+        private readonly FarmerAuditService $audit,
+    ) {}
+
+    // -------------------------------------------------------------------------
+    // UC-FAPI-01 — self-registration (account starts pending)
+    // -------------------------------------------------------------------------
+
+    /**
+     * @return array{user: User, farmer: Farmer}
      */
     public function register(array $data): array
     {
-        return DB::transaction(function () use ($data) {
-            // Create user with farmer role and pending status
+        $result = DB::transaction(function () use ($data) {
             $user = User::create([
-                'name' => $data['name'],
-                'email' => $data['email'],
-                'password' => Hash::make($data['password']),
-                'role' => 'farmer',
-                'status' => 'pending',
+                'name'     => $data['name'],
+                'email'    => $data['email'],
+                // The `hashed` cast on User hashes this; do not pre-hash.
+                'password' => $data['password'],
+                'role'     => 'farmer',
+                'status'   => 'pending',
             ]);
 
-            // Create farmer record
-            $farmer = Farmer::create([
-                'user_id' => $user->id,
-                'telephone' => $data['telephone'] ?? null,
+            // No Spatie role is assigned here. The SRS gives that decision to
+            // the administrator at approval time, who also chooses between
+            // farmer and farmer-write.
+
+            $farmer = $this->linker->linkOrCreate($user, [
+                'telephone'  => $data['telephone'] ?? null,
+                'first_name' => $data['first_name'] ?? null,
+                'last_name'  => $data['last_name'] ?? null,
             ]);
 
-            // Send confirmation email to farmer
-            Mail::to($user->email)->send(new \App\Mail\Farmer\RegistrationPending($user));
+            $this->audit->log($farmer->id, 'registration_submitted', $farmer->id);
 
-            // TODO: Send notification to admin
-
-            return [
-                'user' => $user,
-                'farmer' => $farmer,
-            ];
+            return ['user' => $user, 'farmer' => $farmer];
         });
+
+        // Outside the transaction: a mail failure must not roll back a
+        // perfectly good registration.
+        $this->sendQuietly(
+            fn () => Mail::to($result['user']->email)->send(new RegistrationPending($result['user'])),
+            'farmer registration confirmation'
+        );
+
+        $this->sendQuietly(function () use ($result) {
+            $approvers = User::permission('approve-farmer-registrations')->pluck('email')->all();
+
+            if ($approvers !== []) {
+                Mail::to($approvers)->send(new NewRegistrationForReview($result['user']));
+            }
+        }, 'admin new-registration notice');
+
+        return $result;
     }
 
+    // -------------------------------------------------------------------------
+    // UC-FAPI-02 — login
+    // -------------------------------------------------------------------------
+
     /**
-     * Login farmer and issue token
+     * @return array{token: string, expires_at: string, farmer: array}|array{error: string, message: string}|null
+     *         null means invalid credentials.
      */
     public function login(array $credentials): ?array
     {
         $user = User::where('email', $credentials['email'])->first();
 
-        if (!$user || !Hash::check($credentials['password'], $user->password)) {
+        if (! $user || ! Hash::check($credentials['password'], $user->password)) {
             return null;
         }
 
-        // Check account status
+        // Checked before the status branches and folded into the generic
+        // failure: telling a caller "this account is not a farmer" would let
+        // them enumerate admin addresses.
+        if ($user->role !== 'farmer') {
+            return null;
+        }
+
         if ($user->status === 'pending') {
             return ['error' => 'pending', 'message' => 'Your account is awaiting administrator approval.'];
         }
@@ -70,179 +125,213 @@ class AuthService
             return ['error' => 'inactive', 'message' => 'Your account is inactive. Please contact the administrator.'];
         }
 
-        // Check role
-        if ($user->role !== 'farmer') {
-            return ['error' => 'invalid_role', 'message' => 'This account does not have farmer access.'];
-        }
+        $farmer = $this->resolveFarmer($user);
 
-        // Revoke existing tokens
+        // Only now, after every rejection path: a failed login must never
+        // revoke a session the farmer still has on another device.
         $user->tokens()->delete();
 
-        // Create new token with 30-day expiry
-        $token = $user->createToken('farmer-token', ['*'], Carbon::now()->addDays(30));
+        // One timestamp for both the token and the response, so the client is
+        // never told an expiry that differs from the one being enforced.
+        $expiresAt = Carbon::now()->addDays(self::TOKEN_TTL_DAYS);
 
-        // Get farmer profile
-        $farmer = Farmer::where('user_id', $user->id)->first();
+        $token = $user->createToken('farmer-mobile', ['*'], $expiresAt);
+
+        $farmer->forceFill(['last_login_at' => now()])->save();
 
         return [
-            'token' => $token->plainTextToken,
-            'expires_at' => Carbon::now()->addDays(30)->toIso8601String(),
-            'farmer' => [
-                'id' => $farmer->id,
-                'name' => $user->name,
+            'token'      => $token->plainTextToken,
+            'expires_at' => $expiresAt->toIso8601String(),
+            'farmer'     => [
+                'id'    => $farmer->id,
+                'name'  => $user->name,
                 'email' => $user->email,
-                'role' => $user->role,
+                'role'  => $user->role,
             ],
         ];
     }
 
-    /**
-     * Logout farmer - revoke current token
-     */
-    public function logout($user): void
+    // -------------------------------------------------------------------------
+    // UC-FAPI-03 — logout
+    // -------------------------------------------------------------------------
+
+    public function logout(User $user): void
     {
-        $user->currentAccessToken()->delete();
+        $user->currentAccessToken()?->delete();
     }
 
+    // -------------------------------------------------------------------------
+    // UC-FAPI-04 — password recovery
+    // -------------------------------------------------------------------------
+
     /**
-     * Send password reset email
+     * Always returns void: the controller answers identically whether or not
+     * the address is registered.
+     *
+     * Uses the framework's password broker rather than hand-rolled token rows.
+     * config/auth.php already configures password_reset_tokens with a 60
+     * minute expiry and a throttle, the repository stores the token hashed,
+     * and it deletes the row on use — which is the single-use requirement.
      */
     public function sendResetLink(string $email): void
     {
-        $user = User::where('email', $email)->first();
-
-        if (!$user || $user->role !== 'farmer') {
-            return; // Silent return to prevent enumeration
-        }
-
-        $token = Str::random(60);
-
-        DB::table('password_resets')->updateOrInsert(
-            ['email' => $email],
-            [
-                'token' => Hash::make($token),
-                'created_at' => Carbon::now(),
-            ]
-        );
-
-        Mail::to($email)->send(new \App\Mail\Farmer\PasswordReset($user, $token));
+        $this->sendQuietly(function () use ($email) {
+            Password::broker('users')->sendResetLink(
+                // `role` is not a password key, so the user provider turns it
+                // into a where clause: an administrator can never be issued a
+                // mobile deep link.
+                ['email' => $email, 'role' => 'farmer'],
+                fn (User $user, string $token) => Mail::to($user->email)
+                    ->send(new FarmerPasswordReset($user, $token))
+            );
+        }, 'farmer password reset link');
     }
 
-    /**
-     * Reset password using token
-     */
     public function resetPassword(array $data): bool
     {
-        $reset = DB::table('password_resets')
-            ->where('email', $data['email'])
-            ->first();
+        $status = Password::broker('users')->reset(
+            [
+                'email'                 => $data['email'],
+                'password'              => $data['password'],
+                'password_confirmation' => $data['password_confirmation'] ?? $data['password'],
+                'token'                 => $data['token'],
+                'role'                  => 'farmer',
+            ],
+            function (User $user, string $password) {
+                // The `hashed` cast hashes this on save.
+                $user->forceFill(['password' => $password])->save();
 
-        if (!$reset || !Hash::check($data['token'], $reset->token)) {
-            return false;
-        }
+                // Deliberately NOT revoking Sanctum tokens. UC-FAPI-04 states
+                // that existing sessions survive a password reset; do not
+                // "fix" this into a global logout.
+            }
+        );
 
-        // Check if token is expired (60 minutes)
-        if (Carbon::parse($reset->created_at)->addMinutes(60)->isPast()) {
-            return false;
-        }
-
-        $user = User::where('email', $data['email'])->first();
-        if (!$user || $user->role !== 'farmer') {
-            return false;
-        }
-
-        $user->password = Hash::make($data['password']);
-        $user->save();
-
-        // Delete the reset token
-        DB::table('password_resets')->where('email', $data['email'])->delete();
-
-        return true;
+        // Every failure — unknown address, wrong token, expired token —
+        // collapses to false so the caller emits one message and leaks nothing.
+        return $status === Password::PASSWORD_RESET;
     }
 
-    /**
-     * Update farmer profile
-     */
-    public function updateProfile(User $user, array $data): array
-    {
-        return DB::transaction(function () use ($user, $data) {
-            $farmer = Farmer::where('user_id', $user->id)->first();
+    // -------------------------------------------------------------------------
+    // UC-FAPI-05 — profile
+    // -------------------------------------------------------------------------
 
-            // Update user
-            $userData = [];
-            if (isset($data['password']) && !empty($data['password'])) {
-                $userData['password'] = Hash::make($data['password']);
-            }
-            if (isset($data['name'])) {
-                $userData['name'] = $data['name'];
-            }
-            if (!empty($userData)) {
-                $user->update($userData);
-            }
-
-            // Update farmer
-            $farmerData = [];
-            if (isset($data['address'])) {
-                $farmerData['address'] = $data['address'];
-            }
-            if (isset($data['telephone'])) {
-                $farmerData['telephone'] = $data['telephone'];
-            }
-            if (!empty($farmerData)) {
-                $farmer->update($farmerData);
-            }
-
-            // Log the update
-            FarmerAuditLog::create([
-                'farmer_id' => $farmer->id,
-                'action_type' => 'profile_update',
-                'affected_record_type' => 'farmer',
-                'affected_record_id' => $farmer->id,
-                'details' => json_encode(array_keys($farmerData)),
-            ]);
-
-            return [
-                'farmer' => $farmer->fresh(),
-                'user' => $user->fresh(),
-            ];
-        });
-    }
-
-    /**
-     * Get farmer profile
-     */
     public function getProfile(User $user): array
     {
-        $farmer = Farmer::with('user')->where('user_id', $user->id)->first();
+        $farmer = $this->resolveFarmer($user);
+
+        [$firstName, $lastName] = $this->linker->splitName(
+            $user->name,
+            $farmer->first_name,
+            $farmer->last_name
+        );
 
         return [
-            'id' => $farmer->id,
-            'first_name' => $user->name,
-            'last_name' => '', // Can be extended if needed
-            'email' => $user->email,
-            'telephone' => $farmer->telephone,
-            'address' => $farmer->address,
-            'gender' => $farmer->gender,
-            'role' => $user->role,
+            'id'         => $farmer->id,
+            'first_name' => $firstName,
+            'last_name'  => $lastName,
+            'gender'     => $farmer->gender,
+            'email'      => $user->email,
+            'telephone'  => $farmer->telephone,
+            'address'    => $farmer->address,
+            'role'       => $user->role,
         ];
     }
 
     /**
-     * Register FCM device token
+     * @return array{user: User, farmer: Farmer}
      */
+    public function updateProfile(User $user, array $data): array
+    {
+        return DB::transaction(function () use ($user, $data) {
+            $farmer = $this->resolveFarmer($user);
+
+            $farmerData = array_intersect_key($data, array_flip([
+                'first_name', 'last_name', 'gender', 'telephone', 'address',
+            ]));
+
+            // `email` and `role` are absent from UpdateProfileRequest's rules,
+            // so they cannot arrive here — changing either needs an admin.
+            $userData = [];
+
+            if (! empty($data['password'])) {
+                $userData['password'] = $data['password'];
+            }
+
+            if ($farmerData !== []) {
+                $farmer->update($farmerData);
+            }
+
+            // Keep users.name, which the login response returns, in step with
+            // the name columns the profile exposes.
+            if (isset($farmerData['first_name']) || isset($farmerData['last_name'])) {
+                $fresh = $farmer->fresh();
+                $userData['name'] = trim("{$fresh->first_name} {$fresh->last_name}");
+            }
+
+            if ($userData !== []) {
+                $user->update($userData);
+            }
+
+            $this->audit->log($farmer->id, 'profile_update', $farmer->id);
+
+            return ['user' => $user->fresh(), 'farmer' => $farmer->fresh()];
+        });
+    }
+
+    // -------------------------------------------------------------------------
+    // UC-FAPI-14 — FCM device token
+    // -------------------------------------------------------------------------
+
     public function registerDeviceToken(User $user, string $deviceToken): void
+    {
+        $farmer = $this->resolveFarmer($user);
+
+        // Stored on the farmer profile, never on the user row, and never
+        // logged or echoed back — it is a credential for that device.
+        $farmer->update(['fcm_token' => $deviceToken]);
+
+        $this->audit->log($farmer->id, 'device_token_registered', $farmer->id);
+    }
+
+    // -------------------------------------------------------------------------
+    // Internals
+    // -------------------------------------------------------------------------
+
+    /**
+     * A farmer User should always have a profile row, but accounts created
+     * before the two paths were unified may not. Heal rather than fatal:
+     * a missing profile would otherwise make the account unusable forever.
+     */
+    private function resolveFarmer(User $user): Farmer
     {
         $farmer = Farmer::where('user_id', $user->id)->first();
 
-        // Update token (upsert pattern)
-        $farmer->update(['fcm_token' => $deviceToken]);
+        if ($farmer) {
+            return $farmer;
+        }
 
-        // Log the action
-        FarmerAuditLog::create([
-            'farmer_id' => $farmer->id,
-            'action_type' => 'device_token_registered',
-            'affected_record_type' => 'farmer',
-            'affected_record_id' => $farmer->id,
+        Log::warning('Farmer profile missing for farmer user; creating one.', [
+            'user_id' => $user->id,
         ]);
+
+        return $this->linker->linkOrCreate($user, [
+            'status'         => $user->status === 'active' ? 'Active' : 'Inactive',
+            'profile_status' => $user->status === 'active' ? 'active' : 'pending',
+        ]);
+    }
+
+    /**
+     * Mail must never be the reason an authentication action fails: the
+     * transport is out of our control and the user-visible outcome (and, for
+     * password reset, the anti-enumeration guarantee) must not depend on it.
+     */
+    private function sendQuietly(callable $send, string $description): void
+    {
+        try {
+            $send();
+        } catch (\Throwable $e) {
+            Log::warning("Failed to send {$description}.", ['exception' => $e->getMessage()]);
+        }
     }
 }

@@ -8,15 +8,24 @@ use App\Http\Requests\ApiaryManagement\FarmerStoreRequest;
 use App\Http\Requests\ApiaryManagement\FarmerUpdateRequest;
 use App\Models\Farmer;
 use App\Models\FarmerMessage;
+use App\Services\ApiaryManagement\FarmerApprovalService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
 
+/**
+ * Note: store() deliberately creates a farmer WITHOUT a login account. This
+ * is the registry path — recording a farmer the project already works with,
+ * who may never use the mobile app. If they later self-register with the
+ * same email, AuthService adopts this row rather than creating a duplicate.
+ * Provisioning a farmer WITH a login is done from /admin/users/create.
+ */
 class FarmerController extends Controller
 {
-    public function __construct(private readonly FarmerRegistryServiceContract $farmerService)
-    {
-        $this->middleware('auth');
+    public function __construct(
+        private readonly FarmerRegistryServiceContract $farmerService,
+        private readonly FarmerApprovalService $approvals,
+    ) {
     }
 
     public function index(Request $request): View
@@ -91,25 +100,39 @@ class FarmerController extends Controller
     public function pending(Request $request): View
     {
         $farmers = Farmer::query()
-            ->where('profile_status', 'pending')
+            ->pending()
+            // Eager loaded so the view can show whether the row came from a
+            // self-registration (has a login) or the admin registry (does not)
+            // without an N+1.
+            ->with('user')
             ->orderByDesc('registration_date')
             ->paginate(20);
 
         return view('admin.apiary-management.farmers.pending', compact('farmers'));
     }
 
-    public function approve(Farmer $farmer): RedirectResponse
+    public function approve(Request $request, Farmer $farmer): RedirectResponse
     {
-        $farmer->update(['profile_status' => 'active']);
+        // Optional, and must stay optional: the pending screen can approve
+        // without choosing a role, in which case the base farmer role applies.
+        $validated = $request->validate([
+            'role' => ['nullable', 'in:farmer,farmer-write'],
+        ]);
+
+        $this->approvals->approve($farmer, $validated['role'] ?? 'farmer');
 
         return redirect()
             ->route('admin.farmers.pending')
             ->with('success', "Farmer \"{$farmer->full_name}\" approved.");
     }
 
-    public function reject(Farmer $farmer): RedirectResponse
+    public function reject(Request $request, Farmer $farmer): RedirectResponse
     {
-        $farmer->update(['profile_status' => 'incomplete']);
+        $validated = $request->validate([
+            'reason' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        $this->approvals->reject($farmer, $validated['reason'] ?? null);
 
         return redirect()
             ->route('admin.farmers.pending')

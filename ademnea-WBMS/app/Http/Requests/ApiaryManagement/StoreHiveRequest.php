@@ -23,6 +23,8 @@ class StoreHiveRequest extends FormRequest
             'queen_status' => ['nullable', 'in:Present,Absent,New,Old,Superseded,Unknown'],
             'latitude' => ['required', 'numeric', 'between:-90,90'],
             'longitude' => ['required', 'numeric', 'between:-180,180'],
+            // Set by "Use my location"; empty when the coordinates were typed.
+            'accuracy_meters' => ['nullable', 'numeric', 'min:0', 'max:999999'],
             'last_inspection_date' => ['nullable', 'date'],
             'notes' => ['nullable', 'string'],
         ];

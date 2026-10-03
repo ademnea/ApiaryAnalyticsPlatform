@@ -37,6 +37,8 @@ class SuperAdminSeeder extends Seeder
         'manage-apiaries',
         'manage-hives',
         'manage-iot-devices',
+        'manage-inspections',
+        'manage-harvests',
         'view-hive-data',
 
         // Farmer management
@@ -100,14 +102,51 @@ class SuperAdminSeeder extends Seeder
             );
             $adminRole->syncPermissions($this->permissions);
 
-            // Also create the standard farmer roles
-            // Also create the standard roles with sensible default permissions
-            \Spatie\Permission\Models\Role::firstOrCreate(
+            // ----------------------------------------------------------------
+            // Farmer roles (SRS §4.8, RBAC section)
+            //
+            // These permissions are created here rather than in $this->permissions
+            // so that admin and super-admin, which syncPermissions($this->permissions),
+            // do not silently inherit farmer-scoped grants.
+            //
+            // Guard is 'web' deliberately. Sanctum has no guard entry in
+            // config/auth.php, and Spatie resolves a token-authenticated User
+            // against 'web'; a 'sanctum'-guard duplicate of these roles would
+            // never match and would make the role list ambiguous.
+            // ----------------------------------------------------------------
+            $farmerPermissions = [
+                'view-own-hive-data',
+                'submit-farmer-feedback',
+                'view-own-notifications',
+                'update-own-profile',
+            ];
+
+            $farmerWriteOnly = ['submit-field-reports'];
+
+            foreach ([...$farmerPermissions, ...$farmerWriteOnly] as $permission) {
+                try {
+                    \Spatie\Permission\Models\Permission::firstOrCreate(
+                        ['name' => $permission, 'guard_name' => 'web']
+                    );
+                } catch (\Throwable $e) {
+                    Log::warning(
+                        "SuperAdminSeeder: failed to create permission [{$permission}]: " . $e->getMessage()
+                    );
+                }
+            }
+
+            $farmerRole = \Spatie\Permission\Models\Role::firstOrCreate(
                 ['name' => 'farmer', 'guard_name' => 'web']
             );
-            \Spatie\Permission\Models\Role::firstOrCreate(
+            $farmerRole->syncPermissions($farmerPermissions);
+
+            // farmer-write is additive: granted alongside farmer, it adds the
+            // ability to submit field and inspection reports from the app.
+            $farmerWriteRole = \Spatie\Permission\Models\Role::firstOrCreate(
                 ['name' => 'farmer-write', 'guard_name' => 'web']
             );
+            $farmerWriteRole->syncPermissions([...$farmerPermissions, ...$farmerWriteOnly]);
+
             \Spatie\Permission\Models\Role::firstOrCreate(
                 ['name' => 'field-officer', 'guard_name' => 'web']
             );

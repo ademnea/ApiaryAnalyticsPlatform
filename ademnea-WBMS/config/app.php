@@ -56,6 +56,19 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Mobile Application URL
+    |--------------------------------------------------------------------------
+    |
+    | Base URL of the farmer mobile app, used to build deep links in emails
+    | (e.g. the password reset link, which must open the app's reset screen
+    | rather than a web page). MOBILE_APP_URL is already set in .env.
+    |
+    */
+
+    'mobile_app_url' => env('MOBILE_APP_URL', 'https://app.ademnea.com'),
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Timezone
     |--------------------------------------------------------------------------
     |
@@ -66,6 +79,19 @@ return [
     */
 
     'timezone' => 'UTC',
+
+    /*
+    |--------------------------------------------------------------------------
+    | Local Timezone
+    |--------------------------------------------------------------------------
+    |
+    | Times are stored in UTC. This is the timezone the people using the
+    | system live in: where a "day" starts and ends for daily figures such
+    | as the dashboard charts.
+    |
+    */
+
+    'local_timezone' => env('APP_LOCAL_TIMEZONE', 'Africa/Kampala'),
 
     /*
     |--------------------------------------------------------------------------

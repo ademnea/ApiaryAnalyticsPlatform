@@ -2,16 +2,22 @@
 
 namespace App\Services;
 
+use App\Exceptions\IotDeviceNotAssignedException;
 use App\Models\IotDevice;
+use App\Models\IotDeviceTelemetry;
 use App\Models\IotIngestionLog;
 use App\Models\HiveTemperature;
 use App\Models\HiveHumidity;
 use App\Models\HiveCarbondioxide;
 use App\Models\HiveWeight;
+use App\Services\Iot\TelemetryPayloadRules;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 
 class IotSensorIngestionService
 {
+    private const SENSOR_TYPES = ['temperature', 'humidity', 'co2', 'weight'];
+
     public function __construct(private readonly IotDeviceIdentificationService $identification)
     {
     }
@@ -27,14 +33,22 @@ class IotSensorIngestionService
             return;
         }
 
-        ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
+        // Rejected before anything is stored, so an unknown type is never
+        // also logged as accepted or announced to condition monitoring.
+        if (! in_array($sensorType, self::SENSOR_TYPES, true)) {
+            $this->logRejected($device, $payload, "Unknown sensor_type: {$sensorType}");
+            return;
+        }
 
-         try {
-           ['hive' => $hive] = $this->identification->resolveHiveAndFarm($device);
-             } catch (\App\Exceptions\IotDeviceNotAssignedException $e) {
-           $this->logRejected($device, $payload, $e->getMessage());
-        return;
-    }
+        // An unassigned device is a permanent condition: log and acknowledge.
+        // Letting the exception escape would make the queue worker retry the
+        // message as if it were a transient failure.
+        try {
+            ['hive' => $hive] = $this->identification->resolveHiveAndApiary($device);
+        } catch (IotDeviceNotAssignedException $e) {
+            $this->logRejected($device, $payload, $e->getMessage());
+            return;
+        }
 
         $recordedAtUtc = \Illuminate\Support\Carbon::parse($recordedAt)->utc();
 
@@ -80,7 +94,6 @@ class IotSensorIngestionService
                 'recorded_at' => $recordedAtUtc,
                 'created_at' => now(),
             ]),
-            default => $this->logRejected($device, $payload, "Unknown sensor_type: {$sensorType}"),
         };
 
         IotIngestionLog::create([
@@ -90,9 +103,47 @@ class IotSensorIngestionService
             'created_at' => now(),
         ]);
 
+        // Receive time, not recorded_at: a device uploading a backlog of old
+        // readings is still in contact. CheckDeviceHealth counts this as
+        // contact, so a device that sends data but no heartbeats isn't
+        // reported offline.
+        IotDeviceTelemetry::updateOrCreate(
+            ['device_id' => $device->id],
+            ['last_data_received_at' => now()] + $this->deviceMeta($device, $payload['device_meta'] ?? null, $recordedAtUtc),
+        );
+
         // Event dispatch to IoT Condition Monitoring stays exactly as
         // already designed in §4.5.8 — decoupled, not called directly.
-        //event(new \App\Events\SensorRecordReceived($device, $sensorType, $recordedAtUtc));
+        event(new \App\Events\SensorRecordReceived($device, $hive, $sensorType, $recordedAtUtc));
+    }
+
+    /**
+     * UC-IOT-02: battery, signal and firmware piggybacked on a reading, so
+     * the dashboard sees them more often than every heartbeat. Optional —
+     * older firmware doesn't send it — and ignored when the reading is older
+     * than the last heartbeat, which already holds newer values.
+     *
+     * @return array<string, mixed> telemetry columns to update
+     */
+    private function deviceMeta(IotDevice $device, mixed $meta, Carbon $recordedAt): array
+    {
+        $meta = TelemetryPayloadRules::validDeviceMeta($meta);
+
+        if ($meta === []) {
+            return [];
+        }
+
+        $lastHeartbeatAt = IotDeviceTelemetry::where('device_id', $device->id)->value('last_heartbeat_at');
+
+        if ($lastHeartbeatAt !== null && $recordedAt->lt(Carbon::parse($lastHeartbeatAt))) {
+            return [];
+        }
+
+        if (isset($meta['firmware_version'])) {
+            $device->update(['firmware_version' => $meta['firmware_version']]);
+        }
+
+        return $meta;
     }
 
     private function logRejected(IotDevice $device, array $payload, string $reason): void

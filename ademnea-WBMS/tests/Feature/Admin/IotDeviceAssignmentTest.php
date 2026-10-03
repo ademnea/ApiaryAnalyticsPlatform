@@ -2,6 +2,8 @@
 
 namespace Tests\Feature\Admin;
 
+use App\Models\Apiary;
+use App\Models\Hive;
 use App\Models\IotDevice;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
@@ -102,6 +104,20 @@ class IotDeviceAssignmentTest extends TestCase
     }
 
     #[Test]
+    public function selecting_an_apiary_lists_its_available_hives(): void
+    {
+        $this->actingAsAdminWithPermission();
+        $device = IotDevice::factory()->create(['hive_id' => null]);
+        $hive = Hive::factory()->for(Apiary::factory()->active())->create();
+
+        $response = $this->get(route('admin.iot-devices.assign.hives', $device) . '?apiary_id=' . $hive->apiary_id);
+
+        $response->assertOk();
+        $response->assertViewIs('admin.iot-devices.assign-hives');
+        $response->assertSee($hive->hybrid_identifier);
+    }
+
+    #[Test]
     public function assignment_requires_a_hive_id(): void
     {
         $this->actingAsAdminWithPermission();
@@ -119,15 +135,13 @@ class IotDeviceAssignmentTest extends TestCase
     #[Test]
     public function guest_cannot_assign_a_device_to_a_hive(): void
     {
-        // $device = IotDevice::factory()->create(['hive_id' => null]);
+        $device = IotDevice::factory()->create(['hive_id' => null]);
 
-        // $response = $this->post(route('admin.iot-devices.assign.store', $device), [
-        //     'hive_id' => $this->createTestHiveId()
-        // ]);
+        $response = $this->post(route('admin.iot-devices.assign.store', $device), [
+            'hive_id' => $this->createTestHiveId()
+        ]);
 
-        // $response->assertRedirect(route('login'));
-        // $this->assertDatabaseHas('iot_devices', ['id' => $device->id, 'hive_id' => null]);
-
-        $this->markTestSkipped('Auth/RBAC not yet implemented — module pending.');
+        $response->assertRedirect(route('admin.login'));
+        $this->assertDatabaseHas('iot_devices', ['id' => $device->id, 'hive_id' => null]);
     }
 }

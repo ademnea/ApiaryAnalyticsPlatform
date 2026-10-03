@@ -4,6 +4,8 @@ namespace App\Services\Admin;
 
 use App\Mail\WelcomeUserMail;
 use App\Models\User;
+use App\Services\Farmer\FarmerProfileLinker;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -20,6 +22,26 @@ use Illuminate\Support\Facades\Mail;
  */
 class UserService
 {
+    public function __construct(
+        private readonly FarmerProfileLinker $linker
+    ) {}
+
+    /**
+     * Maps the Spatie roles chosen in the admin UI onto the users.role string
+     * column. Both exist and nothing kept them in sync, so an admin-created
+     * "farmer" was left at the migration default of 'admin' and was then
+     * rejected by the mobile login's role check.
+     */
+    private function roleColumnFor(array $roles): string
+    {
+        return match (true) {
+            (bool) array_intersect(['farmer', 'farmer-write'], $roles) => 'farmer',
+            in_array('field-officer', $roles, true)                    => 'field_officer',
+            in_array('researcher', $roles, true)                       => 'researcher',
+            default                                                    => 'admin',
+        };
+    }
+
     /**
      * Create a new user, assign roles, and dispatch the welcome email.
      *
@@ -39,16 +61,34 @@ class UserService
             ->forceDelete();
 
         $plainPassword = $data['password'];
+        $roles         = (array) $data['roles'];
+        $roleColumn    = $this->roleColumnFor($roles);
 
-        $user = User::create([
-            'name'      => $data['name'],
-            'email'     => $data['email'],
-            'password'  => Hash::make($plainPassword),
-            'status'    => 'active',
-            'is_active' => true,
-        ]);
+        $user = DB::transaction(function () use ($data, $plainPassword, $roles, $roleColumn) {
+            $user = User::create([
+                'name'      => $data['name'],
+                'email'     => $data['email'],
+                'password'  => Hash::make($plainPassword),
+                'role'      => $roleColumn,
+                'status'    => 'active',
+                'is_active' => true,
+            ]);
 
-        $user->syncRoles($data['roles']);
+            $user->syncRoles($roles);
+
+            // A farmer login is useless without the profile row that owns the
+            // apiaries, so create it in the same transaction. Same helper as
+            // self-registration, so the two paths cannot drift.
+            if ($roleColumn === 'farmer') {
+                $this->linker->linkOrCreate($user, [
+                    'telephone'      => $data['telephone'] ?? null,
+                    'status'         => 'Active',
+                    'profile_status' => 'active',
+                ]);
+            }
+
+            return $user;
+        });
 
         $emailFailed = false;
 

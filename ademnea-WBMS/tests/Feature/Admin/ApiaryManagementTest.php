@@ -137,4 +137,16 @@ class ApiaryManagementTest extends TestCase
 
         $response->assertSessionHasErrors('name');
     }
+
+    #[Test]
+    public function read_only_user_can_view_apiaries_but_not_create_them(): void
+    {
+        $this->actingAsAdminWithPermission('view-hive-data');
+        $apiary = Apiary::factory()->create();
+
+        $this->get(route('admin.apiaries.index'))->assertOk();
+        $this->get(route('admin.apiaries.show', $apiary))->assertOk();
+        $this->get(route('admin.apiaries.create'))->assertForbidden();
+        $this->post(route('admin.apiaries.store'), ['name' => 'Not allowed'])->assertForbidden();
+    }
 }
