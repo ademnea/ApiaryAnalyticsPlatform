@@ -1,0 +1,129 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  php:
+    name: PHP checks and tests
+    runs-on: ubuntu-24.04
+    defaults:
+      run:
+        working-directory: ademnea-WBMS
+
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: password
+          MYSQL_DATABASE: ademnea_test
+        ports:
+          - 3306:3306
+        options: >-
+          --health-cmd="mysqladmin ping -h 127.0.0.1"
+          --health-interval=10s
+          --health-timeout=5s
+          --health-retries=5
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, bcmath, intl, gd, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Find the Composer cache folder
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('ademnea-WBMS/composer.lock')}}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Check PHP syntax
+        run: |
+          find app bootstrap config database routes tests -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l > lint.txt \
+            || { grep -v '^No syntax errors' lint.txt; exit 1; }
+
+      - name: Reject leftover debug calls
+        run: |
+          if grep -rnE '^\s*(dd|dump|var_dump|ray)\(' app routes resources/views; then
+            echo "::error::Remove debug calls (dd, dump, var_dump, ray) before merging"
+            exit 1
+          fi
+
+      - name: Prepare the environment file
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Build production caches
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan event:cache
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          php artisan event:clear
+
+      - name: Run the test suite
+        env:
+          DB_HOST: 127.0.0.1
+          DB_PORT: 3306
+          DB_USERNAME: root
+          DB_PASSWORD: password
+        run: php artisan test
+
+
+  gateway:
+    name: Python gateway
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Check out the code
+        uses: actions/checkout@v7
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.12'
+          cache: pip
+          cache-dependency-path: requirements.txt
+
+      - name: Install gateway dependencies
+        run: pip install -r requirements.txt
+
+      - name: Smoke-test the gateway
+        run: |
+          python - <<'EOF'
+          import apigateway
+
+          routes = {r.rule for r in apigateway.app.url_map.iter_rules()}
+          assert {'/ingest', '/heartbeat', '/media/confirm'} <= routes, routes
+
+          client = apigateway.app.test_client()
+          response = client.post('/ingest', data='not json', content_type='application/json')
+          assert response.status_code == 400, response.status_code
+          print('gateway OK')
+          EOF
