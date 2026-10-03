@@ -11,13 +11,64 @@ jobs:
   php:
     name: PHP checks and tests
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: ademnea-WBMS
 
     steps:
       - name: Check out the code
         uses: actions/checkout@v7
 
-      - name: Look around
+      - name: Set up PHP 8.4
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.4'
+          extensions: mbstring, pdo_mysql, bcmath, intl, gd, zip
+          coverage: none
+          tools: composer:v2
+
+      - name: Find the Composer cache folder
+        id: composer-cache
+        run: echo "dir=$(composer config cache-files-dir)" >> "$GITHUB_OUTPUT"
+
+      - name: Cache Composer packages
+        uses: actions/cache@v6
+        with:
+          path: ${{ steps.composer-cache.outputs.dir }}
+          key: composer-${{ runner.os }}-${{ hashFiles('ademnea-WBMS/composer.lock')}}
+          restore-keys: composer-${{ runner.os }}-
+
+      - name: Validate composer.json and composer.lock
+        run: composer validate --strict
+
+      - name: Install Composer dependencies
+        run: composer install --no-interaction --no-progress --prefer-dist
+
+      - name: Check PHP syntax
         run: |
-          pwd
-          ls -la
-          ls ademnea-WBMS
+          find app bootstrap config database routes tests -name '*.php' -print0 \
+            | xargs -0 -n1 -P4 php -l > lint.txt \
+            || { grep -v '^No syntax errors' lint.txt; exit 1; }
+
+      - name: Reject leftover debug calls
+        run: |
+          if grep -rnE '^\s*(dd|dump|var_dump|ray)\(' app routes resources/views; then
+            echo "::error::Remove debug calls (dd, dump, var_dump, ray) before merging"
+            exit 1
+          fi
+
+      - name: Prepare the environment file
+        run: |
+          cp .env.example .env
+          php artisan key:generate
+
+      - name: Build production caches
+        run: |
+          php artisan config:cache
+          php artisan route:cache
+          php artisan view:cache
+          php artisan event:cache
+          php artisan config:clear
+          php artisan route:clear
+          php artisan view:clear
+          php artisan event:clear
