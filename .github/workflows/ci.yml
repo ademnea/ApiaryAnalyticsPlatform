@@ -127,3 +127,29 @@ jobs:
           assert response.status_code == 400, response.status_code
           print('gateway OK')
           EOF
+
+  deploy:
+    name: Deploy to production
+    needs: [ php, gateway ]
+    if: github.ref == 'refs/heads/main' && github.event_name != 'pull_request'
+    runs-on: ubuntu-24.04
+    concurrency:
+      group: production-deploy
+      cancel-in-progress: false
+    steps:
+      - name: Trust the server's host key
+        run: |
+          mkdir -p ~/.ssh
+          echo "196.43.168.57 ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIEf52Sb/kOdomylbrCyewLOIH6W6XQc/1kEyro/5Clq7" >> ~/.ssh/known_hosts
+
+      - name: Load the deploy key
+        env:
+          DEPLOY_SSH_KEY: ${{ secrets.DEPLOY_SSH_KEY }}
+        run: |
+          install -m 600 /dev/null ~/.ssh/deploy_key
+          printf '%s\n' "$DEPLOY_SSH_KEY" > ~/.ssh/deploy_key
+
+      - name: Deploy this commit
+        run: >
+          ssh -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o BatchMode=yes -o StrictHostKeyChecking=yes
+          deploy@196.43.168.57 "${{ github.sha }}"
