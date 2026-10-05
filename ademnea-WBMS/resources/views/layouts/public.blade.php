@@ -125,6 +125,9 @@
             ['Work Packages', route('public.work-packages.index'), 'public.work-packages.*'],
             ['Team', route('public.team.index'), 'public.team.*'],
             ['Gallery', route('public.gallery.index'), 'public.gallery.*'],
+            ['Publications', route('public.publications.index'), 'public.publications.*'],
+            ['Events', route('public.events.index'), 'public.events.*'],
+            ['Newsletters', route('public.newsletters.index'), 'public.newsletters.*'],
             ['Scholarships', route('public.scholarships.index'), 'public.scholarships.*'],
             ['Feedback', route('public.feedback.create'), 'public.feedback.*'],
         ];

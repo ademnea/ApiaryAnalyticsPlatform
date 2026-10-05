@@ -1,5 +1,6 @@
 @extends('layouts.app')
 
+@section('title', 'Hive Map')
 @section('page-title', 'Hive Map')
 @section('breadcrumbs')
     <li class="breadcrumb-item"><a href="{{ route('admin.hives.index') }}">Hives</a></li>
@@ -15,8 +16,7 @@
 @endsection
 
 @push('styles')
-<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.css"
-      integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
 <style>
 .hive-map-label {
     background: transparent !important;
@@ -45,8 +45,7 @@
 @endpush
 
 @push('scripts')
-<script src="https://cdn.jsdelivr.net/npm/leaflet@1.9.4/dist/leaflet.js"
-        integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
 <script>
 document.addEventListener('DOMContentLoaded', function () {
     const map = L.map('hive-map').setView([1.3733, 32.2903], 7);
