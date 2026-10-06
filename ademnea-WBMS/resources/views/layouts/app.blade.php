@@ -1100,9 +1100,9 @@
 
 {{-- Scripts --}}
 <script src="{{ asset('bootstrap.bundle.min.js') }}"></script>
-<script defer src="https://cdn.jsdelivr.net/npm/@alpinejs/collapse@3.14.0/dist/cdn.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/alpinejs@3.14.0/dist/cdn.min.js" defer></script>
-<script src="https://cdn.jsdelivr.net/npm/htmx.org@2.0.3/dist/htmx.min.js"></script>
+<script defer src="{{ asset('alpine-collapse.min.js') }}"></script>
+<script src="{{ asset('alpine.min.js') }}" defer></script>
+<script src="{{ asset('htmx.min.js') }}"></script>
 {{-- Chart.js for monitoring pages --}}
 <script src="{{ asset('chart.umd.js') }}"></script>
 
