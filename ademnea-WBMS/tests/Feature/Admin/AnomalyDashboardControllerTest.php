@@ -72,8 +72,8 @@ class AnomalyDashboardControllerTest extends TestCase
                     && $rules['frozen_sensor']['openCount'] === 0
                     && $rules['statistical_deviation']['group'] === 'Colony signals'
                     && $rules['statistical_deviation']['notifies'] === [
-                        ['recipient' => 'Admins', 'channels' => ['email']],
-                        ['recipient' => 'Farmer', 'channels' => ['push']],
+                        ['recipient' => 'Admins', 'channels' => ['email', 'sms']],
+                        ['recipient' => 'Farmer', 'channels' => ['push', 'sms']],
                     ];
             });
     }
