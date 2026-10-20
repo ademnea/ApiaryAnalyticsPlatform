@@ -138,8 +138,8 @@ class AnomalyEvidenceTest extends TestCase
             ->assertDontSee('No farmer alert was sent')
             ->assertViewHas('notificationSummary', fn (array $summary) => $summary['emptyReason'] === null
                 && $summary['routes'] === [
-                    ['recipient' => 'Admins', 'channels' => ['email']],
-                    ['recipient' => 'Hardware team', 'channels' => ['email']],
+                    ['recipient' => 'Admins', 'channels' => ['email', 'sms']],
+                    ['recipient' => 'Hardware team', 'channels' => ['email', 'sms']],
                 ]);
     }
 

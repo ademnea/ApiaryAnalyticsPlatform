@@ -134,8 +134,10 @@ class AnomalyIncidentLifecycleTest extends TestCase
             'occurrences' => 3,
             'resolved' => false,
         ]);
-        // One email to the hardware team's contact, not one per reading.
-        $this->assertDatabaseCount('notification_logs', 1);
+        // One email and one SMS to the hardware team's contact, not per reading.
+        $this->assertDatabaseCount('notification_logs', 2);
+        $this->assertDatabaseHas('notification_logs', ['channel' => 'email', 'type' => 'static_threshold_breach']);
+        $this->assertDatabaseHas('notification_logs', ['channel' => 'sms', 'type' => 'static_threshold_breach']);
     }
 
     #[Test]

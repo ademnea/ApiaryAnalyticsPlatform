@@ -6,6 +6,8 @@ use App\Models\User;
 use App\Models\Farmer;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Mail;
 use Tests\TestCase;
 
 class AuthTest extends TestCase
@@ -38,6 +40,56 @@ class AuthTest extends TestCase
         $this->assertDatabaseHas('farmers', [
             'telephone' => '256700000000',
         ]);
+    }
+
+    public function test_farmer_registration_sends_sms_to_farmer_and_configured_admins(): void
+    {
+        config([
+            'services.africastalking.username' => 'sandbox',
+            'services.africastalking.api_key' => 'test-key',
+            'services.africastalking.admin_phone_numbers' => ['+256700000001'],
+        ]);
+        Http::fake([
+            '*' => Http::response([
+                'SMSMessageData' => [
+                    'Recipients' => [['status' => 'Success']],
+                ],
+            ]),
+        ]);
+        Mail::fake();
+
+        $this->postJson('/api/v1/farmer/register', [
+            'name' => 'Test Farmer',
+            'email' => 'sms-farmer@example.com',
+            'telephone' => '+256700000000',
+            'password' => 'password123',
+            'password_confirmation' => 'password123',
+        ])->assertCreated();
+
+        $this->assertDatabaseHas('notification_logs', [
+            'recipient_type' => 'farmer',
+            'recipient' => '+256700000000',
+            'type' => 'registration_pending',
+            'channel' => 'sms',
+            'status' => 'sent',
+        ]);
+        $this->assertDatabaseHas('notification_logs', [
+            'recipient_type' => 'admin',
+            'recipient' => '+256700000001',
+            'type' => 'registration_pending',
+            'channel' => 'sms',
+            'status' => 'sent',
+        ]);
+        Http::assertSentCount(2);
+    }
+
+    public function test_farmer_registration_is_rate_limited_to_protect_billable_sms(): void
+    {
+        for ($attempt = 0; $attempt < 3; $attempt++) {
+            $this->postJson('/api/v1/farmer/register', [])->assertUnprocessable();
+        }
+
+        $this->postJson('/api/v1/farmer/register', [])->assertTooManyRequests();
     }
 
     public function test_register_requires_valid_email(): void

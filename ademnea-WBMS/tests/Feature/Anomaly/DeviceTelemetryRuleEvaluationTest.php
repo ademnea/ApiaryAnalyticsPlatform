@@ -70,7 +70,7 @@ class DeviceTelemetryRuleEvaluationTest extends TestCase
     }
 
     #[Test]
-    public function a_malformed_heartbeat_is_rejected_whole_and_the_hardware_team_emailed_once(): void
+    public function a_malformed_heartbeat_is_rejected_whole_and_the_hardware_team_is_notified_once_per_channel(): void
     {
         [, $device] = $this->makeDevice();
         $service = app(IotHeartbeatProcessingService::class);
@@ -83,8 +83,12 @@ class DeviceTelemetryRuleEvaluationTest extends TestCase
         $this->assertSame(2, IotIngestionLog::where('device_id', $device->id)->where('outcome', 'rejected_validation')->count());
         $this->assertArrayHasKey('battery_level', IotIngestionLog::first()->validation_errors);
 
-        // The second bad heartbeat within the hour is logged but not emailed again.
-        $this->assertSame(1, NotificationLog::where('type', 'malformed_heartbeat')->where('recipient_type', 'hardware_team')->count());
+        // The second bad heartbeat within the hour does not duplicate either channel.
+        $logs = NotificationLog::where('type', 'malformed_heartbeat')
+            ->where('recipient_type', 'hardware_team')
+            ->get();
+        $this->assertCount(2, $logs);
+        $this->assertEqualsCanonicalizing(['email', 'sms'], $logs->pluck('channel')->all());
     }
 
     #[Test]

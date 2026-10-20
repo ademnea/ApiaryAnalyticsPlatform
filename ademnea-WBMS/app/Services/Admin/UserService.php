@@ -5,6 +5,7 @@ namespace App\Services\Admin;
 use App\Mail\WelcomeUserMail;
 use App\Models\User;
 use App\Services\Farmer\FarmerProfileLinker;
+use App\Services\Notifications\SmsNotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
@@ -23,7 +24,8 @@ use Illuminate\Support\Facades\Mail;
 class UserService
 {
     public function __construct(
-        private readonly FarmerProfileLinker $linker
+        private readonly FarmerProfileLinker $linker,
+        private readonly SmsNotificationService $sms,
     ) {}
 
     /**
@@ -97,6 +99,21 @@ class UserService
         } catch (\Throwable $e) {
             Log::warning("WelcomeUserMail failed for user [{$user->id}]: " . $e->getMessage());
             $emailFailed = true;
+        }
+
+        if ($roleColumn === 'farmer' && $farmer = $user->farmer) {
+            try {
+                $this->sms->sendToFarmer(
+                    $farmer,
+                    'account_created',
+                    'AdEMNEA account created',
+                    'Your AdEMNEA farmer account has been created. Check your email for sign-in details.'
+                );
+            } catch (\Throwable $e) {
+                Log::warning("Farmer account SMS failed for user [{$user->id}].", [
+                    'exception' => $e->getMessage(),
+                ]);
+            }
         }
 
         return compact('user', 'emailFailed');

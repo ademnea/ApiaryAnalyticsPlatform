@@ -5,10 +5,10 @@ namespace App\Http\Requests\Api\Farmer;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * UC-FAPI-04 step 2: complete the password reset.
+ * UC-FAPI-04 step 2: complete the password reset with a six-digit code.
  *
  * As with ForgotPasswordRequest, there is no `exists:users,email` rule: an
- * unknown address must produce the same single "invalid or expired link"
+ * unknown address must produce the same single "invalid or expired code"
  * message as a bad token, not a distinguishable field error.
  */
 class ResetPasswordRequest extends FormRequest
@@ -21,8 +21,8 @@ class ResetPasswordRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email'    => ['required', 'email'],
-            'token'    => ['required', 'string'],
+            'email' => ['required', 'email'],
+            'token' => ['required', 'string', 'regex:/^[0-9]{6}$/'],
             'password' => ['required', 'string', 'min:8', 'confirmed'],
         ];
     }
@@ -31,7 +31,7 @@ class ResetPasswordRequest extends FormRequest
     {
         return [
             'password.confirmed' => 'The password confirmation does not match.',
-            'password.min'       => 'The password must be at least 8 characters.',
+            'password.min' => 'The password must be at least 8 characters.',
         ];
     }
 }

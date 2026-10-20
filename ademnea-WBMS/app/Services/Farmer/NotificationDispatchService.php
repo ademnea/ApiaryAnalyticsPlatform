@@ -5,6 +5,7 @@ namespace App\Services\Farmer;
 use App\Models\Alert;
 use App\Models\NotificationLog;
 use App\Services\Notifications\NotificationQueue;
+use App\Services\Notifications\SmsNotificationService;
 
 /**
  * REQ-F-FAPI-24 to 30: pushes a farmer's new alert to their phone (FCM).
@@ -13,9 +14,10 @@ use App\Services\Notifications\NotificationQueue;
  */
 class NotificationDispatchService
 {
-    public function __construct(private readonly NotificationQueue $queue)
-    {
-    }
+    public function __construct(
+        private readonly NotificationQueue $queue,
+        private readonly SmsNotificationService $sms,
+    ) {}
 
     public function dispatch(Alert $alert): NotificationLog
     {
@@ -28,7 +30,7 @@ class NotificationDispatchService
         ];
 
         if (blank($farmer?->fcm_token)) {
-            return NotificationLog::create($to + [
+            $log = NotificationLog::create($to + [
                 'recipient' => null,
                 'type' => $alert->type,
                 'channel' => 'push',
@@ -37,8 +39,14 @@ class NotificationDispatchService
                 'status' => 'skipped',
                 'error_message' => 'The farmer has no registered FCM token.',
             ]);
+        } else {
+            $log = $this->queue->send('push', $to, $alert->type, 'AdEMNEA hive alert', $alert->message);
         }
 
-        return $this->queue->send('push', $to, $alert->type, 'AdEMNEA hive alert', $alert->message);
+        if ($farmer !== null) {
+            $this->sms->sendToFarmer($farmer, $alert->type, 'AdEMNEA hive alert', $alert->message);
+        }
+
+        return $log;
     }
 }

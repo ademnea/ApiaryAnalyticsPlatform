@@ -56,6 +56,36 @@ class NotificationDeliveryTest extends TestCase
     }
 
     #[Test]
+    public function a_farmer_alert_is_sent_by_sms_to_the_saved_phone_number(): void
+    {
+        config([
+            'services.africastalking.username' => 'sandbox',
+            'services.africastalking.api_key' => 'test-key',
+        ]);
+        Http::fake([
+            '*' => Http::response([
+                'SMSMessageData' => [
+                    'Recipients' => [['status' => 'Success']],
+                ],
+            ]),
+        ]);
+
+        $alert = $this->makeAlert(null);
+        $alert->farmer->update(['telephone' => '+256700000099']);
+
+        app(NotificationDispatchService::class)->dispatch($alert);
+
+        $this->assertDatabaseHas('notification_logs', [
+            'recipient_type' => 'farmer',
+            'recipient' => '+256700000099',
+            'channel' => 'sms',
+            'status' => 'sent',
+        ]);
+        Http::assertSent(fn ($request) => str_contains($request->url(), 'sandbox.africastalking.com')
+            && $request['to'] === '+256700000099');
+    }
+
+    #[Test]
     public function a_farmer_without_a_token_is_logged_as_skipped(): void
     {
         $this->configureFcm();

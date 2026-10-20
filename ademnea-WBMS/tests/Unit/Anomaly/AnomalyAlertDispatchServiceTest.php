@@ -75,6 +75,7 @@ class AnomalyAlertDispatchServiceTest extends TestCase
         $this->assertDatabaseHas('notification_logs', ['recipient_type' => 'admin', 'recipient' => 'admin@example.com', 'channel' => 'email', 'status' => 'sent']);
         // No FCM token on the farmer: the push is on record as skipped.
         $this->assertDatabaseHas('notification_logs', ['recipient_type' => 'farmer', 'channel' => 'push', 'status' => 'skipped']);
+        $this->assertDatabaseHas('notification_logs', ['recipient_type' => 'farmer', 'channel' => 'sms', 'status' => 'skipped']);
         $this->assertDatabaseMissing('notification_logs', ['recipient_type' => 'hardware_team']);
         $this->assertTrue($anomaly->fresh()->alerted);
     }
@@ -90,7 +91,11 @@ class AnomalyAlertDispatchServiceTest extends TestCase
         $this->assertDatabaseCount('alerts', 0);
         $this->assertDatabaseHas('notification_logs', ['recipient_type' => 'admin', 'channel' => 'email']);
         $this->assertDatabaseHas('notification_logs', ['recipient_type' => 'hardware_team', 'recipient' => 'field-team@example.com', 'channel' => 'email']);
-        $this->assertDatabaseMissing('notification_logs', ['channel' => 'sms']);
+        $this->assertDatabaseHas('notification_logs', [
+            'recipient_type' => 'hardware_team',
+            'channel' => 'sms',
+            'status' => 'skipped',
+        ]);
     }
 
     #[Test]

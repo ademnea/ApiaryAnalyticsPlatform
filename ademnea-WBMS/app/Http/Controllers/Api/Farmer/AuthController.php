@@ -75,15 +75,15 @@ class AuthController extends Controller
     {
         try {
             $this->authService->sendResetLink($request->validated()['email']);
-        } catch (\Throwable) {
+        } catch (\Throwable $exception) {
             // Swallowed on purpose. The response below must be identical
             // whether the address exists, does not exist, or the mail
             // transport failed — any difference is an enumeration oracle.
-            // AuthService already logs the failure.
+            report($exception);
         }
 
         return response()->json([
-            'message' => 'If this email is registered, you will receive a reset link shortly.',
+            'message' => 'If this email is registered, you will receive a reset code shortly.',
         ], 200);
     }
 
@@ -94,7 +94,7 @@ class AuthController extends Controller
 
         if (! $ok) {
             return response()->json([
-                'message' => 'This password reset link is invalid or has expired. Please request a new one.',
+                'message' => 'This password reset code is invalid, expired, or has too many attempts. Please request a new one.',
             ], 422);
         }
 

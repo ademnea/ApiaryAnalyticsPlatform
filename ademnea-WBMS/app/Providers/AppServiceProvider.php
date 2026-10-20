@@ -115,6 +115,14 @@ class AppServiceProvider extends ServiceProvider
      */
     private function configureRateLimiting(): void
     {
+        RateLimiter::for('farmer-register', function (Request $request) {
+            return Limit::perMinute(3)
+                ->by($request->ip())
+                ->response(fn () => response()->json([
+                    'message' => 'Too many registration attempts. Please try again later.',
+                ], 429));
+        });
+
         // UC-FAPI-02 alternative flow D.
         //
         // Note for review: this is per-IP, as the SRS specifies. A co-op or
@@ -135,6 +143,14 @@ class AppServiceProvider extends ServiceProvider
                 ->by($request->ip())
                 ->response(fn () => response()->json([
                     'message' => 'Too many requests. Please try again later.',
+                ], 429));
+        });
+
+        RateLimiter::for('farmer-password-reset', function (Request $request) {
+            return Limit::perMinute(10)
+                ->by($request->ip())
+                ->response(fn () => response()->json([
+                    'message' => 'Too many password reset attempts. Please try again later.',
                 ], 429));
         });
     }

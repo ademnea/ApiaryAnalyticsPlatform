@@ -14,12 +14,13 @@ class FarmerPasswordReset extends Mailable
     use Queueable, SerializesModels;
 
     public User $user;
-    public string $token;
 
-    public function __construct(User $user, string $token)
+    public string $code;
+
+    public function __construct(User $user, string $code)
     {
         $this->user = $user;
-        $this->token = $token;
+        $this->code = $code;
     }
 
     public function envelope(): Envelope
@@ -36,8 +37,7 @@ class FarmerPasswordReset extends Mailable
             with: [
                 'name' => $this->user->name,
                 'email' => $this->user->email,
-                'token' => $this->token,
-                'resetUrl' => config('app.mobile_app_url') . '/reset-password?token=' . $this->token . '&email=' . urlencode($this->user->email),
+                'code' => $this->code,
             ],
         );
     }

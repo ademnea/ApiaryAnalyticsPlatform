@@ -7,12 +7,13 @@ use App\Mail\Farmer\NewRegistrationForReview;
 use App\Mail\Farmer\RegistrationPending;
 use App\Models\Farmer;
 use App\Models\User;
+use App\Services\Notifications\SmsNotificationService;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
-use Illuminate\Support\Facades\Password;
+use Illuminate\Support\Facades\RateLimiter;
 
 /**
  * UC-FAPI-01 to 05: farmer authentication and account management.
@@ -32,10 +33,13 @@ class AuthService
      * connection is a worse failure than a longer-lived token.
      */
     private const TOKEN_TTL_DAYS = 30;
+    private const PASSWORD_RESET_CODE_TTL_MINUTES = 10;
+    private const PASSWORD_RESET_CODE_MAX_ATTEMPTS = 5;
 
     public function __construct(
         private readonly FarmerProfileLinker $linker,
         private readonly FarmerAuditService $audit,
+        private readonly SmsNotificationService $sms,
     ) {}
 
     // -------------------------------------------------------------------------
@@ -86,6 +90,25 @@ class AuthService
                 Mail::to($approvers)->send(new NewRegistrationForReview($result['user']));
             }
         }, 'admin new-registration notice');
+
+        $this->sendQuietly(
+            fn () => $this->sms->sendToFarmer(
+                $result['farmer'],
+                'registration_pending',
+                'AdEMNEA registration received',
+                'Your AdEMNEA farmer registration has been received and is awaiting administrator approval.'
+            ),
+            'farmer registration SMS'
+        );
+
+        $this->sendQuietly(
+            fn () => $this->sms->sendToAdmins(
+                'registration_pending',
+                'New farmer registration',
+                "A farmer registration is awaiting review: {$result['user']->name} ({$result['user']->email})."
+            ),
+            'admin registration SMS'
+        );
 
         return $result;
     }
@@ -168,48 +191,98 @@ class AuthService
      * Always returns void: the controller answers identically whether or not
      * the address is registered.
      *
-     * Uses the framework's password broker rather than hand-rolled token rows.
-     * config/auth.php already configures password_reset_tokens with a 60
-     * minute expiry and a throttle, the repository stores the token hashed,
-     * and it deletes the row on use — which is the single-use requirement.
+     * Farmer mobile resets use a short-lived numeric code. Only its hash is
+     * stored, and successful use removes it from the shared reset-token table.
      */
     public function sendResetLink(string $email): void
     {
-        $this->sendQuietly(function () use ($email) {
-            Password::broker('users')->sendResetLink(
-                // `role` is not a password key, so the user provider turns it
-                // into a where clause: an administrator can never be issued a
-                // mobile deep link.
-                ['email' => $email, 'role' => 'farmer'],
-                fn (User $user, string $token) => Mail::to($user->email)
-                    ->send(new FarmerPasswordReset($user, $token))
+        $user = User::where('email', $email)->where('role', 'farmer')->first();
+
+        if (! $user) {
+            return;
+        }
+
+        $requestKey = 'farmer-password-reset-request:'.hash('sha256', mb_strtolower($user->email));
+
+        if (RateLimiter::tooManyAttempts($requestKey, 1)) {
+            return;
+        }
+
+        RateLimiter::hit($requestKey, (int) config('auth.passwords.users.throttle', 60));
+
+        $code = str_pad((string) random_int(0, 999999), 6, '0', STR_PAD_LEFT);
+
+        DB::table(config('auth.passwords.users.table'))->updateOrInsert(
+            ['email' => $user->email],
+            ['token' => Hash::make($code), 'created_at' => now()]
+        );
+
+        $this->notifyPasswordReset($user, $code);
+    }
+
+    private function notifyPasswordReset(User $user, string $code): void
+    {
+        $this->sendQuietly(
+            fn () => Mail::to($user->email)->send(new FarmerPasswordReset($user, $code)),
+            'farmer password reset email'
+        );
+
+        $this->sendQuietly(function () use ($user, $code) {
+            $this->sms->sendToFarmer(
+                $this->resolveFarmer($user),
+                'password_reset',
+                'AdEMNEA password reset',
+                "Your AdEMNEA password reset code is {$code}. It expires in 10 minutes."
             );
-        }, 'farmer password reset link');
+        }, 'farmer password reset SMS');
     }
 
     public function resetPassword(array $data): bool
     {
-        $status = Password::broker('users')->reset(
-            [
-                'email'                 => $data['email'],
-                'password'              => $data['password'],
-                'password_confirmation' => $data['password_confirmation'] ?? $data['password'],
-                'token'                 => $data['token'],
-                'role'                  => 'farmer',
-            ],
-            function (User $user, string $password) {
-                // The `hashed` cast hashes this on save.
-                $user->forceFill(['password' => $password])->save();
+        $email = mb_strtolower($data['email']);
+        $attemptKey = 'farmer-password-reset:'.hash('sha256', $email);
 
-                // Deliberately NOT revoking Sanctum tokens. UC-FAPI-04 states
-                // that existing sessions survive a password reset; do not
-                // "fix" this into a global logout.
+        if (RateLimiter::tooManyAttempts($attemptKey, self::PASSWORD_RESET_CODE_MAX_ATTEMPTS)) {
+            return false;
+        }
+
+        RateLimiter::hit($attemptKey, self::PASSWORD_RESET_CODE_TTL_MINUTES * 60);
+
+        $reset = DB::transaction(function () use ($data) {
+            $user = User::where('email', $data['email'])
+                ->where('role', 'farmer')
+                ->lockForUpdate()
+                ->first();
+
+            $reset = DB::table(config('auth.passwords.users.table'))
+                ->where('email', $user?->email ?? $data['email'])
+                ->lockForUpdate()
+                ->first();
+
+            if (
+                ! $user
+                || ! $reset
+                || ! $reset->created_at
+                || Carbon::parse($reset->created_at)->addMinutes(self::PASSWORD_RESET_CODE_TTL_MINUTES)->isPast()
+                || ! Hash::check($data['token'], $reset->token)
+            ) {
+                return false;
             }
-        );
 
-        // Every failure — unknown address, wrong token, expired token —
-        // collapses to false so the caller emits one message and leaks nothing.
-        return $status === Password::PASSWORD_RESET;
+            // The `hashed` cast on User hashes this; do not pre-hash.
+            $user->forceFill(['password' => $data['password']])->save();
+            DB::table(config('auth.passwords.users.table'))->where('email', $user->email)->delete();
+
+            // Deliberately do not revoke Sanctum tokens: existing sessions
+            // survive a password reset.
+            return true;
+        });
+
+        if ($reset) {
+            RateLimiter::clear($attemptKey);
+        }
+
+        return $reset;
     }
 
     // -------------------------------------------------------------------------

@@ -31,7 +31,8 @@ Route::prefix('v1/farmer')->group(function () {
     // -------------------------------------------------------------------------
     // Public — no authentication required
     // -------------------------------------------------------------------------
-    Route::post('register',         [AuthController::class, 'register']);
+    Route::post('register',         [AuthController::class, 'register'])
+        ->middleware('throttle:farmer-register');
 
     // UC-FAPI-02 alt-flow D: 10 attempts per IP per minute.
     Route::post('login',            [AuthController::class, 'login'])
@@ -42,7 +43,8 @@ Route::prefix('v1/farmer')->group(function () {
     Route::post('password/forgot',  [AuthController::class, 'forgotPassword'])
         ->middleware('throttle:farmer-password-forgot');
 
-    Route::post('password/reset',   [AuthController::class, 'resetPassword']);
+    Route::post('password/reset',   [AuthController::class, 'resetPassword'])
+        ->middleware('throttle:farmer-password-reset');
 
     // -------------------------------------------------------------------------
     // Authenticated, but not role-gated

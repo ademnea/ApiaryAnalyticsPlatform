@@ -4,6 +4,7 @@ namespace App\Services\Notifications;
 
 use App\Jobs\SendNotification;
 use App\Models\NotificationLog;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Facades\Log;
 use Throwable;
 
@@ -21,7 +22,7 @@ class NotificationQueue
     }
 
     /**
-     * @param  array{recipient_type: string, recipient: string, farmer_id?: ?int, sensor_anomaly_id?: ?int}  $to
+     * @param  array{recipient_type: string, recipient: ?string, farmer_id?: ?int, sensor_anomaly_id?: ?int}  $to
      */
     public function send(string $channel, array $to, string $type, string $subject, string $content): NotificationLog
     {
@@ -30,6 +31,7 @@ class NotificationQueue
             'sms' => ! $this->sms->isConfigured(),
             default => false,
         };
+        $missingRecipient = blank($to['recipient']);
 
         $log = NotificationLog::create([
             'farmer_id' => $to['farmer_id'] ?? null,
@@ -39,12 +41,16 @@ class NotificationQueue
             'type' => $type,
             'channel' => $channel,
             'subject' => $subject,
-            'content' => $content,
-            'status' => $unconfigured ? 'skipped' : 'pending',
-            'error_message' => $unconfigured ? "The {$channel} channel is not configured." : null,
+            'content' => $channel === 'sms' && $type === 'password_reset'
+                ? Crypt::encryptString($content)
+                : $content,
+            'status' => $missingRecipient || $unconfigured ? 'skipped' : 'pending',
+            'error_message' => $missingRecipient
+                ? "The {$channel} recipient has no address."
+                : ($unconfigured ? "The {$channel} channel is not configured." : null),
         ]);
 
-        if (! $unconfigured) {
+        if (! $missingRecipient && ! $unconfigured) {
             try {
                 SendNotification::dispatch($log->id);
             } catch (Throwable $e) {
