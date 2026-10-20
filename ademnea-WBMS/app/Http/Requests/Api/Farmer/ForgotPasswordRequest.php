@@ -5,7 +5,7 @@ namespace App\Http\Requests\Api\Farmer;
 use Illuminate\Foundation\Http\FormRequest;
 
 /**
- * UC-FAPI-04 step 1: request a password reset link.
+ * UC-FAPI-04 step 1: request a password reset code.
  *
  * Deliberately no `exists:users,email` rule. The endpoint must answer
  * identically whether or not the address is registered, and an exists rule

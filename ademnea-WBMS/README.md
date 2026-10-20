@@ -63,6 +63,9 @@ The Laravel framework is open-sourced software licensed under the [MIT license](
 
 Run these PowerShell commands from the project root to create and seed the database, run migrations, and start the local server. Adjust `php` path or environment as needed.
 
+The Farmer Mobile API endpoints and request/response formats are documented in
+[`docs/api/farmer-api.md`](docs/api/farmer-api.md).
+
 ```powershell
 # install dependencies
 composer install
@@ -85,4 +88,3 @@ Next steps (suggested):
 - Configure mailer in `.env` for password resets and notifications.
 - Configure queue worker: `php artisan queue:work` for async jobs.
 - Add Spatie permissions (composer require spatie/laravel-permission) and publish migrations if RBAC is needed.
-

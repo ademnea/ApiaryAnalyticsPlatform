@@ -80,7 +80,11 @@ class AnomalyAlertDispatchService
     public function notifyStaff(IotDevice $device, array $routes, string $type, string $subject, string $body, ?int $anomalyId = null): void
     {
         $recipients = [
-            AlertRouting::ADMIN => fn (string $channel) => $channel === 'email' ? $this->adminEmails() : [],
+            AlertRouting::ADMIN => fn (string $channel) => match ($channel) {
+                'email' => $this->adminEmails(),
+                'sms' => config('services.africastalking.admin_phone_numbers', []),
+                default => [],
+            },
             AlertRouting::HARDWARE_TEAM => fn (string $channel) => $this->hardwareTeamContacts($device, $channel),
         ];
 

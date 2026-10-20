@@ -5,6 +5,7 @@ namespace App\Services\ApiaryManagement;
 use App\Mail\Farmer\AccountApproved;
 use App\Mail\Farmer\RegistrationRejected;
 use App\Models\Farmer;
+use App\Services\Notifications\SmsNotificationService;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
@@ -30,6 +31,10 @@ use Illuminate\Support\Facades\Mail;
  */
 class FarmerApprovalService
 {
+    public function __construct(private readonly SmsNotificationService $sms)
+    {
+    }
+
     public function approve(Farmer $farmer, string $role = 'farmer'): Farmer
     {
         DB::transaction(function () use ($farmer, $role) {
@@ -59,6 +64,12 @@ class FarmerApprovalService
             fn () => Mail::to($this->contactAddress($farmer))->send(new AccountApproved($farmer)),
             $farmer,
             'approval'
+        );
+        $this->notifySms(
+            $farmer,
+            'account_approved',
+            'AdEMNEA account approved',
+            'Your AdEMNEA account is active. You can now sign in at '.config('app.mobile_app_url')
         );
 
         return $farmer->refresh();
@@ -92,6 +103,12 @@ class FarmerApprovalService
             $farmer,
             'rejection'
         );
+        $this->notifySms(
+            $farmer,
+            'registration_rejected',
+            'AdEMNEA registration update',
+            'Your AdEMNEA registration was not approved. Please contact '.config('mail.from.address').' for assistance.'
+        );
 
         return $farmer->refresh();
     }
@@ -115,6 +132,18 @@ class FarmerApprovalService
             $send();
         } catch (\Throwable $e) {
             Log::warning("Failed to send farmer {$kind} notification.", [
+                'farmer_id' => $farmer->id,
+                'exception' => $e->getMessage(),
+            ]);
+        }
+    }
+
+    private function notifySms(Farmer $farmer, string $type, string $subject, string $message): void
+    {
+        try {
+            $this->sms->sendToFarmer($farmer, $type, $subject, $message);
+        } catch (\Throwable $e) {
+            Log::warning("Failed to send farmer {$type} SMS.", [
                 'farmer_id' => $farmer->id,
                 'exception' => $e->getMessage(),
             ]);

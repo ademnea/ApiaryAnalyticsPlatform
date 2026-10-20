@@ -59,9 +59,8 @@ return [
     | Mobile Application URL
     |--------------------------------------------------------------------------
     |
-    | Base URL of the farmer mobile app, used to build deep links in emails
-    | (e.g. the password reset link, which must open the app's reset screen
-    | rather than a web page). MOBILE_APP_URL is already set in .env.
+    | Base URL of the farmer mobile app, used in account and alert
+    | notifications. MOBILE_APP_URL can be set in .env.
     |
     */
 
@@ -73,20 +72,18 @@ return [
     |--------------------------------------------------------------------------
     |
     | Here you may specify the default timezone for your application, which
-    | will be used by the PHP date and date-time functions. The timezone
-    | is set to "UTC" by default as it is suitable for most use cases.
+    | will be used by the PHP date and date-time functions.
     |
     */
 
-    'timezone' => 'UTC',
+    'timezone' => env('APP_TIMEZONE', 'Africa/Kampala'),
 
     /*
     |--------------------------------------------------------------------------
     | Local Timezone
     |--------------------------------------------------------------------------
     |
-    | Times are stored in UTC. This is the timezone the people using the
-    | system live in: where a "day" starts and ends for daily figures such
+    | This is the timezone where a "day" starts and ends for daily figures such
     | as the dashboard charts.
     |
     */

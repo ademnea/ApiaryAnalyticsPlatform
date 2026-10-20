@@ -55,5 +55,9 @@ return [
     'africastalking' => [
         'api_key' => env('AFRICASTALKING_API_KEY'),
         'username' => env('AFRICASTALKING_USERNAME'),
+        'admin_phone_numbers' => array_values(array_filter(array_map(
+            'trim',
+            explode(',', (string) env('AFRICASTALKING_ADMIN_PHONE_NUMBERS', ''))
+        ))),
     ],
 ];

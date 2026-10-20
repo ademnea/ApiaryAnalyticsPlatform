@@ -12,6 +12,7 @@ use Illuminate\Foundation\Bus\Dispatchable;
 use Illuminate\Queue\InteractsWithQueue;
 use Illuminate\Queue\SerializesModels;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Crypt;
 use Illuminate\Support\Str;
 use Throwable;
 
@@ -42,10 +43,13 @@ class SendNotification implements ShouldQueue
         }
 
         $log->increment('attempts');
+        $content = $log->channel === 'sms' && $log->type === 'password_reset'
+            ? Crypt::decryptString($log->content)
+            : $log->content;
 
         match ($log->channel) {
             'email' => Mail::to($log->recipient)->send(new DeviceAlertMail($log->subject ?? 'AdEMNEA alert', $log->content)),
-            'sms' => $sms->send($log->recipient, $log->content),
+            'sms' => $sms->send($log->recipient, $content),
             'push' => $push->send($log->recipient, $log->subject ?? 'AdEMNEA alert', $log->content, array_filter([
                 'type' => $log->type,
                 'sensor_anomaly_id' => $log->sensor_anomaly_id,

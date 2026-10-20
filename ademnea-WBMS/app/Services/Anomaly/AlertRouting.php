@@ -21,25 +21,25 @@ final class AlertRouting
     public const FARMER = 'farmer';
 
     private const ROUTES = [
-        'device_offline' => [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email']],
-        'low_battery' => [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email']],
-        'critical_battery' => [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email', 'sms']],
+        'device_offline' => [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']],
+        'low_battery' => [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']],
+        'critical_battery' => [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']],
         'weak_signal' => [],
-        'frozen_sensor' => [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email']],
-        'static_threshold_breach' => [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email']],
-        'statistical_deviation' => [self::ADMIN => ['email'], self::FARMER => ['push']],
-        'high_anomaly_rate' => [self::ADMIN => ['email']],
+        'frozen_sensor' => [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']],
+        'static_threshold_breach' => [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']],
+        'statistical_deviation' => [self::ADMIN => ['email', 'sms'], self::FARMER => ['push', 'sms']],
+        'high_anomaly_rate' => [self::ADMIN => ['email', 'sms']],
         'firmware_outdated' => [],
-        'storage_full' => [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email']],
-        'reboot_loop' => [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email']],
-        'submission_delay' => [self::FARMER => ['push']],
+        'storage_full' => [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']],
+        'reboot_loop' => [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']],
+        'submission_delay' => [self::FARMER => ['push', 'sms']],
     ];
 
     /** A device back online (UC-IOT-12, Alternative Flow B). */
-    public const RECOVERY = [self::ADMIN => ['email'], self::HARDWARE_TEAM => ['email']];
+    public const RECOVERY = [self::ADMIN => ['email', 'sms'], self::HARDWARE_TEAM => ['email', 'sms']];
 
     /** A malformed heartbeat (UC-IOT-01, Alternative Flow B). */
-    public const MALFORMED_HEARTBEAT = [self::HARDWARE_TEAM => ['email']];
+    public const MALFORMED_HEARTBEAT = [self::HARDWARE_TEAM => ['email', 'sms']];
 
     /**
      * Unknown types (e.g. future ML layers) go to the admin by email rather
@@ -49,7 +49,7 @@ final class AlertRouting
      */
     public static function for(string $anomalyType): array
     {
-        return self::ROUTES[$anomalyType] ?? [self::ADMIN => ['email']];
+        return self::ROUTES[$anomalyType] ?? [self::ADMIN => ['email', 'sms']];
     }
 
     public const RECIPIENT_LABELS = [

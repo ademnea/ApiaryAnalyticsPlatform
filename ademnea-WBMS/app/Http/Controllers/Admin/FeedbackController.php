@@ -6,12 +6,17 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\UpdateFeedbackStatusRequest;
 use App\Mail\FeedbackResponseMail;
 use App\Models\Feedback;
+use App\Services\Notifications\SmsNotificationService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\View\View;
 
 class FeedbackController extends Controller
 {
+    public function __construct(private readonly SmsNotificationService $sms)
+    {
+    }
+
     public function index(Request $request): View
     {
         $query = Feedback::query()->with('category');
@@ -73,14 +78,27 @@ class FeedbackController extends Controller
 
     protected function notifySubmitter(Feedback $feedback): void
     {
-        if (! $this->mailerConfigured()) {
-            return;
+        if ($this->mailerConfigured() && filled($feedback->email)) {
+            try {
+                Mail::to($feedback->email)->send(new FeedbackResponseMail($feedback));
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
 
-        try {
-            Mail::to($feedback->email)->send(new FeedbackResponseMail($feedback));
-        } catch (\Throwable $e) {
-            report($e);
+        if (filled($feedback->phone)) {
+            try {
+                $this->sms->sendToPhone(
+                    $feedback->phone,
+                    'feedback',
+                    null,
+                    'feedback_response',
+                    'AdEMNEA response to your feedback',
+                    'Response to "'.$feedback->subject.'": '.$feedback->admin_response
+                );
+            } catch (\Throwable $e) {
+                report($e);
+            }
         }
     }
 
