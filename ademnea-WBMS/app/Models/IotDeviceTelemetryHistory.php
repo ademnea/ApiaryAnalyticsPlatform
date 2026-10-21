@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\UtcDateTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -25,7 +26,7 @@ class IotDeviceTelemetryHistory extends Model
         'cpu_usage' => 'float',
         'storage_usage' => 'float',
         'sensor_read_success_rate' => 'float',
-        'recorded_at' => 'datetime',
+        'recorded_at' => UtcDateTime::class,
         'created_at' => 'datetime',
     ];
 
