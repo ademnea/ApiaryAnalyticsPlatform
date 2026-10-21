@@ -13,7 +13,8 @@ class IotDeviceTelemetryHistory extends Model
     public $timestamps = false;
 
     protected $fillable = [
-        'device_id', 'battery_level', 'signal_strength', 'uptime_seconds',
+        'device_id', 'battery_level', 'battery_voltage', 'battery_current',
+        'signal_strength', 'uptime_seconds',
         'cpu_usage', 'storage_usage', 'reboot_count', 'sensor_read_success_rate',
         'error_codes', 'recorded_at', 'created_at',
     ];
@@ -21,6 +22,8 @@ class IotDeviceTelemetryHistory extends Model
     protected $casts = [
         'error_codes' => 'array',
         'battery_level' => 'float',
+        'battery_voltage' => 'float',
+        'battery_current' => 'float',
         'signal_strength' => 'float',
         'cpu_usage' => 'float',
         'storage_usage' => 'float',

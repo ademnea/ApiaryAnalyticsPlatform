@@ -73,6 +73,12 @@
                     <dt class="col-sm-4">Hardware Revision</dt>
                     <dd class="col-sm-8">{!! $iotDevice->hardware_revision ? e($iotDevice->hardware_revision) : '<span class="text-muted">Not recorded</span>' !!}</dd>
 
+                    <dt class="col-sm-4">MAC Address</dt>
+                    <dd class="col-sm-8">{{ $iotDevice->mac_address ?: 'Not reported by the device yet' }}</dd>
+
+                    <dt class="col-sm-4">Chip</dt>
+                    <dd class="col-sm-8">{{ $iotDevice->chip ?: 'Not reported by the device yet' }}</dd>
+
                     <dt class="col-sm-4">Firmware Notes</dt>
                     <dd class="col-sm-8">{!! $iotDevice->firmware_notes ? e($iotDevice->firmware_notes) : '<span class="text-muted">None</span>' !!}</dd>
 

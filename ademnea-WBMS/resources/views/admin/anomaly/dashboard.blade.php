@@ -123,7 +123,7 @@
     <a href="{{ route('admin.devices.fleet') }}" class="fleet-callout">
         <i class="bi bi-grid-3x3-gap" style="font-size:1.1rem;color:var(--clr-forest);"></i>
         <span class="flex-grow-1">
-            Battery, signal and connectivity problems are tracked on the <strong>Device Fleet</strong> page.
+            Battery, signal, connectivity, and device issues are tracked on the <strong>Device Monitoring</strong> page.
         </span>
         @if($openDeviceIssuesCount > 0)
             <span class="badge badge-offline">{{ $openDeviceIssuesCount }} open device {{ Str::plural('issue', $openDeviceIssuesCount) }}</span>

@@ -17,9 +17,7 @@ class IotHeartbeatProcessingService
     /** A device stuck sending bad heartbeats emails its hardware team at most this often. */
     private const MALFORMED_NOTICE_MINUTES = 60;
 
-    public function __construct(private readonly AnomalyAlertDispatchService $alerts)
-    {
-    }
+    public function __construct(private readonly AnomalyAlertDispatchService $alerts) {}
 
     /**
      * @param  string|null  $receivedAt  when the gateway received the request (envelope requestTime)
@@ -45,6 +43,8 @@ class IotHeartbeatProcessingService
 
         $reading = [
             'battery_level' => $payload['battery_level'] ?? null,
+            'battery_voltage' => $payload['battery_voltage'] ?? null,
+            'battery_current' => $payload['battery_current'] ?? null,
             'signal_strength' => $payload['signal_strength'] ?? null,
             'uptime_seconds' => $payload['uptime'] ?? null,
             'firmware_version' => $payload['firmware_version'] ?? null,
@@ -61,13 +61,34 @@ class IotHeartbeatProcessingService
         $isLatest = $lastHeartbeatAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastHeartbeatAt));
 
         if ($isLatest) {
-            IotDeviceTelemetry::updateOrCreate(
-                ['device_id' => $device->id],
-                $reading + ['last_heartbeat_at' => $heartbeatAt],
-            );
+            $hasBatteryReading = collect(['battery_level', 'battery_voltage', 'battery_current'])
+                ->contains(fn (string $field) => ($payload[$field] ?? null) !== null);
+            $lastBatteryReadingAt = IotDeviceTelemetry::where('device_id', $device->id)->value('battery_reading_at');
 
-            if (! empty($payload['firmware_version'])) {
-                $device->update(['firmware_version' => $payload['firmware_version']]);
+            foreach (['battery_level', 'battery_voltage', 'battery_current'] as $field) {
+                if (($payload[$field] ?? null) === null
+                    || ($hasBatteryReading && $lastBatteryReadingAt !== null
+                        && $heartbeatAt->lt(Carbon::parse($lastBatteryReadingAt)))) {
+                    unset($reading[$field]);
+                }
+            }
+
+            $telemetryUpdate = $reading + ['last_heartbeat_at' => $heartbeatAt];
+
+            if ($hasBatteryReading && ($lastBatteryReadingAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastBatteryReadingAt)))) {
+                $telemetryUpdate['battery_reading_at'] = $heartbeatAt;
+            }
+
+            IotDeviceTelemetry::updateOrCreate(['device_id' => $device->id], $telemetryUpdate);
+
+            $deviceDetails = array_filter([
+                'firmware_version' => $payload['firmware_version'] ?? null,
+                'mac_address' => $payload['mac_address'] ?? null,
+                'chip' => $payload['chip'] ?? null,
+            ], fn ($value) => $value !== null && $value !== '');
+
+            if ($deviceDetails !== []) {
+                $device->update($deviceDetails);
             }
         }
 
@@ -116,7 +137,7 @@ class IotHeartbeatProcessingService
         }
 
         try {
-            $time = Carbon::parse($value);
+            $time = Carbon::parse($value, 'UTC')->setTimezone(config('app.timezone'));
         } catch (\Throwable) {
             return null;
         }

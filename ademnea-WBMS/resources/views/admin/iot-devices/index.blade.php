@@ -49,7 +49,7 @@
     <p class="text-muted mb-0" style="font-size:0.82rem;">{{ $devices->total() }} {{ Str::plural('device', $devices->total()) }} found.</p>
     <div class="d-flex gap-2">
         <a href="{{ route('admin.devices.fleet') }}" class="btn btn-sm btn-outline-forest">
-            <i class="bi bi-grid-3x3-gap me-1"></i>Device Fleet
+            <i class="bi bi-grid-3x3-gap me-1"></i>Device Monitoring
         </a>
         <a href="{{ route('admin.iot-devices.create') }}" class="btn btn-primary"><i class="bi bi-plus-circle me-1"></i>Register Device</a>
     </div>

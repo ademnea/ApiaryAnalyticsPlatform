@@ -10,10 +10,11 @@ class IotDeviceTelemetry extends Model
     protected $table = 'iot_device_telemetry';
 
     protected $fillable = [
-        'device_id', 'battery_level', 'signal_strength', 'uptime_seconds',
+        'device_id', 'battery_level', 'battery_voltage', 'battery_current',
+        'signal_strength', 'uptime_seconds',
         'firmware_version', 'cpu_usage', 'storage_usage', 'reboot_count',
         'sensor_read_success_rate', 'error_codes',
-        'last_heartbeat_at', 'last_data_received_at',
+        'last_heartbeat_at', 'last_data_received_at', 'battery_reading_at',
         'data_gap_minutes', 'submission_interval_actual',
     ];
 
@@ -21,7 +22,10 @@ class IotDeviceTelemetry extends Model
         'error_codes' => 'array',
         'last_heartbeat_at' => 'datetime',
         'last_data_received_at' => 'datetime',
+        'battery_reading_at' => 'datetime',
         'battery_level' => 'float',
+        'battery_voltage' => 'float',
+        'battery_current' => 'float',
         'signal_strength' => 'float',
         'cpu_usage' => 'float',
         'storage_usage' => 'float',

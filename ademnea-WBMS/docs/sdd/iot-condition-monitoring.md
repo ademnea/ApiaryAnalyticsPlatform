@@ -80,6 +80,20 @@ rules run against it. A heartbeat that fails `TelemetryPayloadRules` is logged a
 `rejected_validation`, nothing from it is stored, and the hardware team is emailed at most once an
 hour per device.
 
+Heartbeats may also include `battery_voltage`, `battery_current`, `mac_address`, and `chip`.
+Voltage/current are stored in both the current telemetry row and heartbeat history. MAC address
+and chip are device identity/details stored on `iot_devices` and updated only by the latest
+heartbeat; older firmware can omit them. `battery_current` is retained as reported because the
+firmware payload does not define its unit. The authenticated Device Monitoring area combines
+connectivity, battery, signal, and open device issues, with focused Overview, Battery & Power,
+Connectivity, and Issues sections. Its overview points staff to the relevant operational detail.
+The battery section records the timestamp of the latest battery
+update separately from general device contact, marks readings stale after the configured
+offline-silence interval, and charts daily fleet-average battery level and voltage over seven days
+when history spans at least two days. The chart uses accepted heartbeat history; the displayed
+percentage is reported by firmware, not calculated from voltage. The former Battery Monitor URL
+redirects to Device Monitoring.
+
 **Alert routing and delivery (REQ-F-IOT-17).** `AnomalyAlertDispatchService::dispatch()` returns
 `bool` (false when the cooldown suppressed it), not `?Alert`.
 - `AlertRouting` maps each anomaly type to recipients and channels. Sensor faults and device issues
@@ -111,7 +125,7 @@ shows `SensorRecordReceived` → `EvaluateSensorReadingRules` and `DeviceTelemet
 
 | Page | Route | Permission | Replaces |
 |---|---|---|---|
-| Device Fleet — live health (`IotDeviceHealthEvaluator`), attention panels, open device issues, filterable device table | `GET /admin/devices/fleet` → `admin.devices.fleet` | `view-device-fleet\|manage-iot-devices` | the "Fleet Overview" half of `AnomalyDashboardController` |
+| Device Monitoring — live health (`IotDeviceHealthEvaluator`), battery freshness and trend, attention panels, open device issues, filterable device table | `GET /admin/devices/fleet` → `admin.devices.fleet` | `view-device-fleet\|manage-iot-devices` | the "Fleet Overview" half of `AnomalyDashboardController` |
 | Anomaly Dashboard — hive conditions only | `admin.anomaly.dashboard` | `view-anomaly-analytics` | — |
 | All Anomalies — list, filters, detail, acknowledge/resolve | `admin.anomaly.anomalies.{index,show,acknowledge,resolve}` | `view-anomaly-analytics\|view-device-fleet` | — |
 | Analytics heatmap — hive conditions only | `admin.anomaly.analytics` | `view-anomaly-analytics` | — |
@@ -406,7 +420,7 @@ is a *new* table rather than converting the existing one to insert-only.
 |---|---|---|---|
 | `id` | bigint (PK) | — | |
 | `device_id` | unsignedBigInteger, FK → `iot_devices.id` | no | `onDelete('cascade')`, named constraint `fk_iot_device_telemetry_history_device` |
-| `battery_level`, `signal_strength`, `uptime_seconds`, `cpu_usage`, `storage_usage`, `reboot_count`, `sensor_read_success_rate` | float/integer as in `iot_device_telemetry` | yes | copied verbatim from the heartbeat payload at insert time |
+| `battery_level`, `battery_voltage`, `battery_current`, `signal_strength`, `uptime_seconds`, `cpu_usage`, `storage_usage`, `reboot_count`, `sensor_read_success_rate` | float/integer as in `iot_device_telemetry` | yes | copied verbatim from the heartbeat payload at insert time |
 | `error_codes` | json | yes | |
 | `recorded_at` | timestamp | no | the heartbeat's timestamp |
 | `created_at` | timestamp | no, `useCurrent()` | append-only, no `updated_at` |

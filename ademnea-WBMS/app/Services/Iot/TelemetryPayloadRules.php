@@ -16,6 +16,10 @@ final class TelemetryPayloadRules
 {
     public const RULES = [
         'battery_level' => ['nullable', 'numeric', 'between:0,100'],
+        'battery_voltage' => ['nullable', 'numeric', 'min:0'],
+        'battery_current' => ['nullable', 'numeric'],
+        'mac_address' => ['nullable', 'string', 'regex:/\A(?:[0-9A-Fa-f]{2}[:-]){5}[0-9A-Fa-f]{2}\z/'],
+        'chip' => ['nullable', 'string', 'max:100'],
         'signal_strength' => ['nullable', 'numeric', 'between:-150,0'],
         'uptime' => ['nullable', 'integer', 'min:0'],
         'firmware_version' => ['nullable', 'string', 'max:30'],

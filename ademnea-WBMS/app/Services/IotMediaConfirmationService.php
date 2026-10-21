@@ -8,6 +8,7 @@ use App\Models\IotIngestionLog;
 use App\Models\HivePhoto;
 use App\Models\HiveVideo;
 use App\Models\HiveAudio;
+use Illuminate\Support\Carbon;
 
 class IotMediaConfirmationService
 {
@@ -47,7 +48,7 @@ class IotMediaConfirmationService
             'file_path' => $objectKey,
             's3_object_key' => $objectKey,
             'file_size_bytes' => $payload['file_size_bytes'] ?? null,
-            'recorded_at' => \Illuminate\Support\Carbon::parse($payload['captured_at'] ?? now())->utc(),
+            'recorded_at' => Carbon::parse($payload['captured_at'] ?? now(), 'UTC')->setTimezone(config('app.timezone')),
             'created_at' => now(),
         ];
 

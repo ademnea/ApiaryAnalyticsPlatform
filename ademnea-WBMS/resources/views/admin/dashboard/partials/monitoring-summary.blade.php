@@ -112,7 +112,7 @@
                             <i class="bi bi-cpu me-1"></i>Device Status
                         </span>
                         <a href="{{ route('admin.devices.fleet') }}"
-                           style="font-size:0.72rem;color:var(--clr-forest-mid);">Device Fleet →</a>
+                           style="font-size:0.72rem;color:var(--clr-forest-mid);">Device Monitoring →</a>
                     </div>
                     @php
                         $active  = $monitoring['active_devices'];

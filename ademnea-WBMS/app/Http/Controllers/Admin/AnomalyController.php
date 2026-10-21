@@ -15,7 +15,7 @@ use Illuminate\View\View;
 /**
  * Anomaly incidents: filterable list, detail view, and the
  * acknowledge/resolve lifecycle. Serves both categories — hive
- * conditions (Condition Monitoring) and device issues (Device Fleet).
+ * conditions (Condition Monitoring) and device issues (Device Monitoring).
  */
 class AnomalyController extends Controller
 {
