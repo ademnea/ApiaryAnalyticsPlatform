@@ -137,7 +137,7 @@ class IotHeartbeatProcessingService
         }
 
         try {
-            $time = Carbon::parse($value, 'UTC')->setTimezone(config('app.timezone'));
+            $time = Carbon::parse($value);
         } catch (\Throwable) {
             return null;
         }

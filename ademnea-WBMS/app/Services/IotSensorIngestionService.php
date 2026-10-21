@@ -51,7 +51,7 @@ class IotSensorIngestionService
             return;
         }
 
-        $recordedAtLocal = Carbon::parse($recordedAt, 'UTC')->setTimezone(config('app.timezone'));
+        $recordedAtUtc = Carbon::parse($recordedAt)->utc();
 
         // Discrete typed columns per Schema Rule 7 — the *-delimited
         // string convention is retired. Each sensor type maps to its own
@@ -66,7 +66,7 @@ class IotSensorIngestionService
                 'brood_section' => $reading['brood_section'] ?? null,
                 'exterior' => $reading['exterior'] ?? null,
                 'suspect' => false,
-                'recorded_at' => $recordedAtLocal,
+                'recorded_at' => $recordedAtUtc,
                 'created_at' => now(),
             ]),
             'humidity' => HiveHumidity::create([
@@ -76,7 +76,7 @@ class IotSensorIngestionService
                 'brood_section' => $reading['brood_section'] ?? null,
                 'exterior' => $reading['exterior'] ?? null,
                 'suspect' => false,
-                'recorded_at' => $recordedAtLocal,
+                'recorded_at' => $recordedAtUtc,
                 'created_at' => now(),
             ]),
             'co2' => HiveCarbondioxide::create([
@@ -84,7 +84,7 @@ class IotSensorIngestionService
                 'device_id' => $device->id,
                 'co2_level' => $reading['co2_level'] ?? null,
                 'suspect' => false,
-                'recorded_at' => $recordedAtLocal,
+                'recorded_at' => $recordedAtUtc,
                 'created_at' => now(),
             ]),
             'weight' => HiveWeight::create([
@@ -92,7 +92,7 @@ class IotSensorIngestionService
                 'device_id' => $device->id,
                 'weight_kg' => $reading['weight_kg'] ?? null,
                 'suspect' => false,
-                'recorded_at' => $recordedAtLocal,
+                'recorded_at' => $recordedAtUtc,
                 'created_at' => now(),
             ]),
         };
@@ -110,12 +110,12 @@ class IotSensorIngestionService
         // reported offline.
         IotDeviceTelemetry::updateOrCreate(
             ['device_id' => $device->id],
-            ['last_data_received_at' => now()] + $this->deviceMeta($device, $payload['device_meta'] ?? null, $recordedAtLocal),
+            ['last_data_received_at' => now()] + $this->deviceMeta($device, $payload['device_meta'] ?? null, $recordedAtUtc),
         );
 
         // Event dispatch to IoT Condition Monitoring stays exactly as
         // already designed in §4.5.8 — decoupled, not called directly.
-        event(new SensorRecordReceived($device, $hive, $sensorType, $recordedAtLocal));
+        event(new SensorRecordReceived($device, $hive, $sensorType, $recordedAtUtc));
     }
 
     /**

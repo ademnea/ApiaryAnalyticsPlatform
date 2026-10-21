@@ -213,16 +213,16 @@ class DashboardService
     }
 
     /**
-     * SQL for the local calendar date of a timestamp column. MySQL returns
-     * TIMESTAMP values in the connection timezone, aligned with app.timezone.
-     * Offsets avoid relying on MySQL timezone tables.
+     * SQL for the local calendar date of a UTC timestamp column. The offset
+     * is passed as "+03:00" rather than a zone name, which MySQL only
+     * understands once its timezone tables are loaded. It is the offset in
+     * force now, which is exact for a timezone without daylight saving.
      */
     private function localDateSql(string $column): string
     {
-        $appOffset = Carbon::now(config('app.timezone'))->format('P');
-        $localOffset = Carbon::now(config('app.local_timezone'))->format('P');
+        $offset = Carbon::now(config('app.local_timezone'))->format('P');
 
-        return "DATE(CONVERT_TZ({$column}, '{$appOffset}', '{$localOffset}'))";
+        return "DATE(CONVERT_TZ({$column}, '+00:00', '{$offset}'))";
     }
 
     /**
@@ -238,7 +238,7 @@ class DashboardService
     {
         $raw = $model::selectRaw($this->localDateSql('recorded_at')." as day, AVG({$column}) as avg")
             ->where('suspect', false)
-            ->where('recorded_at', '>=', $dates[0]->copy()->setTimezone(config('app.timezone')))
+            ->where('recorded_at', '>=', $dates[0]->copy()->utc())
             ->whereNotNull($column)
             ->groupBy('day')
             ->pluck('avg', 'day');
@@ -259,7 +259,7 @@ class DashboardService
     private function getHiveActivityByDay(array $dates): array
     {
         $raw = HiveStatusHistory::selectRaw($this->localDateSql('created_at').' as day, COUNT(*) as total')
-            ->where('created_at', '>=', $dates[0]->copy()->setTimezone(config('app.timezone')))
+            ->where('created_at', '>=', $dates[0]->copy()->utc())
             ->groupBy('day')
             ->pluck('total', 'day');
 

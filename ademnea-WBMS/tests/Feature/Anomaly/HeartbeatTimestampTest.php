@@ -42,7 +42,7 @@ class HeartbeatTimestampTest extends TestCase
         $device = $this->makeDevice();
         $sentAt = now()->subHours(3)->startOfMinute();
 
-        $this->heartbeat($device, ['battery_level' => 80, 'recorded_at' => $sentAt->copy()->utc()->toIso8601String()]);
+        $this->heartbeat($device, ['battery_level' => 80, 'recorded_at' => $sentAt->toIso8601String()]);
 
         $this->assertTrue(IotDeviceTelemetry::where('device_id', $device->id)->value('last_heartbeat_at')->equalTo($sentAt));
         $this->assertTrue(IotDeviceTelemetry::where('device_id', $device->id)->value('battery_reading_at')->equalTo($sentAt));
