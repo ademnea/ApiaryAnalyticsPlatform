@@ -478,13 +478,15 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
         Route::get('/admin/alerts', [SystemAlertController::class, 'index'])->name('admin.alerts.index');
     });
 
-    // Device Fleet — live device health + open device issues
+    // Device Monitoring — live device health, battery readings and open issues.
     Route::middleware(['permission:view-device-fleet|manage-iot-devices'])->group(function () {
         Route::get('/admin/devices/fleet', [DeviceFleetController::class, 'index'])->name('admin.devices.fleet');
+        Route::get('/admin/devices/battery', fn () => redirect()->route('admin.devices.fleet', [], 301))
+            ->name('admin.devices.battery');
     });
 
     // Anomaly incidents (hive conditions + device issues) — list, detail,
-    // acknowledge/resolve. Reachable from both Condition Monitoring and Device Fleet.
+    // acknowledge/resolve. Reachable from Condition Monitoring and Device Monitoring.
     Route::middleware(['permission:view-anomaly-analytics|view-device-fleet'])
         ->prefix('/admin/anomaly/anomalies')
         ->name('admin.anomaly.anomalies.')

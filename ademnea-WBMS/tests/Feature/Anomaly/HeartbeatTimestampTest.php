@@ -45,7 +45,33 @@ class HeartbeatTimestampTest extends TestCase
         $this->heartbeat($device, ['battery_level' => 80, 'recorded_at' => $sentAt->toIso8601String()]);
 
         $this->assertTrue(IotDeviceTelemetry::where('device_id', $device->id)->value('last_heartbeat_at')->equalTo($sentAt));
+        $this->assertTrue(IotDeviceTelemetry::where('device_id', $device->id)->value('battery_reading_at')->equalTo($sentAt));
         $this->assertTrue(IotDeviceTelemetryHistory::where('device_id', $device->id)->value('recorded_at')->equalTo($sentAt));
+    }
+
+    #[Test]
+    public function heartbeat_battery_readings_are_saved_to_current_state_and_history_and_device_identity_is_updated(): void
+    {
+        $device = $this->makeDevice();
+
+        $this->heartbeat($device, [
+            'battery_level' => 78.5,
+            'battery_voltage' => 3.75,
+            'battery_current' => 1.55,
+            'mac_address' => '30:76:F5:90:90:F0',
+            'chip' => 'ESP32',
+            'recorded_at' => now()->toIso8601String(),
+        ]);
+
+        $telemetry = IotDeviceTelemetry::where('device_id', $device->id)->firstOrFail();
+        $history = IotDeviceTelemetryHistory::where('device_id', $device->id)->firstOrFail();
+
+        $this->assertSame(3.75, $telemetry->battery_voltage);
+        $this->assertSame(1.55, $telemetry->battery_current);
+        $this->assertSame(3.75, $history->battery_voltage);
+        $this->assertSame(1.55, $history->battery_current);
+        $this->assertSame('30:76:F5:90:90:F0', $device->fresh()->mac_address);
+        $this->assertSame('ESP32', $device->fresh()->chip);
     }
 
     #[Test]
@@ -72,6 +98,52 @@ class HeartbeatTimestampTest extends TestCase
             [70.0, 90.0],
             IotDeviceTelemetryHistory::where('device_id', $device->id)->pluck('battery_level')->all(),
         );
+    }
+
+    #[Test]
+    public function a_heartbeat_without_battery_values_preserves_the_latest_battery_reading(): void
+    {
+        $device = $this->makeDevice();
+        $batteryAt = now()->subMinutes(10)->startOfMinute();
+
+        $this->heartbeat($device, [
+            'battery_level' => 70,
+            'battery_voltage' => 3.8,
+            'recorded_at' => $batteryAt->toIso8601String(),
+        ]);
+        $this->heartbeat($device, [
+            'signal_strength' => -70,
+            'recorded_at' => now()->toIso8601String(),
+        ]);
+
+        $telemetry = IotDeviceTelemetry::where('device_id', $device->id)->firstOrFail();
+
+        $this->assertSame(70.0, $telemetry->battery_level);
+        $this->assertSame(3.8, $telemetry->battery_voltage);
+        $this->assertTrue($telemetry->battery_reading_at->equalTo($batteryAt));
+    }
+
+    #[Test]
+    public function a_heartbeat_does_not_overwrite_newer_battery_metadata(): void
+    {
+        $device = $this->makeDevice();
+        $batteryAt = now()->subMinutes(2)->startOfMinute();
+        IotDeviceTelemetry::create([
+            'device_id' => $device->id,
+            'battery_level' => 50,
+            'last_heartbeat_at' => now()->subMinutes(10),
+            'battery_reading_at' => $batteryAt,
+        ]);
+
+        $this->heartbeat($device, [
+            'battery_level' => 90,
+            'recorded_at' => now()->subMinutes(5)->toIso8601String(),
+        ]);
+
+        $telemetry = IotDeviceTelemetry::where('device_id', $device->id)->firstOrFail();
+
+        $this->assertSame(50.0, $telemetry->battery_level);
+        $this->assertTrue($telemetry->battery_reading_at->equalTo($batteryAt));
     }
 
     #[Test]

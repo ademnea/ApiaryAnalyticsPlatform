@@ -36,7 +36,7 @@ class IotDeviceRegistryController extends Controller
         $devices = $this->service->list($request->only(['hardware_team_id', 'status', 'active_flag']));
 
         // Health is computed per-device (not stored) so the registry always
-        // reflects live telemetry — same thresholds as the Device Fleet page,
+        // reflects live telemetry — same thresholds as the Device Monitoring page,
         // via the shared evaluator.
         $health = $devices->getCollection()
             ->mapWithKeys(fn (IotDevice $device) => [$device->id => $this->healthEvaluator->evaluate($device)]);

@@ -135,7 +135,7 @@ class DashboardService
     /**
      * Active/offline/low-battery device counts, using the same
      * silence-threshold definition of "offline" as the IoT Condition
-     * Device Fleet page (DeviceFleetController), so the two
+     * Device Monitoring page (DeviceFleetController), so the two
      * dashboards never disagree about what "offline" means. Revoked
      * devices (active_flag = false) are excluded — they're intentionally
      * decommissioned, not failing.

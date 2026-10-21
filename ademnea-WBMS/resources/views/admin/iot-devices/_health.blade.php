@@ -96,6 +96,10 @@
             <dl class="row mb-0 mt-3 device-facts" style="font-size:0.82rem;">
                 <dt class="col-sm-4">Firmware it reports</dt>
                 <dd class="col-sm-8">{{ $telemetry->firmware_version ?: '—' }}</dd>
+                <dt class="col-sm-4">Battery voltage</dt>
+                <dd class="col-sm-8">{{ $telemetry->battery_voltage !== null ? number_format($telemetry->battery_voltage, 2).' V' : '—' }}</dd>
+                <dt class="col-sm-4">Battery current</dt>
+                <dd class="col-sm-8">{{ $telemetry->battery_current !== null ? number_format($telemetry->battery_current, 2) : '—' }}</dd>
                 <dt class="col-sm-4">Running since last restart</dt>
                 <dd class="col-sm-8">{{ $telemetry->uptime_seconds !== null ? \Carbon\CarbonInterval::seconds($telemetry->uptime_seconds)->cascade()->forHumans(['short' => true, 'parts' => 2]) : '—' }}</dd>
                 <dt class="col-sm-4">Restarts</dt>

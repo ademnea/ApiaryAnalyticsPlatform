@@ -26,6 +26,8 @@ class IotDevice extends Model
         'firmware_version',
         'firmware_notes',
         'hardware_revision',
+        'mac_address',
+        'chip',
         'expected_interval_minutes',
         'status',
         

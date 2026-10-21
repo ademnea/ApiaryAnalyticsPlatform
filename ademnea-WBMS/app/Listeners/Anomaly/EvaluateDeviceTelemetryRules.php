@@ -27,13 +27,16 @@ class EvaluateDeviceTelemetryRules
         // sent — which, for an out-of-order heartbeat, differ from the
         // device's current telemetry row.
         $reading = $event->reading ?: $telemetry->only([
-            'battery_level', 'signal_strength', 'uptime_seconds', 'cpu_usage',
+            'battery_level', 'battery_voltage', 'battery_current', 'signal_strength',
+            'uptime_seconds', 'cpu_usage',
             'storage_usage', 'reboot_count', 'sensor_read_success_rate', 'error_codes',
         ]);
 
         IotDeviceTelemetryHistory::create([
             'device_id' => $event->device->id,
             'battery_level' => $reading['battery_level'] ?? null,
+            'battery_voltage' => $reading['battery_voltage'] ?? null,
+            'battery_current' => $reading['battery_current'] ?? null,
             'signal_strength' => $reading['signal_strength'] ?? null,
             'uptime_seconds' => $reading['uptime_seconds'] ?? null,
             'cpu_usage' => $reading['cpu_usage'] ?? null,

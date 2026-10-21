@@ -9,7 +9,7 @@ use Illuminate\View\View;
 /**
  * SRS UC-IOT-09: hive-condition anomaly overview — threshold breaches,
  * frozen sensors and statistical deviations. Device health (battery,
- * signal, connectivity) lives on the Device Fleet page.
+ * signal, connectivity) lives on the Device Monitoring page.
  */
 class AnomalyDashboardController extends Controller
 {

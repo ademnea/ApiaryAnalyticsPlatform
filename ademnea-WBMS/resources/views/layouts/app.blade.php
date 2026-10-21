@@ -772,11 +772,11 @@
     </div>
 </div>
 
-    {{-- Device Fleet --}}
+    {{-- Device Monitoring --}}
     <a href="{{ route('admin.devices.fleet') }}"
        class="nav-item-link {{ request()->routeIs('admin.devices.fleet') ? 'active' : '' }}">
         <i class="bi bi-grid-3x3-gap"></i>
-        Device Fleet
+        Device Monitoring
     </a>
 
     {{-- Sensor Monitoring --}}
