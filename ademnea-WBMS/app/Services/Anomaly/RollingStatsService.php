@@ -60,7 +60,7 @@ class RollingStatsService
     private function window(Model $reading, string $sensorType, ?string $channel, bool $includeReading): ?array
     {
         $column = SensorChannels::columnFor($sensorType, $channel);
-        $end = Carbon::parse($reading->recorded_at);
+        $end = Carbon::parse($reading->recorded_at)->utc();
 
         $row = $reading->newQuery()
             ->where('hive_id', $reading->hive_id)

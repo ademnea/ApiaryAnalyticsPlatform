@@ -2,9 +2,10 @@
 
 namespace App\Models;
 
+use App\Casts\UtcDateTime;
+use App\Contracts\MediaUploadStorageContract;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use App\Contracts\MediaUploadStorageContract;
 
 class HiveVideo extends Model
 {
@@ -18,7 +19,7 @@ class HiveVideo extends Model
     ];
 
     protected $casts = [
-        'recorded_at' => 'datetime',
+        'recorded_at' => UtcDateTime::class,
         'created_at' => 'datetime',
     ];
 

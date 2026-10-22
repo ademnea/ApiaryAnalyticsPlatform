@@ -47,7 +47,8 @@ class MediaController extends Controller
                 $this->farmer($request),
                 $hiveId,
                 $this->pageSize($request, 8, 50)
-            )
+            ),
+            localizeCaptureTime: true,
         );
     }
 
@@ -67,12 +68,25 @@ class MediaController extends Controller
      * list of at most 20 items with no meta and ignored per_page, forcing the
      * client to special-case it.
      */
-    private function paginated(LengthAwarePaginator $page): JsonResponse
+    private function paginated(LengthAwarePaginator $page, bool $localizeCaptureTime = false): JsonResponse
     {
-        $items = collect($page->items())->each(function ($media) {
-            $media->url = $media->file_path
+        $items = collect($page->items())->map(function ($media) use ($localizeCaptureTime) {
+            $item = $media->toArray();
+            $item['url'] = $media->file_path
                 ? $this->storage->publicUrl($media->file_path)
                 : null;
+
+            if ($localizeCaptureTime) {
+                foreach (['recorded_at', 'created_at'] as $timestamp) {
+                    if ($media->{$timestamp} !== null) {
+                        $item[$timestamp] = $media->{$timestamp}
+                            ->setTimezone(config('app.local_timezone'))
+                            ->toIso8601String();
+                    }
+                }
+            }
+
+            return $item;
         });
 
         return response()->json([

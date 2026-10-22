@@ -13,6 +13,7 @@ use Carbon\CarbonInterface;
 use Generator;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\JoinClause;
 use Illuminate\Support\Collection;
 
@@ -90,7 +91,7 @@ class MonitoringService
             'flagged' => (int) $totals->flagged_count,
             'hives_reporting' => (int) $totals->hives_reporting,
             'devices_reporting' => (int) $totals->devices_reporting,
-            'last_reading_at' => $this->moment($totals->last_reading_at),
+            'last_reading_at' => $this->utcMoment($totals->last_reading_at),
             'last_received_at' => $this->moment($totals->last_received_at),
             'latest_id' => $totals->latest_id === null ? null : (int) $totals->latest_id,
             'columns' => $columns,
@@ -182,7 +183,7 @@ class MonitoringService
      * from it. The (device_id, recorded_at) unique constraint on every sensor
      * table makes the join back to the row exact.
      *
-     * @return Collection<int, \Illuminate\Database\Eloquent\Model>
+     * @return Collection<int, Model>
      */
     public function latestPerDevice(SensorMetric $metric, MonitoringFilters $filters): Collection
     {
@@ -231,8 +232,8 @@ class MonitoringService
 
         foreach ($readings as $reading) {
             yield [
-                $reading->recorded_at->toDateTimeString(),
-                $reading->created_at?->toDateTimeString() ?? '',
+                $reading->recorded_at->copy()->utc()->toDateTimeString(),
+                $reading->created_at?->copy()->utc()->toDateTimeString() ?? '',
                 $reading->hive?->display_name ?: ($reading->hive?->hive_code ?? ''),
                 $reading->hive?->apiary?->name ?? '',
                 $reading->device?->device_code ?? '',
@@ -252,7 +253,7 @@ class MonitoringService
      */
     public function weightDailyChange(MonitoringFilters $filters): array
     {
-        $day = "DATE_FORMAT(recorded_at, '%Y-%m-%d')";
+        $day = $filters->dayBucketSql();
 
         $byHive = $this->scoped(SensorMetric::Weight, $filters)
             ->toBase()
@@ -393,7 +394,7 @@ class MonitoringService
             'devices_reporting' => (int) $row->devices_reporting,
             'total_bytes' => (int) $row->total_bytes,
             'total_seconds' => (int) $row->total_seconds,
-            'last_capture_at' => $this->moment($row->last_capture_at),
+            'last_capture_at' => $this->utcMoment($row->last_capture_at),
             'latest_id' => $row->latest_id === null ? null : (int) $row->latest_id,
         ];
     }
@@ -442,7 +443,7 @@ class MonitoringService
                 'readings' => (int) $row->readings_count,
                 'hives_reporting' => (int) $row->hives_reporting,
                 'average' => $this->float($row->average_value),
-                'last_reading_at' => $this->moment($row->last_reading_at),
+                'last_reading_at' => $this->utcMoment($row->last_reading_at),
                 'spark' => array_map(fn (string $key) => $this->float($spark[$key] ?? null), $keys),
             ]];
         })->all();
@@ -492,7 +493,7 @@ class MonitoringService
             return [$kind->value => [
                 'kind' => $kind,
                 'files' => (int) $row->files_count,
-                'last_capture_at' => $this->moment($row->last_capture_at),
+                'last_capture_at' => $this->utcMoment($row->last_capture_at),
             ]];
         })->all();
     }
@@ -525,7 +526,7 @@ class MonitoringService
                 ->selectRaw('hive_id, MAX(recorded_at) as last_reading_at')
                 ->groupBy('hive_id')
                 ->pluck('last_reading_at', 'hive_id')
-                ->map(fn (string $at) => CarbonImmutable::parse($at)),
+                ->map(fn (string $at) => CarbonImmutable::parse($at, 'UTC')->setTimezone(config('app.local_timezone'))),
         ]);
     }
 
@@ -605,5 +606,12 @@ class MonitoringService
     private function moment(mixed $value): ?CarbonImmutable
     {
         return $value === null ? null : CarbonImmutable::parse($value);
+    }
+
+    private function utcMoment(mixed $value): ?CarbonImmutable
+    {
+        return $value === null
+            ? null
+            : CarbonImmutable::parse($value, 'UTC')->setTimezone(config('app.local_timezone'));
     }
 }

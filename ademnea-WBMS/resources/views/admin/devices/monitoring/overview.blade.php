@@ -76,10 +76,103 @@
     </div>
 </div>
 
+<div class="card mb-4">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <span><i class="bi bi-graph-up me-1" aria-hidden="true"></i>Fleet battery trend · Last 7 days</span>
+        @if($batteryTrendDays >= 2)
+            <span class="device-monitoring-hint">{{ number_format($batteryTrendReadingsCount) }} readings across {{ $batteryTrendDays }} days</span>
+        @endif
+    </div>
+    <div class="card-body">
+        @if($batteryTrendChange !== null)
+            <div class="alert-ademnea mb-3" role="status">
+                @if($batteryTrendChange < 0)
+                    The fleet average battery level fell by {{ number_format(abs($batteryTrendChange), 1) }} percentage points
+                @elseif($batteryTrendChange > 0)
+                    The fleet average battery level rose by {{ number_format($batteryTrendChange, 1) }} percentage points
+                @else
+                    The fleet average battery level was unchanged
+                @endif
+                between {{ \Illuminate\Support\Carbon::parse($batteryTrendFirstDay)->format('M j') }}
+                and {{ \Illuminate\Support\Carbon::parse($batteryTrendLastDay)->format('M j') }}.
+                This compares daily averages across reported readings, not individual-device battery life.
+            </div>
+        @endif
+
+        @if($batteryTrendDays >= 2)
+            <canvas id="batteryTrendChart" height="110" role="img" aria-label="Daily fleet average battery level and voltage over the last seven days"></canvas>
+        @else
+            <div class="text-center text-muted py-3 device-monitoring-hint">
+                <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>
+                Not enough history for a trend yet. Readings are recorded as devices check in.
+                @if($batteryTrendReadingsCount > 0)
+                    {{ number_format($batteryTrendReadingsCount) }} reading{{ $batteryTrendReadingsCount === 1 ? '' : 's' }} recorded so far.
+                @endif
+            </div>
+        @endif
+        <p class="device-monitoring-hint mt-2 mb-0">
+            Battery percentage is reported by device firmware. Voltage uses a separate chart scale; current is shown in readings without a unit conversion.
+            <a href="{{ route('admin.devices.fleet', ['section' => 'battery']) }}">View detailed battery readings</a>.
+        </p>
+    </div>
+</div>
+
 <div class="card">
     <div class="card-header"><i class="bi bi-lightbulb me-1" aria-hidden="true"></i>How to read this dashboard</div>
     <div class="card-body device-monitoring-hint">
         <p class="mb-2"><strong>Health</strong> combines recent device contact with battery and signal warnings.</p>
-        <p class="mb-0"><strong>Battery level</strong> is reported by firmware, not calculated from voltage. Open Battery &amp; Power to review freshness and the seven-day trend.</p>
+        <p class="mb-0"><strong>Battery level</strong> is reported by firmware, not calculated from voltage. Use Battery &amp; Power to review individual readings.</p>
     </div>
 </div>
+
+@if($batteryTrendDays >= 2)
+    @push('scripts')
+        <script>
+            new Chart(document.getElementById('batteryTrendChart'), {
+                type: 'line',
+                data: {
+                    labels: @json($batteryTrendChart['labels']),
+                    datasets: [
+                        {
+                            label: 'Battery level (%)',
+                            data: @json($batteryTrendChart['battery']),
+                            borderColor: '#2D6A4F',
+                            backgroundColor: 'rgba(45,106,79,0.1)',
+                            yAxisID: 'battery',
+                            tension: 0.3,
+                            spanGaps: false,
+                        },
+                        {
+                            label: 'Voltage (V)',
+                            data: @json($batteryTrendChart['voltage']),
+                            borderColor: '#D4A017',
+                            backgroundColor: 'rgba(212,160,23,0.1)',
+                            yAxisID: 'voltage',
+                            tension: 0.3,
+                            spanGaps: false,
+                        },
+                    ],
+                },
+                options: {
+                    responsive: true,
+                    interaction: { mode: 'index', intersect: false },
+                    scales: {
+                        battery: {
+                            type: 'linear',
+                            position: 'left',
+                            min: 0,
+                            max: 100,
+                            title: { display: true, text: 'Battery level (%)' },
+                        },
+                        voltage: {
+                            type: 'linear',
+                            position: 'right',
+                            grid: { drawOnChartArea: false },
+                            title: { display: true, text: 'Voltage (V)' },
+                        },
+                    },
+                },
+            });
+        </script>
+    @endpush
+@endif

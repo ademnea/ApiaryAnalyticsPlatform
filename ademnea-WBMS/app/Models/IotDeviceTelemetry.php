@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\UtcDateTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -20,9 +21,9 @@ class IotDeviceTelemetry extends Model
 
     protected $casts = [
         'error_codes' => 'array',
-        'last_heartbeat_at' => 'datetime',
-        'last_data_received_at' => 'datetime',
-        'battery_reading_at' => 'datetime',
+        'last_heartbeat_at' => UtcDateTime::class,
+        'last_data_received_at' => UtcDateTime::class,
+        'battery_reading_at' => UtcDateTime::class,
         'battery_level' => 'float',
         'battery_voltage' => 'float',
         'battery_current' => 'float',
