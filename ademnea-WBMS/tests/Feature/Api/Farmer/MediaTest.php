@@ -8,6 +8,7 @@ use App\Models\Hive;
 use App\Models\HiveAudio;
 use App\Models\HivePhoto;
 use App\Models\IotDevice;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 
 /**
@@ -97,6 +98,29 @@ class MediaTest extends FarmerApiTestCase
         $this->assertCount(5, $response->json('data'));
         $this->assertSame(12, $response->json('meta.total'));
         $this->assertStringStartsWith('https://media.test/', $response->json('data.0.url'));
+    }
+
+    public function test_audio_capture_time_is_returned_in_the_configured_local_timezone(): void
+    {
+        config(['app.local_timezone' => 'Africa/Kampala']);
+
+        [$user, $farmer] = $this->makeFarmer();
+        $hive = $this->hiveOwnedBy($farmer->id);
+        $device = IotDevice::factory()->create();
+
+        HiveAudio::create([
+            'hive_id' => $hive->id,
+            'device_id' => $device->id,
+            'file_path' => 'media/audio-timezone.wav',
+            'recorded_at' => CarbonImmutable::parse('2026-10-22 12:00:00', 'UTC'),
+            'created_at' => CarbonImmutable::parse('2026-10-22 15:05:00', 'Africa/Kampala'),
+        ]);
+
+        $this->authed($user)
+            ->getJson("/api/v1/farmer/hives/{$hive->id}/audio")
+            ->assertOk()
+            ->assertJsonPath('data.0.recorded_at', '2026-10-22T15:00:00+03:00')
+            ->assertJsonPath('data.0.created_at', '2026-10-22T15:05:00+03:00');
     }
 
     public function test_media_for_another_farmers_hive_is_not_reachable(): void
