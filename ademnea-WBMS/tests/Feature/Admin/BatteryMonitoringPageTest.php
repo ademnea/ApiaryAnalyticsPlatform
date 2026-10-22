@@ -6,6 +6,7 @@ use App\Models\IotDevice;
 use App\Models\IotDeviceTelemetry;
 use App\Models\IotDeviceTelemetryHistory;
 use App\Models\IotHardwareTeam;
+use Carbon\CarbonImmutable;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use PHPUnit\Framework\Attributes\Test;
 use Tests\Feature\Admin\Concerns\InteractsWithApiaryAdminAuth;
@@ -107,6 +108,47 @@ class BatteryMonitoringPageTest extends TestCase
             ->assertOk()
             ->assertSee('Not enough history for a trend yet.')
             ->assertDontSee('batteryTrendChart');
+    }
+
+    #[Test]
+    public function battery_trend_uses_kampala_calendar_days_and_shows_local_timestamp(): void
+    {
+        $this->travelTo(CarbonImmutable::parse('2026-10-22 12:00:00', 'Africa/Kampala'));
+        $this->actingAsAdminWithPermission('view-device-fleet');
+
+        $device = IotDevice::factory()->create([
+            'device_code' => 'BATTERY-TZ',
+            'hardware_team_id' => IotHardwareTeam::factory(),
+        ]);
+        IotDeviceTelemetry::create([
+            'device_id' => $device->id,
+            'battery_level' => 80,
+            'last_heartbeat_at' => CarbonImmutable::parse('2026-10-22 09:34:56', 'UTC'),
+            'battery_reading_at' => CarbonImmutable::parse('2026-10-22 09:34:56', 'UTC'),
+        ]);
+
+        foreach ([
+            CarbonImmutable::parse('2026-10-20 20:30:00', 'UTC'),
+            CarbonImmutable::parse('2026-10-20 21:30:00', 'UTC'),
+        ] as $recordedAt) {
+            IotDeviceTelemetryHistory::create([
+                'device_id' => $device->id,
+                'battery_level' => 80,
+                'battery_voltage' => 3.8,
+                'recorded_at' => $recordedAt,
+                'created_at' => CarbonImmutable::parse('2026-10-22 09:34:56', 'UTC'),
+            ]);
+        }
+
+        $this->get(route('admin.devices.fleet', ['section' => 'battery']))
+            ->assertOk()
+            ->assertSee('2026-10-22 12:34:56 EAT')
+            ->assertViewHas('batteryTrendDays', 2)
+            ->assertViewHas('batteryTrendReadingsCount', 2)
+            ->assertViewHas('batteryTrendChart', fn (array $chart) => $chart['labels'][4] === 'Oct 20'
+                && $chart['labels'][5] === 'Oct 21'
+                && $chart['battery'][4] === 80.0
+                && $chart['battery'][5] === 80.0);
     }
 
     #[Test]

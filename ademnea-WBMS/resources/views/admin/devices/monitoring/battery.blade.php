@@ -110,10 +110,10 @@
                                 <span class="badge bg-secondary">No reading</span>
                             @elseif($batteryReading['is_stale'])
                                 <span class="badge badge-warning">Stale</span>
-                                <div class="device-monitoring-hint">{{ $batteryReading['recorded_at']->diffForHumans() }}</div>
+                                <div class="device-monitoring-hint" title="{{ $batteryReading['recorded_at']->format('Y-m-d H:i:s T') }}">{{ $batteryReading['recorded_at']->diffForHumans() }}</div>
                             @else
                                 <span class="badge badge-active">Fresh</span>
-                                <div class="device-monitoring-hint">{{ $batteryReading['recorded_at']->diffForHumans() }}</div>
+                                <div class="device-monitoring-hint" title="{{ $batteryReading['recorded_at']->format('Y-m-d H:i:s T') }}">{{ $batteryReading['recorded_at']->diffForHumans() }}</div>
                             @endif
                         </td>
                     </tr>

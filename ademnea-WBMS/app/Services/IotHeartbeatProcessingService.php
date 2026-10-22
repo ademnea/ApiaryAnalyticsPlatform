@@ -58,7 +58,7 @@ class IotHeartbeatProcessingService
         // SQS standard queues don't preserve order: an older heartbeat
         // processed late must not overwrite the device's current state.
         $lastHeartbeatAt = IotDeviceTelemetry::where('device_id', $device->id)->value('last_heartbeat_at');
-        $isLatest = $lastHeartbeatAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastHeartbeatAt));
+        $isLatest = $lastHeartbeatAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastHeartbeatAt, 'UTC'));
 
         if ($isLatest) {
             $hasBatteryReading = collect(['battery_level', 'battery_voltage', 'battery_current'])
@@ -68,14 +68,14 @@ class IotHeartbeatProcessingService
             foreach (['battery_level', 'battery_voltage', 'battery_current'] as $field) {
                 if (($payload[$field] ?? null) === null
                     || ($hasBatteryReading && $lastBatteryReadingAt !== null
-                        && $heartbeatAt->lt(Carbon::parse($lastBatteryReadingAt)))) {
+                        && $heartbeatAt->lt(Carbon::parse($lastBatteryReadingAt, 'UTC')))) {
                     unset($reading[$field]);
                 }
             }
 
             $telemetryUpdate = $reading + ['last_heartbeat_at' => $heartbeatAt];
 
-            if ($hasBatteryReading && ($lastBatteryReadingAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastBatteryReadingAt)))) {
+            if ($hasBatteryReading && ($lastBatteryReadingAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastBatteryReadingAt, 'UTC')))) {
                 $telemetryUpdate['battery_reading_at'] = $heartbeatAt;
             }
 

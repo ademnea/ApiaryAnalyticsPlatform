@@ -30,8 +30,8 @@ class SensorMonitoringTest extends TestCase
         $filters = MonitoringFilters::fromArray([]);
 
         $this->assertSame('7d', $filters->range);
-        $this->assertTrue($filters->from->equalTo(CarbonImmutable::now()->subDays(7)));
-        $this->assertTrue($filters->to->equalTo(CarbonImmutable::now()));
+        $this->assertTrue($filters->from->equalTo(CarbonImmutable::now(config('app.local_timezone'))->subDays(7)));
+        $this->assertTrue($filters->to->equalTo(CarbonImmutable::now(config('app.local_timezone'))));
         $this->assertFalse($filters->hasAnyScope());
     }
 
@@ -43,7 +43,7 @@ class SensorMonitoringTest extends TestCase
 
         $this->assertSame($range, $filters->range);
         $this->assertSame($days, (int) round($filters->from->diffInDays($filters->to)));
-        $this->assertTrue($filters->to->equalTo(CarbonImmutable::now()));
+        $this->assertTrue($filters->to->equalTo(CarbonImmutable::now(config('app.local_timezone'))));
     }
 
     public static function presets(): array
@@ -140,8 +140,9 @@ class SensorMonitoringTest extends TestCase
         $this->assertCount(24, $keys);
         $this->assertSame('2026-09-10 00:00:00', $keys[0]);
         $this->assertSame('2026-09-10 23:00:00', $keys[23]);
-        $this->assertSame("DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00:00')", $filters->bucketSql());
+        $this->assertSame("DATE_FORMAT(CONVERT_TZ(recorded_at, '+00:00', '+03:00'), '%Y-%m-%d %H:00:00')", $filters->bucketSql());
         $this->assertSame('Sep 10, 14:00', $filters->bucketLabel('2026-09-10 14:00:00'));
+        $this->assertSame("DATE_FORMAT(CONVERT_TZ(recorded_at, '+00:00', '+03:00'), '%Y-%m-%d')", $filters->dayBucketSql());
     }
 
     #[Test]
@@ -152,7 +153,7 @@ class SensorMonitoringTest extends TestCase
 
         $this->assertCount(20, $keys);
         $this->assertSame(['2026-08-01', '2026-08-20'], [$keys[0], $keys[19]]);
-        $this->assertSame("DATE_FORMAT(recorded_at, '%Y-%m-%d')", $filters->bucketSql());
+        $this->assertSame("DATE_FORMAT(CONVERT_TZ(recorded_at, '+00:00', '+03:00'), '%Y-%m-%d')", $filters->bucketSql());
         $this->assertSame('Aug 1', $filters->bucketLabel('2026-08-01'));
     }
 

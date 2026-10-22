@@ -28,7 +28,7 @@ class DeviceFleetService
      */
     public function overview(array $filters, int $page, array $paginatorOptions): array
     {
-        $now = now();
+        $now = now(config('app.local_timezone'));
 
         // Health is derived per device, so the whole active fleet is loaded
         // once to build the KPIs, the attention panels and the filtered table.
@@ -72,15 +72,17 @@ class DeviceFleetService
             ->values();
 
         $batteryTrendStart = $now->copy()->startOfDay()->subDays(6);
+        $localOffset = $now->format('P');
+        $localReadingDay = "DATE(CONVERT_TZ(iot_device_telemetry_history.recorded_at, '+00:00', '{$localOffset}'))";
         $batteryTrend = $devices->isEmpty()
             ? collect()
             : IotDeviceTelemetryHistory::query()
                 ->join('iot_devices', 'iot_devices.id', '=', 'iot_device_telemetry_history.device_id')
                 ->whereIn('iot_devices.id', $devices->modelKeys())
                 ->where('iot_devices.active_flag', true)
-                ->where('iot_device_telemetry_history.recorded_at', '>=', $batteryTrendStart)
+                ->where('iot_device_telemetry_history.recorded_at', '>=', $batteryTrendStart->copy()->utc())
                 ->whereNotNull('iot_device_telemetry_history.battery_level')
-                ->selectRaw('DATE(iot_device_telemetry_history.recorded_at) as reading_day')
+                ->selectRaw("{$localReadingDay} as reading_day")
                 ->selectRaw('AVG(iot_device_telemetry_history.battery_level) as average_battery_level')
                 ->selectRaw('AVG(iot_device_telemetry_history.battery_voltage) as average_battery_voltage')
                 ->selectRaw('COUNT(*) as readings_count')

@@ -50,6 +50,23 @@ class HeartbeatTimestampTest extends TestCase
     }
 
     #[Test]
+    public function a_device_local_battery_timestamp_is_stored_in_utc_and_read_back_in_kampala_time(): void
+    {
+        $device = $this->makeDevice();
+        $sentAt = '2026-10-20T12:34:56+03:00';
+
+        $this->heartbeat($device, ['battery_level' => 80, 'recorded_at' => $sentAt]);
+
+        $telemetry = IotDeviceTelemetry::where('device_id', $device->id)->firstOrFail();
+        $history = IotDeviceTelemetryHistory::where('device_id', $device->id)->firstOrFail();
+
+        $this->assertSame('2026-10-20 09:34:56', $telemetry->getRawOriginal('battery_reading_at'));
+        $this->assertSame('2026-10-20 12:34:56', $telemetry->battery_reading_at->toDateTimeString());
+        $this->assertSame('2026-10-20 09:34:56', $history->getRawOriginal('recorded_at'));
+        $this->assertSame('2026-10-20 12:34:56', $history->recorded_at->toDateTimeString());
+    }
+
+    #[Test]
     public function heartbeat_battery_readings_are_saved_to_current_state_and_history_and_device_identity_is_updated(): void
     {
         $device = $this->makeDevice();
