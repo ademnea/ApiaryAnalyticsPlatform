@@ -92,6 +92,28 @@ class HeartbeatTimestampTest extends TestCase
     }
 
     #[Test]
+    public function a_heartbeat_with_a_mac_mismatch_is_rejected_without_changing_device_data(): void
+    {
+        $device = $this->makeDevice();
+        $device->update(['mac_address' => '30:76:F5:90:90:F0']);
+
+        $this->heartbeat($device, [
+            'battery_level' => 50,
+            'mac_address' => '30:76:F5:90:90:F1',
+            'recorded_at' => now()->toIso8601String(),
+        ]);
+
+        $this->assertSame('30:76:F5:90:90:F0', $device->fresh()->mac_address);
+        $this->assertDatabaseMissing('iot_device_telemetry', ['device_id' => $device->id]);
+        $this->assertDatabaseMissing('iot_device_telemetry_history', ['device_id' => $device->id]);
+        $this->assertDatabaseHas('iot_ingestion_logs', [
+            'device_id' => $device->id,
+            'payload_type' => 'heartbeat',
+            'outcome' => 'rejected_validation',
+        ]);
+    }
+
+    #[Test]
     public function without_recorded_at_the_gateway_receive_time_is_used(): void
     {
         $device = $this->makeDevice();

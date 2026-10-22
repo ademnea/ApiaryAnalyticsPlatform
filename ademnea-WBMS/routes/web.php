@@ -481,6 +481,9 @@ Route::middleware(['auth', 'ensure.not.farmer'])->group(function () {
     // Device Monitoring — live device health, battery readings and open issues.
     Route::middleware(['permission:view-device-fleet|manage-iot-devices'])->group(function () {
         Route::get('/admin/devices/fleet', [DeviceFleetController::class, 'index'])->name('admin.devices.fleet');
+        Route::get('/admin/devices/fleet/readings/{stream}/export', [DeviceFleetController::class, 'exportReadings'])
+            ->whereIn('stream', ['battery', 'connectivity'])
+            ->name('admin.devices.fleet.readings.export');
         Route::get('/admin/devices/battery', fn () => redirect()->route('admin.devices.fleet', [], 301))
             ->name('admin.devices.battery');
     });

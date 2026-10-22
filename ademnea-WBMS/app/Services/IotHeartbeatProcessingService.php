@@ -35,6 +35,21 @@ class IotHeartbeatProcessingService
             return;
         }
 
+        $reportedMac = $payload['mac_address'] ?? null;
+        if ($reportedMac !== null
+            && $device->mac_address !== null
+            && $this->normalizeMac($reportedMac) !== $this->normalizeMac($device->mac_address)) {
+            IotIngestionLog::create([
+                'device_id' => $device->id,
+                'payload_type' => 'heartbeat',
+                'outcome' => 'rejected_validation',
+                'validation_errors' => ['mac_address' => ['Reported MAC address does not match the registered device.']],
+                'created_at' => now(),
+            ]);
+
+            return;
+        }
+
         // When the heartbeat was sent, not when the queue worker got to it:
         // the device's own recorded_at, else the gateway's receive time.
         $heartbeatAt = $this->timestamp($payload['recorded_at'] ?? null)
@@ -143,5 +158,10 @@ class IotHeartbeatProcessingService
         }
 
         return $time->isFuture() ? now() : $time;
+    }
+
+    private function normalizeMac(string $macAddress): string
+    {
+        return strtoupper(str_replace([':', '-'], '', $macAddress));
     }
 }
