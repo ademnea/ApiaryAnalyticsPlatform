@@ -136,7 +136,7 @@ class IotSensorIngestionService
 
         $lastHeartbeatAt = IotDeviceTelemetry::where('device_id', $device->id)->value('last_heartbeat_at');
 
-        if ($lastHeartbeatAt !== null && $recordedAt->lt(Carbon::parse($lastHeartbeatAt))) {
+        if ($lastHeartbeatAt !== null && $recordedAt->lt(Carbon::parse($lastHeartbeatAt, 'UTC'))) {
             return [];
         }
 
@@ -144,7 +144,7 @@ class IotSensorIngestionService
             $lastBatteryReadingAt = IotDeviceTelemetry::where('device_id', $device->id)->value('battery_reading_at');
             $lastBatteryReadingAt ??= $lastHeartbeatAt;
 
-            if ($lastBatteryReadingAt !== null && $recordedAt->lt(Carbon::parse($lastBatteryReadingAt))) {
+            if ($lastBatteryReadingAt !== null && $recordedAt->lt(Carbon::parse($lastBatteryReadingAt, 'UTC'))) {
                 unset($meta['battery_level']);
             }
         }

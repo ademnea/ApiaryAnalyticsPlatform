@@ -146,6 +146,33 @@ class SensorMonitoringTest extends TestCase
     }
 
     #[Test]
+    public function monitoring_filters_and_charts_use_kampala_time_for_utc_device_readings(): void
+    {
+        $this->actingAsAdminWithPermission('view-monitoring-dashboard');
+
+        $this->recordTemperature(['brood_section' => 20.0], CarbonImmutable::parse('2026-09-09 20:59:00', 'UTC'));
+        $this->recordTemperature(['brood_section' => 30.0], CarbonImmutable::parse('2026-09-09 21:30:00', 'UTC'));
+        $this->recordTemperature(['brood_section' => 40.0], CarbonImmutable::parse('2026-09-10 20:30:00', 'UTC'));
+        $this->recordTemperature(['brood_section' => 50.0], CarbonImmutable::parse('2026-09-10 21:01:00', 'UTC'));
+
+        $this->get(route('admin.monitoring.temperature', ['from' => '2026-09-10', 'to' => '2026-09-10']))
+            ->assertOk()
+            ->assertViewHas('summary', fn (array $summary) => $summary['readings'] === 2
+                && $summary['last_reading_at']->format('Y-m-d H:i:s T') === '2026-09-10 23:30:00 EAT')
+            ->assertViewHas('chart', function (array $chart) {
+                $values = collect($chart['series'])->firstWhere('column', 'brood_section')['avg'];
+
+                return count($values) === 24
+                    && $values[0] === 30.0
+                    && $values[23] === 40.0
+                    && count(array_filter($values, fn ($value) => $value !== null)) === 2;
+            })
+            ->assertViewHas('readings', fn ($readings) => $readings->total() === 2
+                && $readings->first()->recorded_at->format('Y-m-d H:i:s') === '2026-09-10 23:30:00'
+                && $readings->first()->getRawOriginal('recorded_at') === '2026-09-10 20:30:00');
+    }
+
+    #[Test]
     public function readings_outside_the_window_or_the_chosen_hive_are_excluded(): void
     {
         $this->actingAsAdminWithPermission('view-monitoring-dashboard');

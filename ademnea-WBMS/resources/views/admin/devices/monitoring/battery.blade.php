@@ -1,181 +1,102 @@
-<div class="row g-3 mb-4">
-    @foreach([
-        ['Battery reporting', $kpis['battery_reporting'].' / '.$kpis['total'], 'bi-battery-half', 'blue'],
-        ['Low or critical', $kpis['low_battery'], 'bi-battery-quarter', $kpis['low_battery'] > 0 ? 'honey' : 'green'],
-        ['Stale readings', $kpis['stale_battery'], 'bi-clock-history', $kpis['stale_battery'] > 0 ? 'honey' : 'green'],
-        ['Average level', $kpis['average_battery_level'] !== null ? number_format($kpis['average_battery_level'], 1).'%' : '—', 'bi-percent', 'green'],
-    ] as [$label, $value, $icon, $tone])
-        <div class="col-6 col-xl-3">
-            <div class="stat-card h-100">
-                <div class="stat-icon {{ $tone }}"><i class="bi {{ $icon }}" aria-hidden="true"></i></div>
-                <div>
-                    <div class="stat-value device-monitoring-tabular">{{ $value }}</div>
-                    <div class="stat-label">{{ $label }}</div>
-                </div>
+<div class="card" id="battery-readings">
+    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
+        <div>
+            <span><i class="bi bi-table me-1" aria-hidden="true"></i>Battery readings</span>
+            <div class="device-monitoring-hint">
+                Individual device reports from {{ $batteryHistoryFrom->format('M j, Y H:i') }} to {{ $batteryHistoryTo->format('M j, Y H:i') }} EAT.
             </div>
         </div>
-    @endforeach
-</div>
-
-<div class="card mb-4">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span><i class="bi bi-graph-up me-1" aria-hidden="true"></i>Fleet battery trend · Last 7 days</span>
-        @if($batteryTrendDays >= 2)
-            <span class="device-monitoring-hint">{{ number_format($batteryTrendReadingsCount) }} readings across {{ $batteryTrendDays }} days</span>
-        @endif
+        <div class="d-flex align-items-center flex-wrap gap-2">
+            <a href="{{ route('admin.devices.fleet.readings.export', ['stream' => 'battery'] + request()->only(['battery_range', 'battery_device', 'battery_sort'])) }}"
+               class="btn btn-sm btn-outline-forest">
+                <i class="bi bi-download me-1" aria-hidden="true"></i>Export CSV
+            </a>
+            <form method="GET" action="{{ route('admin.devices.fleet') }}#battery-readings" class="d-flex align-items-center flex-wrap gap-2">
+                <input type="hidden" name="section" value="battery">
+                <label for="battery-history-range" class="visually-hidden">Battery reading time range</label>
+                <select id="battery-history-range" name="battery_range" class="form-select form-select-sm w-auto" onchange="this.form.requestSubmit()">
+                    @foreach(['24h' => 'Last 24 hours', '7d' => 'Last 7 days', '30d' => 'Last 30 days', '90d' => 'Last 90 days'] as $value => $label)
+                        <option value="{{ $value }}" @selected($batteryHistoryRange === $value)>{{ $label }}</option>
+                    @endforeach
+                </select>
+                <label for="battery-history-device" class="visually-hidden">Filter readings by device</label>
+                <select id="battery-history-device" name="battery_device" class="form-select form-select-sm w-auto" onchange="this.form.requestSubmit()">
+                    <option value="">All devices</option>
+                    @foreach($batteryHistoryDevices as $deviceOption)
+                        <option value="{{ $deviceOption->id }}" @selected((string) $batteryHistoryDevice === (string) $deviceOption->id)>{{ $deviceOption->device_code }}</option>
+                    @endforeach
+                </select>
+                <label for="battery-history-sort" class="visually-hidden">Sort battery readings</label>
+                <select id="battery-history-sort" name="battery_sort" class="form-select form-select-sm w-auto" onchange="this.form.requestSubmit()">
+                    <option value="recorded" @selected($batteryHistorySort === 'recorded')>Newest by device time</option>
+                    <option value="received" @selected($batteryHistorySort === 'received')>Newest by received time</option>
+                </select>
+                <label for="battery-history-per-page" class="visually-hidden">Rows per page</label>
+                <select id="battery-history-per-page" name="battery_per_page" class="form-select form-select-sm w-auto" onchange="this.form.requestSubmit()">
+                    @foreach([25, 50, 100] as $option)
+                        <option value="{{ $option }}" @selected($batteryHistoryPerPage === $option)>{{ $option }} rows</option>
+                    @endforeach
+                </select>
+                <noscript><button type="submit" class="btn btn-sm btn-outline-forest">Apply</button></noscript>
+            </form>
+        </div>
     </div>
-    <div class="card-body">
-        @if($batteryTrendChange !== null)
-            <div class="alert-ademnea mb-3" role="status">
-                @if($batteryTrendChange < 0)
-                    The fleet average battery level fell by {{ number_format(abs($batteryTrendChange), 1) }} percentage points
-                @elseif($batteryTrendChange > 0)
-                    The fleet average battery level rose by {{ number_format($batteryTrendChange, 1) }} percentage points
-                @else
-                    The fleet average battery level was unchanged
-                @endif
-                between {{ \Illuminate\Support\Carbon::parse($batteryTrendFirstDay)->format('M j') }}
-                and {{ \Illuminate\Support\Carbon::parse($batteryTrendLastDay)->format('M j') }}.
-                This compares daily averages across reported readings, not individual-device battery life.
-            </div>
-        @endif
 
-        @if($batteryTrendDays >= 2)
-            <canvas id="batteryTrendChart" height="110" role="img" aria-label="Daily fleet average battery level and voltage over the last seven days"></canvas>
-        @else
-            <div class="text-center text-muted py-3 device-monitoring-hint">
-                <i class="bi bi-hourglass-split me-1" aria-hidden="true"></i>
-                Not enough history for a trend yet. Readings are recorded as devices check in.
-                @if($batteryTrendReadingsCount > 0)
-                    {{ number_format($batteryTrendReadingsCount) }} reading{{ $batteryTrendReadingsCount === 1 ? '' : 's' }} recorded so far.
-                @endif
-            </div>
-        @endif
-        <p class="device-monitoring-hint mt-2 mb-0">Battery percentage is reported by device firmware. Voltage uses a separate chart scale; current is shown as reported because its unit is not defined.</p>
-    </div>
-</div>
-
-<div class="card">
-    <div class="card-header d-flex justify-content-between align-items-center flex-wrap gap-2">
-        <span><i class="bi bi-battery-charging me-1" aria-hidden="true"></i>Battery readings</span>
-        <form method="GET" action="{{ route('admin.devices.fleet') }}" class="d-flex align-items-center gap-2">
-            <input type="hidden" name="section" value="battery">
-            <label for="battery-filter" class="visually-hidden">Filter battery readings</label>
-            <select id="battery-filter" name="battery" class="form-select form-select-sm" onchange="this.form.submit()">
-                <option value="">All active devices</option>
-                <option value="low" @selected(request('battery') === 'low')>Low or critical</option>
-                <option value="stale" @selected(request('battery') === 'stale')>Stale readings</option>
-            </select>
-        </form>
-    </div>
-    <div class="table-responsive">
-        <table class="table table-hover align-middle mb-0 device-monitoring-table">
-            <thead>
-                <tr>
-                    <th>Device</th>
-                    <th>Hive</th>
-                    <th>Status</th>
-                    <th>Battery level</th>
-                    <th>Voltage</th>
-                    <th>Current</th>
-                    <th>Freshness</th>
-                </tr>
-            </thead>
-            <tbody>
-                @forelse($fleet as $device)
-                    @php
-                        $deviceHealth = $health[$device->id];
-                        $batteryReading = $batteryReadings[$device->id];
-                        $batteryBadge = match (true) {
-                            $deviceHealth['is_critical_battery'] => ['Critical', 'badge-offline'],
-                            $deviceHealth['is_low_battery'] => ['Low', 'badge-warning'],
-                            $deviceHealth['battery_level'] !== null => ['Normal', 'badge-active'],
-                            default => ['No level', 'bg-secondary'],
-                        };
-                    @endphp
+    @if($batteryHistory->isEmpty())
+        <div class="text-center text-muted py-5 px-3" role="status">
+            <i class="bi bi-inbox d-block mb-2" aria-hidden="true"></i>
+            <p class="fw-medium text-body mb-1">No battery readings to list</p>
+            <p class="mb-0 device-monitoring-hint">Battery, voltage, and current reports appear here when devices send them.</p>
+        </div>
+    @else
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0 device-monitoring-table">
+                <caption class="visually-hidden">Battery reports from devices, newest {{ $batteryHistorySort === 'received' ? 'received' : 'recorded' }} first</caption>
+                <thead>
                     <tr>
-                        <td>
-                            <a href="{{ route('admin.iot-devices.show', $device) }}" class="fw-semibold text-decoration-none">{{ $device->device_code }}</a>
-                            @if($device->mac_address)
-                                <div class="device-monitoring-hint">{{ $device->mac_address }}</div>
-                            @endif
-                        </td>
-                        <td>{{ $device->hive?->display_name ?? $device->hive?->hive_code ?? 'Unassigned' }}</td>
-                        <td><span class="badge {{ $batteryBadge[1] }}">{{ $batteryBadge[0] }}</span></td>
-                        <td>{{ $deviceHealth['battery_level'] !== null ? number_format($deviceHealth['battery_level'], 1).'%' : '—' }}</td>
-                        <td>{{ $device->telemetry?->battery_voltage !== null ? number_format($device->telemetry->battery_voltage, 2).' V' : '—' }}</td>
-                        <td>{{ $device->telemetry?->battery_current !== null ? number_format($device->telemetry->battery_current, 2) : '—' }}</td>
-                        <td>
-                            @if($batteryReading['recorded_at'] === null)
-                                <span class="badge bg-secondary">No reading</span>
-                            @elseif($batteryReading['is_stale'])
-                                <span class="badge badge-warning">Stale</span>
-                                <div class="device-monitoring-hint">{{ $batteryReading['recorded_at']->diffForHumans() }}</div>
-                            @else
-                                <span class="badge badge-active">Fresh</span>
-                                <div class="device-monitoring-hint">{{ $batteryReading['recorded_at']->diffForHumans() }}</div>
-                            @endif
-                        </td>
+                        <th scope="col">Sent by device</th>
+                        <th scope="col">Received by server</th>
+                        <th scope="col">Device</th>
+                        <th scope="col">Hive</th>
+                        <th scope="col" class="text-end">Battery level</th>
+                        <th scope="col" class="text-end">Voltage</th>
+                        <th scope="col" class="text-end">Current</th>
                     </tr>
-                @empty
-                    <tr><td colspan="7" class="text-center text-muted py-4">No devices match this battery filter.</td></tr>
-                @endforelse
-            </tbody>
-        </table>
-    </div>
-    @if($fleet->hasPages())
-        <div class="card-footer">{{ $fleet->links() }}</div>
+                </thead>
+                <tbody>
+                    @foreach($batteryHistory as $reading)
+                        @php($readingDevice = $reading->device)
+                        <tr>
+                            <td class="text-nowrap">
+                                <time datetime="{{ $reading->recorded_at->toIso8601String() }}" title="{{ $reading->recorded_at->format('Y-m-d H:i:s T') }}">{{ $reading->recorded_at->format('M j, Y H:i') }}</time>
+                                <div class="device-monitoring-hint">{{ $reading->recorded_at->diffForHumans() }}</div>
+                            </td>
+                            <td class="text-nowrap">
+                                @if($reading->created_at)
+                                    <time datetime="{{ $reading->created_at->toIso8601String() }}" title="{{ $reading->created_at->format('Y-m-d H:i:s T') }}">{{ $reading->created_at->format('M j, Y H:i') }}</time>
+                                    <div class="device-monitoring-hint">{{ $reading->created_at->diffForHumans() }}</div>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td class="text-nowrap">
+                                @if($readingDevice)
+                                    <a href="{{ route('admin.iot-devices.show', $readingDevice) }}" class="fw-semibold text-decoration-none">{{ $readingDevice->device_code }}</a>
+                                @else
+                                    —
+                                @endif
+                            </td>
+                            <td>{{ $readingDevice?->hive?->display_name ?? $readingDevice?->hive?->hive_code ?? 'Unassigned' }}</td>
+                            <td class="text-end">{{ $reading->battery_level !== null ? number_format($reading->battery_level, 1).'%' : '—' }}</td>
+                            <td class="text-end">{{ $reading->battery_voltage !== null ? number_format($reading->battery_voltage, 2).' V' : '—' }}</td>
+                            <td class="text-end">{{ $reading->battery_current !== null ? number_format($reading->battery_current, 2) : '—' }}</td>
+                        </tr>
+                    @endforeach
+                </tbody>
+            </table>
+        </div>
+        @if($batteryHistory->hasPages())
+            <div class="card-footer">{{ $batteryHistory->fragment('battery-readings')->links() }}</div>
+        @endif
     @endif
 </div>
-
-@if($batteryTrendDays >= 2)
-    @push('scripts')
-        <script>
-            new Chart(document.getElementById('batteryTrendChart'), {
-                type: 'line',
-                data: {
-                    labels: @json($batteryTrendChart['labels']),
-                    datasets: [
-                        {
-                            label: 'Battery level (%)',
-                            data: @json($batteryTrendChart['battery']),
-                            borderColor: '#2D6A4F',
-                            backgroundColor: 'rgba(45,106,79,0.1)',
-                            yAxisID: 'battery',
-                            tension: 0.3,
-                            spanGaps: false,
-                        },
-                        {
-                            label: 'Voltage (V)',
-                            data: @json($batteryTrendChart['voltage']),
-                            borderColor: '#D4A017',
-                            backgroundColor: 'rgba(212,160,23,0.1)',
-                            yAxisID: 'voltage',
-                            tension: 0.3,
-                            spanGaps: false,
-                        },
-                    ],
-                },
-                options: {
-                    responsive: true,
-                    interaction: { mode: 'index', intersect: false },
-                    scales: {
-                        battery: {
-                            type: 'linear',
-                            position: 'left',
-                            min: 0,
-                            max: 100,
-                            title: { display: true, text: 'Battery level (%)' },
-                        },
-                        voltage: {
-                            type: 'linear',
-                            position: 'right',
-                            grid: { drawOnChartArea: false },
-                            title: { display: true, text: 'Voltage (V)' },
-                        },
-                    },
-                },
-            });
-        </script>
-    @endpush
-@endif

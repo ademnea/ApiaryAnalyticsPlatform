@@ -73,7 +73,7 @@ class CheckAnomalyRate implements ShouldQueue
 
         foreach (['temperature', 'humidity', 'co2', 'weight'] as $sensorType) {
             $row = SensorChannels::modelClassFor($sensorType)::where('device_id', $device->id)
-                ->where('recorded_at', '>=', now()->subMinutes(self::WINDOW_MINUTES))
+                ->where('recorded_at', '>=', now()->utc()->subMinutes(self::WINDOW_MINUTES))
                 ->toBase()
                 ->selectRaw('COUNT(*) as readings, COALESCE(SUM(suspect), 0) as flagged')
                 ->first();

@@ -35,6 +35,21 @@ class IotHeartbeatProcessingService
             return;
         }
 
+        $reportedMac = $payload['mac_address'] ?? null;
+        if ($reportedMac !== null
+            && $device->mac_address !== null
+            && $this->normalizeMac($reportedMac) !== $this->normalizeMac($device->mac_address)) {
+            IotIngestionLog::create([
+                'device_id' => $device->id,
+                'payload_type' => 'heartbeat',
+                'outcome' => 'rejected_validation',
+                'validation_errors' => ['mac_address' => ['Reported MAC address does not match the registered device.']],
+                'created_at' => now(),
+            ]);
+
+            return;
+        }
+
         // When the heartbeat was sent, not when the queue worker got to it:
         // the device's own recorded_at, else the gateway's receive time.
         $heartbeatAt = $this->timestamp($payload['recorded_at'] ?? null)
@@ -58,7 +73,7 @@ class IotHeartbeatProcessingService
         // SQS standard queues don't preserve order: an older heartbeat
         // processed late must not overwrite the device's current state.
         $lastHeartbeatAt = IotDeviceTelemetry::where('device_id', $device->id)->value('last_heartbeat_at');
-        $isLatest = $lastHeartbeatAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastHeartbeatAt));
+        $isLatest = $lastHeartbeatAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastHeartbeatAt, 'UTC'));
 
         if ($isLatest) {
             $hasBatteryReading = collect(['battery_level', 'battery_voltage', 'battery_current'])
@@ -68,14 +83,14 @@ class IotHeartbeatProcessingService
             foreach (['battery_level', 'battery_voltage', 'battery_current'] as $field) {
                 if (($payload[$field] ?? null) === null
                     || ($hasBatteryReading && $lastBatteryReadingAt !== null
-                        && $heartbeatAt->lt(Carbon::parse($lastBatteryReadingAt)))) {
+                        && $heartbeatAt->lt(Carbon::parse($lastBatteryReadingAt, 'UTC')))) {
                     unset($reading[$field]);
                 }
             }
 
             $telemetryUpdate = $reading + ['last_heartbeat_at' => $heartbeatAt];
 
-            if ($hasBatteryReading && ($lastBatteryReadingAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastBatteryReadingAt)))) {
+            if ($hasBatteryReading && ($lastBatteryReadingAt === null || $heartbeatAt->greaterThanOrEqualTo(Carbon::parse($lastBatteryReadingAt, 'UTC')))) {
                 $telemetryUpdate['battery_reading_at'] = $heartbeatAt;
             }
 
@@ -143,5 +158,10 @@ class IotHeartbeatProcessingService
         }
 
         return $time->isFuture() ? now() : $time;
+    }
+
+    private function normalizeMac(string $macAddress): string
+    {
+        return strtoupper(str_replace([':', '-'], '', $macAddress));
     }
 }

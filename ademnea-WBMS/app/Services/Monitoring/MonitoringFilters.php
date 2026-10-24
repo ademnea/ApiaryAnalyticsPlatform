@@ -91,8 +91,9 @@ final class MonitoringFilters
                 return;
             }
 
-            $days = CarbonImmutable::parse($request->input('from'))
-                ->diffInDays(CarbonImmutable::parse($request->input('to')), true);
+            $timezone = config('app.local_timezone');
+            $days = CarbonImmutable::parse($request->input('from'), $timezone)
+                ->diffInDays(CarbonImmutable::parse($request->input('to'), $timezone), true);
 
             if ($days > self::MAX_RANGE_DAYS) {
                 $validator->errors()->add('to', 'Choose a window of '.self::MAX_RANGE_DAYS.' days or fewer.');
@@ -116,7 +117,7 @@ final class MonitoringFilters
             $range = self::DEFAULT_RANGE;
         }
 
-        $now = CarbonImmutable::now();
+        $now = CarbonImmutable::now(config('app.local_timezone'));
 
         [$from, $to] = $range === 'custom'
             ? self::customWindow($input, $now)
@@ -145,8 +146,13 @@ final class MonitoringFilters
     /** Narrows a reading, media or anomaly query to this scope. */
     public function applyTo(Builder $query, string $timeColumn = 'recorded_at'): Builder
     {
+        // Sensor and media recorded_at values are stored in UTC; anomaly
+        // detection timestamps use the application timezone.
+        $from = $timeColumn === 'recorded_at' ? $this->from->utc() : $this->from;
+        $to = $timeColumn === 'recorded_at' ? $this->to->utc() : $this->to;
+
         return $query
-            ->whereBetween($timeColumn, [$this->from, $this->to])
+            ->whereBetween($timeColumn, [$from, $to])
             ->when($this->hiveId, fn (Builder $q, int $id) => $q->where('hive_id', $id))
             ->when($this->apiaryId, fn (Builder $q, int $id) => $q->whereIn(
                 'hive_id',
@@ -206,16 +212,26 @@ final class MonitoringFilters
         return $this->from->diffInHours($this->to, true) <= self::HOURLY_UP_TO_HOURS;
     }
 
-    /**
-     * MySQL expression truncating `recorded_at` to a bucket. DATE_FORMAT
-     * returns the timestamp text exactly as Laravel stored it, so the keys
-     * match bucketKeys() whatever the database session time zone is.
-     */
+    /** MySQL expression truncating a UTC `recorded_at` to a local-time bucket. */
     public function bucketSql(): string
     {
-        return $this->isHourly()
-            ? "DATE_FORMAT(recorded_at, '%Y-%m-%d %H:00:00')"
-            : "DATE_FORMAT(recorded_at, '%Y-%m-%d')";
+        $format = $this->isHourly() ? '%Y-%m-%d %H:00:00' : '%Y-%m-%d';
+
+        return "DATE_FORMAT({$this->localRecordedAtSql()}, '{$format}')";
+    }
+
+    /** MySQL expression for a local calendar-day bucket, even on hourly windows. */
+    public function dayBucketSql(): string
+    {
+        return "DATE_FORMAT({$this->localRecordedAtSql()}, '%Y-%m-%d')";
+    }
+
+    private function localRecordedAtSql(): string
+    {
+        $offset = CarbonImmutable::now(config('app.local_timezone'))->format('P');
+
+        // Use an offset so this does not depend on MySQL timezone tables.
+        return "CONVERT_TZ(recorded_at, '+00:00', '{$offset}')";
     }
 
     /**
@@ -242,7 +258,7 @@ final class MonitoringFilters
 
     public function bucketLabel(string $key): string
     {
-        return CarbonImmutable::parse($key)->format($this->isHourly() ? 'M j, H:i' : 'M j');
+        return CarbonImmutable::parse($key, config('app.local_timezone'))->format($this->isHourly() ? 'M j, H:i' : 'M j');
     }
 
     /** @return array<int, string> */
@@ -265,10 +281,11 @@ final class MonitoringFilters
      */
     private static function customWindow(array $input, CarbonImmutable $now): array
     {
-        $to = empty($input['to']) ? $now : CarbonImmutable::parse($input['to'])->endOfDay();
+        $timezone = config('app.local_timezone');
+        $to = empty($input['to']) ? $now : CarbonImmutable::parse($input['to'], $timezone)->endOfDay();
         $from = empty($input['from'])
             ? $to->subDays(self::PRESETS[self::DEFAULT_RANGE])
-            : CarbonImmutable::parse($input['from'])->startOfDay();
+            : CarbonImmutable::parse($input['from'], $timezone)->startOfDay();
 
         // Validation already rejects both cases; these guards keep the object
         // safe when it is built directly, as in tests or jobs.

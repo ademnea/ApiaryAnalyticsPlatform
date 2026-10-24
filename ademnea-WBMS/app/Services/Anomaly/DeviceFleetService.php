@@ -8,7 +8,10 @@ use App\Models\IotDeviceTelemetryHistory;
 use App\Models\IotHardwareTeam;
 use App\Models\SensorAnomaly;
 use App\Services\IotDeviceHealthEvaluator;
+use Generator;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Carbon;
 
 /**
  * REQ-F-IOT-14 / UC-IOT-09 (fleet half): unified health, battery, signal,
@@ -25,10 +28,12 @@ class DeviceFleetService
     /**
      * @param  array{health?: ?string, hardware_team_id?: ?int, assignment?: ?string, has_issues?: bool, battery?: ?string}  $filters
      * @param  array{path: string, query: array}  $paginatorOptions
+     * @param  array{battery_range?: string, battery_device?: int, battery_sort?: string, battery_per_page?: int}  $batteryHistoryFilters
+     * @param  array{connectivity_range?: string, connectivity_device?: int, connectivity_sort?: string, connectivity_per_page?: int}  $connectivityHistoryFilters
      */
-    public function overview(array $filters, int $page, array $paginatorOptions): array
+    public function overview(array $filters, int $page, array $paginatorOptions, array $batteryHistoryFilters = [], bool $includeBatteryHistory = false, array $connectivityHistoryFilters = [], bool $includeConnectivityHistory = false): array
     {
-        $now = now();
+        $now = now(config('app.local_timezone'));
 
         // Health is derived per device, so the whole active fleet is loaded
         // once to build the KPIs, the attention panels and the filtered table.
@@ -72,15 +77,17 @@ class DeviceFleetService
             ->values();
 
         $batteryTrendStart = $now->copy()->startOfDay()->subDays(6);
+        $localOffset = $now->format('P');
+        $localReadingDay = "DATE(CONVERT_TZ(iot_device_telemetry_history.recorded_at, '+00:00', '{$localOffset}'))";
         $batteryTrend = $devices->isEmpty()
             ? collect()
             : IotDeviceTelemetryHistory::query()
                 ->join('iot_devices', 'iot_devices.id', '=', 'iot_device_telemetry_history.device_id')
                 ->whereIn('iot_devices.id', $devices->modelKeys())
                 ->where('iot_devices.active_flag', true)
-                ->where('iot_device_telemetry_history.recorded_at', '>=', $batteryTrendStart)
+                ->where('iot_device_telemetry_history.recorded_at', '>=', $batteryTrendStart->copy()->utc())
                 ->whereNotNull('iot_device_telemetry_history.battery_level')
-                ->selectRaw('DATE(iot_device_telemetry_history.recorded_at) as reading_day')
+                ->selectRaw("{$localReadingDay} as reading_day")
                 ->selectRaw('AVG(iot_device_telemetry_history.battery_level) as average_battery_level')
                 ->selectRaw('AVG(iot_device_telemetry_history.battery_voltage) as average_battery_voltage')
                 ->selectRaw('COUNT(*) as readings_count')
@@ -101,12 +108,51 @@ class DeviceFleetService
         $batteryLevels = $devices->map(fn ($device) => $device->telemetry?->battery_level)->filter(fn ($value) => $value !== null);
         $batteryVoltages = $devices->map(fn ($device) => $device->telemetry?->battery_voltage)->filter(fn ($value) => $value !== null);
         $onlineRate = $devices->isEmpty() ? 0 : round(($statusCounts->get('online', 0) / $devices->count()) * 100, 1);
+        $batteryRange = $batteryHistoryFilters['battery_range'] ?? '7d';
+        $batteryHistoryTo = $now;
+        $batteryHistoryFrom = $this->historyStart($batteryRange, $batteryHistoryTo);
+        $batteryReadingSort = $batteryHistoryFilters['battery_sort'] ?? 'recorded';
+        $batteryReadingPerPage = (int) ($batteryHistoryFilters['battery_per_page'] ?? 25);
+        $activeDeviceIds = $devices->modelKeys();
+        $batteryHistory = ! $includeBatteryHistory || $activeDeviceIds === []
+            ? new LengthAwarePaginator(collect(), 0, $batteryReadingPerPage, LengthAwarePaginator::resolveCurrentPage(), $paginatorOptions)
+            : $this->historyQuery('battery', $batteryHistoryFilters, $activeDeviceIds, $batteryHistoryFrom, $batteryHistoryTo)
+                ->paginate($batteryReadingPerPage, ['*'], 'battery_page')
+                ->withQueryString()
+                ->appends(['section' => 'battery']);
+        $connectivityRange = $connectivityHistoryFilters['connectivity_range'] ?? '7d';
+        $connectivityHistoryTo = $now;
+        $connectivityHistoryFrom = $this->historyStart($connectivityRange, $connectivityHistoryTo);
+        $connectivityReadingSort = $connectivityHistoryFilters['connectivity_sort'] ?? 'recorded';
+        $connectivityReadingPerPage = (int) ($connectivityHistoryFilters['connectivity_per_page'] ?? 25);
+        $connectivityHistory = ! $includeConnectivityHistory || $activeDeviceIds === []
+            ? new LengthAwarePaginator(collect(), 0, $connectivityReadingPerPage, LengthAwarePaginator::resolveCurrentPage(), $paginatorOptions)
+            : $this->historyQuery('connectivity', $connectivityHistoryFilters, $activeDeviceIds, $connectivityHistoryFrom, $connectivityHistoryTo)
+                ->paginate($connectivityReadingPerPage, ['*'], 'connectivity_page')
+                ->withQueryString()
+                ->appends(['section' => 'connectivity']);
 
         return [
             'fleetGeneratedAt' => $now,
             'health' => $health,
             'batteryReadings' => $batteryReadings,
             'batteryReadingStaleAfterMinutes' => $batteryReadingStaleAfterMinutes,
+            'batteryHistory' => $batteryHistory,
+            'batteryHistoryRange' => $batteryRange,
+            'batteryHistoryDevice' => $batteryHistoryFilters['battery_device'] ?? null,
+            'batteryHistorySort' => $batteryReadingSort,
+            'batteryHistoryPerPage' => $batteryReadingPerPage,
+            'batteryHistoryFrom' => $batteryHistoryFrom,
+            'batteryHistoryTo' => $batteryHistoryTo,
+            'batteryHistoryDevices' => $devices->sortBy('device_code')->values(),
+            'connectivityHistory' => $connectivityHistory,
+            'connectivityHistoryRange' => $connectivityRange,
+            'connectivityHistoryDevice' => $connectivityHistoryFilters['connectivity_device'] ?? null,
+            'connectivityHistorySort' => $connectivityReadingSort,
+            'connectivityHistoryPerPage' => $connectivityReadingPerPage,
+            'connectivityHistoryFrom' => $connectivityHistoryFrom,
+            'connectivityHistoryTo' => $connectivityHistoryTo,
+            'connectivityHistoryDevices' => $devices->sortBy('device_code')->values(),
             'batteryTrendDays' => $batteryTrend->count(),
             'batteryTrendReadingsCount' => $batteryTrend->sum('readings_count'),
             'batteryTrendChange' => $batteryTrendChange,
@@ -162,5 +208,109 @@ class DeviceFleetService
                 ->get(),
             'hardwareTeams' => IotHardwareTeam::orderBy('name')->get(['id', 'name']),
         ];
+    }
+
+    /**
+     * Export all matching readings, not just the current page.
+     *
+     * @param  array<string, mixed>  $filters
+     * @return Generator<int, array<int, scalar|null>>
+     */
+    public function exportHistoryRows(string $stream, array $filters): Generator
+    {
+        $now = now(config('app.local_timezone'));
+        $range = $filters["{$stream}_range"] ?? '7d';
+        [$from, $to] = [$this->historyStart($range, $now), $now];
+        $deviceIds = IotDevice::query()->where('active_flag', true)->pluck('id')->all();
+
+        if ($stream === 'battery') {
+            yield ['Recorded At (EAT)', 'Received At (EAT)', 'Device', 'Hive', 'Battery Level (%)', 'Battery Voltage (V)', 'Battery Current'];
+        } else {
+            yield ['Recorded At (EAT)', 'Received At (EAT)', 'Device', 'Hive', 'Signal (dBm)', 'Uptime (seconds)', 'Sensor Read Success Rate', 'Reboot Count', 'CPU Usage (%)', 'Storage Usage (%)', 'Error Codes'];
+        }
+
+        if ($deviceIds === []) {
+            return;
+        }
+
+        $query = $this->historyQuery($stream, $filters, $deviceIds, $from, $to)
+            ->with('device.hive')
+            ->lazy(500);
+
+        foreach ($query as $reading) {
+            $device = $reading->device;
+            $base = [
+                $reading->recorded_at->toDateTimeString(),
+                $reading->created_at?->toDateTimeString() ?? '',
+                $device?->device_code ?? '',
+                $device?->hive?->display_name ?: ($device?->hive?->hive_code ?? ''),
+            ];
+
+            if ($stream === 'battery') {
+                yield [
+                    ...$base,
+                    $reading->battery_level,
+                    $reading->battery_voltage,
+                    $reading->battery_current,
+                ];
+            } else {
+                yield [
+                    ...$base,
+                    $reading->signal_strength,
+                    $reading->uptime_seconds,
+                    $reading->sensor_read_success_rate,
+                    $reading->reboot_count,
+                    $reading->cpu_usage,
+                    $reading->storage_usage,
+                    json_encode($reading->error_codes ?? [], JSON_THROW_ON_ERROR),
+                ];
+            }
+        }
+    }
+
+    /**
+     * @param  array<string, mixed>  $filters
+     * @param  array<int, int>  $activeDeviceIds
+     */
+    private function historyQuery(string $stream, array $filters, array $activeDeviceIds, Carbon $from, Carbon $to): Builder
+    {
+        $prefix = $stream === 'battery' ? 'battery' : 'connectivity';
+        $sort = $filters["{$prefix}_sort"] ?? 'recorded';
+        $deviceId = $filters["{$prefix}_device"] ?? null;
+
+        return IotDeviceTelemetryHistory::query()
+            ->whereIn('device_id', $activeDeviceIds)
+            ->whereBetween('recorded_at', [$from->copy()->utc(), $to->copy()->utc()])
+            ->where(function (Builder $query) use ($stream): void {
+                if ($stream === 'battery') {
+                    $query->whereNotNull('battery_level')
+                        ->orWhereNotNull('battery_voltage')
+                        ->orWhereNotNull('battery_current');
+
+                    return;
+                }
+
+                $query->whereNotNull('signal_strength')
+                    ->orWhereNotNull('uptime_seconds')
+                    ->orWhereNotNull('sensor_read_success_rate')
+                    ->orWhereNotNull('reboot_count')
+                    ->orWhereNotNull('cpu_usage')
+                    ->orWhereNotNull('storage_usage')
+                    ->orWhereNotNull('error_codes');
+            })
+            ->when($deviceId, fn (Builder $query, int $id) => $query->where('device_id', $id))
+            ->with('device.hive')
+            ->orderByDesc($sort === 'received' ? 'created_at' : 'recorded_at')
+            ->orderByDesc('id');
+    }
+
+    private function historyStart(string $range, Carbon $to): Carbon
+    {
+        return match ($range) {
+            '24h' => $to->copy()->subDay(),
+            '30d' => $to->copy()->subDays(30),
+            '90d' => $to->copy()->subDays(90),
+            default => $to->copy()->subDays(7),
+        };
     }
 }

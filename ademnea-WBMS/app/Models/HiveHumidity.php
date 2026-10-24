@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Casts\UtcDateTime;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
@@ -18,7 +19,7 @@ class HiveHumidity extends Model
 
     protected $casts = [
         'suspect' => 'boolean',
-        'recorded_at' => 'datetime',
+        'recorded_at' => UtcDateTime::class,
         'created_at' => 'datetime',
         'honey_section' => 'float',
         'brood_section' => 'float',
